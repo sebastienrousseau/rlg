@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["rlg"];
+window.ALL_CRATES = ["rlg","xtask"];
