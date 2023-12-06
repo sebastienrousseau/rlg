@@ -1,19 +1,24 @@
 [package]
-authors = ["Sebastian Rousseau <sebastian.rousseau@gmail.com"]
+authors = ["RustLogs Contributors"]
 categories = [
     "asynchronous",
     "development-tools::debugging",
     "development-tools",
     "data-structures",
 ]
-description = "A Rust library that implements application-level logging with a simple, readable output format."
+description = """
+    A Rust library that implements application-level logging with a simple,
+    readable output format.
+"""
+documentation = "https://docs.rs/rlg"
 edition = "2021"
-homepage = "https://minifunctions.com/"
+exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
+homepage = "https://rustlogs.com/"
 keywords = ["debugging", "log", "rlg", "logging", "tracing"]
 license = "MIT OR Apache-2.0"
 name = "rlg"
 repository = "https://github.com/sebastienrousseau/rlg/"
-rust-version = "1.66.1"
+rust-version = "1.71.1"
 version = "0.0.2"
 include = [
     "../../LICENSE-APACHE",
@@ -27,10 +32,13 @@ include = [
     "/tests/**",
 ]
 
+[workspace]
+members = ["xtask"]
+
 [[bench]]
-name = "rlg"
+name = "bench"
 harness = false
-path = "benches/criterion.rs"
+path = "benches/bench.rs"
 
 [dependencies]
 dtt = "0.0.5"
