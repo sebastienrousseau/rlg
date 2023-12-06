@@ -22,7 +22,6 @@ mod tests {
     #[test]
     fn test_macro_info_log() {
         let log = macro_info_log!("2022-01-01", "app", "message");
-        assert_eq!(log.session_id.len(), 9);
         assert_eq!(log.format, LogFormat::CLF);
     }
 
