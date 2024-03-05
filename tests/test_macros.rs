@@ -44,7 +44,6 @@ mod tests {
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_print_log!(log);
         // Asserting that the macro doesn't panic
-        assert!(true);
     }
 
     #[tokio::test]
@@ -68,7 +67,6 @@ mod tests {
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_debug_log!(log);
         // Asserting that the macro doesn't panic
-        assert!(true);
         assert_eq!(log.level, LogLevel::INFO);
     }
 
@@ -89,7 +87,6 @@ mod tests {
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_log_if!(true, log);
         // Asserting that the macro doesn't panic
-        assert!(true);
     }
 
     #[test]
@@ -97,7 +94,6 @@ mod tests {
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_log_if!(false, log);
         // Asserting that the macro doesn't panic
-        assert!(true);
     }
 
     #[test]
