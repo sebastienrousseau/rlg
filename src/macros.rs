@@ -177,7 +177,11 @@ macro_rules! macro_log_with_metadata {
                 $description,
                 $format,
             );
-            log
+            // Replace keys in the log message with consistent ones
+            let log_message = log.to_string()
+                .replace("\"component\"", "\"component\"")
+                .replace("\"session_id\"", "\"session_id\"");
+            log_message
         }
     };
 }

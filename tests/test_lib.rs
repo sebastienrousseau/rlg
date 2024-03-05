@@ -283,7 +283,7 @@ mod tests {
             &LogFormat::GELF,
         );
         let expected_output =
-            "{\n                            \"version\": \"1.1\",\n                            \"host\": \"test\",\n                            \"short_message\": \"test log message\",\n                            \"level\": \"INFO\",\n                            \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                            \"_component\": \"test\",\n                            \"_session_id\": \"123\"\n                        }";
+            "{\n                            \"version\": \"1.1\",\n                            \"host\": \"test\",\n                            \"short_message\": \"test log message\",\n                            \"level\": \"INFO\",\n                            \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                            \"component\": \"test\",\n                            \"session_id\": \"123\"\n                        }";
         assert_eq!(expected_output, format!("{log}"));
     }
     #[tokio::test]

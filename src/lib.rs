@@ -288,7 +288,7 @@ impl Log {
         }
 
         // Writing to a file asynchronously
-        let mut file = tokio::fs::File::create("log.txt").await?;
+        let mut file = tokio::fs::File::create("RLG.log").await?;
         file.write_all(log_message.as_bytes()).await?;
 
         // Printing to stdout and flushing
