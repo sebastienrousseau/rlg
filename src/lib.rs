@@ -390,8 +390,8 @@ impl fmt::Display for Log {
                             "short_message": "{}",
                             "level": "{:?}",
                             "timestamp": "{}",
-                            "_component": "{}",
-                            "_session_id": "{}"
+                            "component": "{}",
+                            "session_id": "{}"
                         }}"#,
                     self.component,
                     self.description,

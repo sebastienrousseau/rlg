@@ -101,11 +101,83 @@ macro_rules! macro_set_log_format_clf {
 
 /// Conditional debug logging
 /// Logs if `debug_enabled` feature flag set
+#[cfg(feature = "debug_enabled")]
 #[macro_export]
 macro_rules! macro_debug_log {
     ($log:expr) => {
-        if cfg!(debug_enabled) {
+        macro_print_log!($log);
+    };
+}
+
+/// Conditional debug logging
+/// Logs if `debug_enabled` feature flag set
+#[cfg(not(feature = "debug_enabled"))]
+#[macro_export]
+macro_rules! macro_debug_log {
+    ($log:expr) => {
+        // Do nothing if `debug_enabled` feature flag is not set
+    };
+}
+
+/// Macro for trace log
+#[macro_export]
+macro_rules! macro_trace_log {
+    ($time:expr, $component:expr, $description:expr) => {
+        macro_log!(
+            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            $time,
+            &LogLevel::TRACE,
+            $component,
+            $description,
+            &LogFormat::CLF
+        )
+    };
+}
+
+/// Macro for fatal log
+#[macro_export]
+macro_rules! macro_fatal_log {
+    ($time:expr, $component:expr, $description:expr) => {
+        macro_log!(
+            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            $time,
+            &LogLevel::FATAL,
+            $component,
+            $description,
+            &LogFormat::CLF
+        )
+    };
+}
+
+/// Conditional logging based on a predicate
+/// Usage:
+/// macro_log_if!(predicate, log);
+#[macro_export]
+macro_rules! macro_log_if {
+    ($predicate:expr, $log:expr) => {
+        if $predicate {
             macro_print_log!($log);
+        }
+    };
+}
+
+/// Macro for logging with metadata
+/// Usage:
+/// let log = macro_log_with_metadata!(session_id, time, level, component, description, format);
+/// println!("{log} | Metadata: {metadata}");
+#[macro_export]
+macro_rules! macro_log_with_metadata {
+    ($session_id:expr, $time:expr, $level:expr, $component:expr, $description:expr, $format:expr) => {
+        {
+            let log = $crate::Log::new(
+                $session_id,
+                $time,
+                $level,
+                $component,
+                $description,
+                $format,
+            );
+            log
         }
     };
 }
