@@ -9,6 +9,9 @@ use rlg::*;
 // Import tokio for async file writing
 use tokio::io::AsyncWriteExt;
 
+// Import LogFormat for benchmarking log formatting
+use rlg::log_format::LogFormat;
+
 // Benchmark creating new Log instances
 fn new_benchmark(c: &mut Criterion) {
     c.bench_function("new", |b| {

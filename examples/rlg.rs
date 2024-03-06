@@ -15,9 +15,9 @@ use rlg::{
     macro_trace_log,
     // Importing Log related structs and enums
     Log,
-    LogFormat,
     LogLevel
 };
+use rlg::log_format::LogFormat;
 
 
 /// Main function

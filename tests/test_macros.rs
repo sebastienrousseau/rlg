@@ -4,8 +4,9 @@ mod tests {
     use rlg::{
         macro_debug_log, macro_error_log, macro_fatal_log, macro_info_log, macro_log, macro_log_if,
         macro_log_to_file, macro_log_with_metadata, macro_print_log, macro_set_log_format_clf,
-        macro_trace_log, macro_warn_log, Log, LogFormat, LogLevel,
+        macro_trace_log, macro_warn_log, Log, LogLevel,
     };
+    use rlg::log_format::LogFormat;
     use std::fs::File;
     use std::io::Read;
 

@@ -53,7 +53,8 @@
 //! ### Basic Logging
 //!
 //! ```rust
-//! use rlg::{LogLevel, Log, LogFormat};
+//! use rlg::{LogLevel, Log};
+//! use rlg::log_format::LogFormat;
 //!
 //! // Create a new log entry
 //! let log_entry = Log::new(
@@ -74,7 +75,8 @@
 //! ### Custom Log Configuration
 //!
 //! ```rust,no_run
-//! use rlg::{config::Config, LogLevel, Log, LogFormat};
+//! use rlg::{config::Config, LogLevel, Log};
+//! use rlg::log_format::LogFormat;
 //!
 //! // Customize log file path
 //! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
@@ -102,7 +104,8 @@
 //! Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result<(), io::Error>` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
 //!
 //! ```rust,no_run
-//! use rlg::{LogLevel, Log, LogFormat};
+//! use rlg::{LogLevel, Log};
+//! use rlg::log_format::LogFormat;
 //!
 //! // Create a new log entry
 //! let log_entry = Log::new(
@@ -142,59 +145,20 @@ use std::{
     fs::OpenOptions,
     io::{stdout, Write}
 };
+use crate::log_format::LogFormat;
 use vrd::Random;
 use dtt::DateTime;
 use crate::config::Config;
 
+
 /// The `config` module contains the configuration struct for the logging system.
 pub mod config;
 
+/// The `log_format` module contains the log format enumeration and its implementation.
+pub mod log_format;
+
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-/// An enumeration of the different log formats that can be used.
-pub enum LogFormat {
-    /// The log format is set to CLF.
-    CLF,
-    /// The log format is set to JSON.
-    JSON,
-    /// The log format is set to CEF.
-    CEF,
-    /// The log format is set to ELF.
-    ELF,
-    /// The log format is set to W3C.
-    W3C,
-    /// The log format is set to GELF.
-    GELF,
-    /// The log format is set to Apache Access Log.
-    ApacheAccessLog,
-    /// The log format is set to Logstash.
-    Logstash,
-    /// The log format is set to Log4j XML.
-    Log4jXML,
-    /// The log format is set to NDJSON (Newline Delimited JSON).
-    NDJSON,
-}
-
-impl fmt::Display for LogFormat {
-    /// Implements [`LogFormat`] to display the log format as a string.
-    /// It allows the LogFormat enumeration to be used with the write!
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LogFormat::CEF => write!(f, "CEF"),
-            LogFormat::CLF => write!(f, "CLF"),
-            LogFormat::ELF => write!(f, "ELF"),
-            LogFormat::GELF => write!(f, "GELF"),
-            LogFormat::JSON => write!(f, "JSON"),
-            LogFormat::W3C => write!(f, "W3C"),
-            LogFormat::ApacheAccessLog => write!(f, "Apache Access Log"),
-            LogFormat::Logstash => write!(f, "Logstash"),
-            LogFormat::Log4jXML => write!(f, "Log4j XML"),
-            LogFormat::NDJSON => write!(f, "NDJSON"),
-        }
-    }
-}
 
 /// Implements [`Log`] to log a message to the console with a simple,
 /// readable output format.

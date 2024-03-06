@@ -31,7 +31,7 @@ macro_rules! macro_info_log {
             &$crate::LogLevel::INFO,
             $component,
             $description,
-            &$crate::LogFormat::CLF,
+            &$crate::log_format::LogFormat::CLF,
         )
     };
 }
@@ -93,8 +93,8 @@ macro_rules! macro_error_log {
 #[macro_export]
 macro_rules! macro_set_log_format_clf {
     ($log:expr) => {
-        if $log.format != $crate::LogFormat::CLF {
-            $log.format = $crate::LogFormat::CLF;
+        if $log.format != $crate::log_format::LogFormat::CLF {
+            $log.format = $crate::log_format::LogFormat::CLF;
         }
     };
 }
