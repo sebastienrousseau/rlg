@@ -1,4 +1,4 @@
-// Copyright © 2022-2023 Mini Functions. All rights reserved.
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 

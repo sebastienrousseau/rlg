@@ -1,20 +1,13 @@
-// Copyright © 2022-2023 Mini Functions. All rights reserved.
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 //!
-//! # A Rust library that implements application-level logging with a simple, readable output format
+//! # RustLogs (RLG)
 //!
-//! [![Rust](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/logo/logo-rlg.svg)](https://minifunctions.com)
+//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format. 
+//! The library provides logging APIs and various helper macros that simplify many common logging tasks.
 //!
-//! <center>
-//!
-//! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust)](https://www.rust-lang.org)
-//! [![Crates.io](https://img.shields.io/crates/v/mini-functions.svg?style=for-the-badge&color=success&labelColor=27A006)](https://crates.io/crates/mini-functions)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.8-success.svg?style=for-the-badge&color=8A48FF&labelColor=6F36E4)](https://lib.rs/crates/mini-functions)
-//! [![GitHub](https://img.shields.io/badge/github-555555?style=for-the-badge&labelColor=000000&logo=github)](https://github.com/sebastienrousseau/mini-functions)
-//! [![License](https://img.shields.io/crates/l/mini-functions.svg?style=for-the-badge&color=007EC6&labelColor=03589B)](http://opensource.org/licenses/MIT)
-//!
-//! </center>
+//! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
 //!
 //! ## Overview
 //!
@@ -22,27 +15,108 @@
 //! logging in a simple, readable output format. The library provides
 //! logging APIs and various helper macros that simplify many common
 //! logging tasks.
-
 //!
 //! ## Features
 //!
-//!- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-//!  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE` and `WARNING`,
-//!- Provides structured log formats that are easy to parse and filter,
-//!- Compatible with multiple output formats including:
-//!  - Common Event Format (CEF),
-//!  - Extended Log Format (ELF),
-//!  - Graylog Extended Log Format (GELF),
-//!  - JavaScript Object Notation (JSON),
-//!  - NCSA Common Log Format (CLF),
-//!  - W3C Extended Log File Format (W3C),
-//!  - and many more
+//! - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
+//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`.
+//! - Provides structured log formats that are easy to parse and filter.
+//! - Compatible with multiple output formats including:
+//!    - Common Event Format (CEF)
+//!    - Extended Log Format (ELF)
+//!    - Graylog Extended Log Format (GELF)
+//!    - JavaScript Object Notation (JSON)
+//!    - NCSA Common Log Format (CLF)
+//!    - W3C Extended Log File Format (W3C)
+//!    - and many more.
 //!
 //! ## Usage
 //!
-//! - [`serde`][]: Enable serialization/deserialization via serde
+//! Add this to your `Cargo.toml`:
 //!
-//! [`serde`]: https://github.com/serde-rs/serde
+//! ```toml
+//! [dependencies]
+//! rlg = "0.0.8"
+//! ```
+//!
+//! ## Configuration
+//!
+//! By default, RustLogs (RLG) logs to a file named "RLG.log" in the current directory. You can customize the log file path by setting the `LOG_FILE_PATH` environment variable.
+//!
+//! ## Examples
+//!
+//! ### Basic Logging
+//!
+//! ```rust
+//! use rlg::{LogLevel, Log, LogFormat};
+//!
+//! // Create a new log entry
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &LogFormat::JSON,
+//! );
+//!
+//! // Log the entry asynchronously
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     log_entry.log().await.unwrap();
+//! });
+//! ```
+//!
+//! ### Custom Log Configuration
+//!
+//! ```rust,no_run
+//! use rlg::{Config, LogLevel, Log, LogFormat};
+//!
+//! // Customize log file path
+//! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
+//!
+//! // Load custom configuration
+//! let config = Config::load();
+//!
+//! // Create a new log entry with custom configuration
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &LogFormat::JSON,
+//! );
+//!
+//! // Log the entry asynchronously
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     log_entry.log().await.unwrap();
+//! });
+//! ```
+//! ## Error Handling
+//!
+//! Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result<(), io::Error>` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
+//!
+//! ```rust,no_run
+//! use rlg::{LogLevel, Log, LogFormat};
+//!
+//! // Create a new log entry
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &LogFormat::JSON,
+//! );
+//!
+//! // Log the entry asynchronously and handle potential errors
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     match log_entry.log().await {
+//!         Ok(_) => println!("Log entry successfully written"),
+//!         Err(err) => eprintln!("Error logging entry: {}", err),
+//!     }
+//! });
+//! ```
 //!
 #![cfg_attr(feature = "bench", feature(test))]
 #![deny(dead_code)]
@@ -51,18 +125,38 @@
 #![forbid(unsafe_code)]
 #![warn(unreachable_pub)]
 #![doc(
-    html_favicon_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg",
-    html_logo_url = "https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg",
+    html_favicon_url = "https://kura.pro/rlg/images/favicon.ico",
+    html_logo_url = "https://kura.pro/rlg/images/logos/rlg.svg",
     html_root_url = "https://docs.rs/rlg"
 )]
 #![crate_name = "rlg"]
 #![crate_type = "lib"]
 
 use tokio::io::{self, AsyncWriteExt};
-use std::fmt;
-use std::fmt::Write as FmtWrite; use std::fs::OpenOptions;
-// Import the write trait for formatting strings
-use std::io::{Write, stdout}; // Import the standard library's Write trait for flushing stdout
+use std::{
+    env,
+    fmt::{self, Write as FmtWrite},
+    fs::OpenOptions,
+    io::{stdout, Write}
+};
+use vrd::Random;
+use dtt::DateTime;
+
+
+/// Configuration struct for logging system.
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub struct Config {
+    /// Path and name of the log file.
+    pub log_file_path: String,
+}
+
+impl Config {
+    /// Loads configuration from environment variables or defaults.
+    pub fn load() -> Config {
+        let log_file_path = env::var("LOG_FILE_PATH").unwrap_or_else(|_| "RLG.log".into());
+        Config { log_file_path }
+    }
+}
 
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
@@ -82,6 +176,14 @@ pub enum LogFormat {
     W3C,
     /// The log format is set to GELF.
     GELF,
+    /// The log format is set to Apache Access Log.
+    ApacheAccessLog,
+    /// The log format is set to Logstash.
+    Logstash,
+    /// The log format is set to Log4j XML.
+    Log4jXML,
+    /// The log format is set to NDJSON (Newline Delimited JSON).
+    NDJSON,
 }
 
 impl fmt::Display for LogFormat {
@@ -95,6 +197,10 @@ impl fmt::Display for LogFormat {
             LogFormat::GELF => write!(f, "GELF"),
             LogFormat::JSON => write!(f, "JSON"),
             LogFormat::W3C => write!(f, "W3C"),
+            LogFormat::ApacheAccessLog => write!(f, "Apache Access Log"),
+            LogFormat::Logstash => write!(f, "Logstash"),
+            LogFormat::Log4jXML => write!(f, "Log4j XML"),
+            LogFormat::NDJSON => write!(f, "NDJSON"),
         }
     }
 }
@@ -197,6 +303,8 @@ impl fmt::Display for LogLevel {
 /// * `component` - A string slice that holds the component name.
 /// * `description` - A string slice that holds the description of the
 ///    log message.
+/// * `format` - A string slice that holds the log format.
+///
 ///
 pub struct Log {
     /// A string that holds a session ID. The session ID is a unique
@@ -281,6 +389,40 @@ impl Log {
                 "GELF:0|{}|{}|{}|{}|{}|GELF",
                 self.session_id, self.time, self.level, self.component, self.description
             ),
+            LogFormat::ApacheAccessLog => write!(
+                log_message,
+                "{} - - [{}] \"{}\" {} {}",
+                hostname::get().unwrap().to_string_lossy(),
+                self.time,
+                self.description,
+                self.level,
+                self.component
+            ),
+            LogFormat::Logstash => write!(
+                log_message,
+                "{{\"@timestamp\":\"{}\",\"level\":\"{}\",\"component\":\"{}\",\"message\":\"{}\"}}",
+                self.time,
+                self.level,
+                self.component,
+                self.description
+            ),
+            LogFormat::Log4jXML => write!(
+                log_message,
+                "<log4j:event logger=\"{}\" timestamp=\"{}\" level=\"{}\" thread=\"{}\"><log4j:message>{}</log4j:message></log4j:event>",
+                self.component,
+                self.time,
+                self.level,
+                self.session_id,
+                self.description
+            ),
+            LogFormat::NDJSON => write!(
+                log_message,
+                "{{\"timestamp\":\"{}\",\"level\":\"{}\",\"component\":\"{}\",\"message\":\"{}\"}}",
+                self.time,
+                self.level,
+                self.component,
+                self.description
+            ),
         };
 
         // Converting std::fmt::Error to std::io::Error
@@ -299,29 +441,21 @@ impl Log {
         Ok(())
     }
 
-    /// Creates a new instance of the `Log` struct with the provided
-    /// parameters.
+    /// Creates a new log entry with provided details.
     ///
     /// # Parameters
-    /// * `component`: A string slice representing the component.
-    /// * `description`: A string slice representing the log description.
-    /// * `format`: A string slice representing the log format.
-    /// * `level`: A string slice representing the log level.
-    /// * `session_id`: A string slice representing the session ID.
-    /// * `time`: A string slice representing the timestamp.
+    ///
+    /// - `session_id`: A unique identifier for the session.
+    /// - `time`: The timestamp in ISO 8601 format.
+    /// - `level`: The logging level.
+    /// - `component`: The component generating the log.
+    /// - `description`: The log message.
+    /// - `format`: The format for the log message.
     ///
     /// # Returns
     ///
-    /// A new instance of the `Log` struct with the provided parameters.
-    #[must_use]
-    pub fn new(
-        session_id: &str,
-        time: &str,
-        level: &LogLevel,
-        component: &str,
-        description: &str,
-        format: &LogFormat,
-    ) -> Self {
+    /// Returns a new instance of `Log`.
+    pub fn new(session_id: &str, time: &str, level: &LogLevel, component: &str, description: &str, format: &LogFormat) -> Self {
         Self {
             session_id: session_id.to_string(),
             time: time.to_string(),
@@ -331,55 +465,37 @@ impl Log {
             format: format.clone(),
         }
     }
-    /// Utility function to write logs
-    ///
-    /// Writes a log entry to the log file.
+    /// Writes a log entry to the log file using the provided details.
     ///
     /// # Parameters
     ///
-    /// * `log_level` - The severity level of the log entry.
-    /// * `process` - The name of the process that generated the log entry.
-    /// * `message` - The message to be logged.
-    /// * `log_format` - The format of the log entry.
+    /// - `log_level`: The severity level of the log.
+    /// - `process`: The process name generating the log.
+    /// - `message`: The log message.
+    /// - `log_format`: The format of the log message.
     ///
     /// # Returns
     ///
-    /// A `std::io::Result` type that indicates whether the log entry was
-    /// written successfully.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rlg::{Log, LogLevel, LogFormat};
-    ///
-    /// // Write a log entry with a log level of `info`, a process name of `main`, a message of "Hello, world!", and a log format of `Text`
-    /// Log::write_log_entry(LogLevel::INFO, "main", "Hello, world!", LogFormat::CLF).unwrap();
-    /// ```
-    pub fn write_log_entry(
-        log_level: LogLevel,
-        process: &str,
-        message: &str,
-        log_format: LogFormat,
-    ) -> std::io::Result<()> {
-        use vrd::Random;
-        use dtt::DateTime;
+    /// A `std::io::Result<()>` indicating the success or failure of writing the log entry.
+    pub fn write_log_entry(log_level: LogLevel, process: &str, message: &str, log_format: LogFormat) -> io::Result<()> {
+        // Configuration is loaded at the beginning of the function
+        let config = Config::load();
+
 
         let date = DateTime::new();
         let iso = date.iso_8601;
         let uuid = Random::default().int(0, 1_000_000_000).to_string();
 
-        let mut log_file = OpenOptions::new()
-            .append(true) // Set to append mode
-            .create(true) // Create the file if it does not exist
-            .open("RLG.log")?; // Open the log file
 
+        let mut log_file = OpenOptions::new()
+            .append(true)
+            .create(true)
+            .open(config.log_file_path)?; // Use the configured path
+
+        // Construct a new log entry and write it to the log file
         let log_entry = Log::new(
-            &uuid,
-            &iso,
-            &log_level,
-            process,
-            message,
-            &log_format,
+            &uuid, &iso, &log_level,
+            process, message, &log_format,
         );
 
         writeln!(log_file, "{}", log_entry)?;
@@ -455,6 +571,66 @@ impl fmt::Display for Log {
                     self.time,
                     self.component,
                     self.session_id
+                )
+                .expect("Unable to write log message");
+                Ok(())
+            },
+            LogFormat::ApacheAccessLog => {
+                write!(
+                    f,
+                    "{} - - [{}] \"{}\" {} {}",
+                    hostname::get().unwrap().to_string_lossy(),
+                    self.time,
+                    self.description,
+                    self.level,
+                    self.component
+                )
+                .expect("Unable to write log message");
+                Ok(())
+            },
+            LogFormat::Logstash => {
+                write!(
+                    f,
+                    r#"{{
+                            "@timestamp": "{}",
+                            "level": "{}",
+                            "component": "{}",
+                            "message": "{}"
+                        }}"#,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )
+                .expect("Unable to write log message");
+                Ok(())
+            },
+            LogFormat::Log4jXML => {
+                write!(
+                    f,
+                    r#"<log4j:event logger="{}" timestamp="{}" level="{}" thread="{}"><log4j:message>{}</log4j:message></log4j:event>"#,
+                    self.component,
+                    self.time,
+                    self.level,
+                    self.session_id,
+                    self.description
+                )
+                .expect("Unable to write log message");
+                Ok(())
+            },
+            LogFormat::NDJSON => {
+                write!(
+                    f,
+                    r#"{{
+                            "timestamp": "{}",
+                            "level": "{}",
+                            "component": "{}",
+                            "message": "{}"
+                        }}"#,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 .expect("Unable to write log message");
                 Ok(())
