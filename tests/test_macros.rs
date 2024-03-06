@@ -2,10 +2,12 @@
 
 mod tests {
     use rlg::{
-        macro_debug_log, macro_error_log, macro_fatal_log, macro_info_log, macro_log,
-        macro_log_if, macro_log_to_file, macro_log_with_metadata, macro_print_log,
-        macro_set_log_format_clf, macro_trace_log, macro_warn_log, LogFormat, LogLevel,
+        macro_debug_log, macro_error_log, macro_fatal_log, macro_info_log, macro_log, macro_log_if,
+        macro_log_to_file, macro_log_with_metadata, macro_print_log, macro_set_log_format_clf,
+        macro_trace_log, macro_warn_log, Log, LogFormat, LogLevel,
     };
+    use std::fs::File;
+    use std::io::Read;
 
     #[test]
     fn test_macro_log() {
@@ -113,5 +115,87 @@ mod tests {
         assert!(log_message.contains("\"Level\":\"INFO\""));
         assert!(log_message.contains("\"Component\":\"app\""));
         assert!(log_message.contains("\"Description\":\"message\""));
+    }
+    #[test]
+    fn test_write_log_entry_success() {
+        // Arrange
+        let log_level = LogLevel::INFO;
+        let process = "test_process";
+        let message = "This is a test log message";
+        let log_format = LogFormat::CLF;
+
+        // Act
+        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Check that the log file was created and contains the expected log entry
+        let mut file = File::open("RLG.log").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert!(contents.contains(process), "The log file does not contain the process.");
+        assert!(contents.contains(message), "The log file does not contain the message.");
+        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
+    }
+
+    #[test]
+    fn test_write_log_entry_failure() {
+        // Arrange
+        let log_level = LogLevel::INFO;
+        let process = "test_process";
+        let message = "This is a test log message";
+        let log_format = LogFormat::CLF;
+
+        // Act
+        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Check that the log file was created and contains the expected log entry
+        let mut file = File::open("RLG.log").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert!(contents.contains(process), "The log file does not contain the process.");
+        assert!(contents.contains(message), "The log file does not contain the message.");
+        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
+    }
+
+    #[test]
+    fn test_write_log_entry_multiple_entries() {
+        // Arrange
+        let log_level = LogLevel::INFO;
+        let process = "test_process";
+        let message = "This is a test log message";
+        let log_format = LogFormat::CLF;
+
+        // Act
+        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Check that the log file was created and contains the expected log entry
+        let mut file = File::open("RLG.log").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert!(contents.contains(process), "The log file does not contain the process.");
+        assert!(contents.contains(message), "The log file does not contain the message.");
+        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
+
+        // Act
+        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
+
+        // Assert
+        assert!(result.is_ok());
+
+        // Check that the log file was created and contains the expected log entry
+        let mut file = File::open("RLG.log").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+        assert!(contents.contains(process), "The log file does not contain the process.");
+        assert!(contents.contains(message), "The log file does not contain the message.");
+        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
     }
 }

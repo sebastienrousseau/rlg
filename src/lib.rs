@@ -60,7 +60,8 @@
 
 use tokio::io::{self, AsyncWriteExt};
 use std::fmt;
-use std::fmt::Write as FmtWrite; // Import the write trait for formatting strings
+use std::fmt::Write as FmtWrite; use std::fs::OpenOptions;
+// Import the write trait for formatting strings
 use std::io::{Write, stdout}; // Import the standard library's Write trait for flushing stdout
 
 /// The `macros` module contains functions for generating macros.
@@ -329,6 +330,61 @@ impl Log {
             description: description.to_string(),
             format: format.clone(),
         }
+    }
+    /// Utility function to write logs
+    ///
+    /// Writes a log entry to the log file.
+    ///
+    /// # Parameters
+    ///
+    /// * `log_level` - The severity level of the log entry.
+    /// * `process` - The name of the process that generated the log entry.
+    /// * `message` - The message to be logged.
+    /// * `log_format` - The format of the log entry.
+    ///
+    /// # Returns
+    ///
+    /// A `std::io::Result` type that indicates whether the log entry was
+    /// written successfully.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rlg::{Log, LogLevel, LogFormat};
+    ///
+    /// // Write a log entry with a log level of `info`, a process name of `main`, a message of "Hello, world!", and a log format of `Text`
+    /// Log::write_log_entry(LogLevel::INFO, "main", "Hello, world!", LogFormat::CLF).unwrap();
+    /// ```
+    pub fn write_log_entry(
+        log_level: LogLevel,
+        process: &str,
+        message: &str,
+        log_format: LogFormat,
+    ) -> std::io::Result<()> {
+        use vrd::Random;
+        use dtt::DateTime;
+
+        let date = DateTime::new();
+        let iso = date.iso_8601;
+        let uuid = Random::default().int(0, 1_000_000_000).to_string();
+
+        let mut log_file = OpenOptions::new()
+            .append(true) // Set to append mode
+            .create(true) // Create the file if it does not exist
+            .open("RLG.log")?; // Open the log file
+
+        let log_entry = Log::new(
+            &uuid,
+            &iso,
+            &log_level,
+            process,
+            message,
+            &log_format,
+        );
+
+        writeln!(log_file, "{}", log_entry)?;
+
+        Ok(())
     }
 }
 

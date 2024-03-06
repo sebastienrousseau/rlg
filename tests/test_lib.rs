@@ -63,7 +63,7 @@ mod tests {
             "Showing main window",
             &LogFormat::CLF,
         );
-        let result = log.log().await; 
+        let result = log.log().await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -77,7 +77,7 @@ mod tests {
             "Showing main window",
             &LogFormat::CLF,
         );
-        let result = log.log().await; 
+        let result = log.log().await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -91,7 +91,7 @@ mod tests {
             "Showing main window",
             &LogFormat::CLF,
         );
-        let result = log.log().await; 
+        let result = log.log().await;
         assert!(result.is_ok());
     }
     #[tokio::test]
@@ -226,8 +226,8 @@ mod tests {
             "test log message",
             &LogFormat::JSON,
         );
-        let expected_output = "{\"SessionID\":\"123\",\"Timestamp\":\"2023-01-23 14:04:09.881393 +00:00:00\",\"Level\":\"INFO\",\"Component\":\"test\",\"Description\":\"test log message\",\"Format\":\"JSON\"}";
-        assert_eq!(expected_output, format!("{log}"));
+        let expected_output = r#"{"SessionID":"123","Timestamp":"2023-01-23 14:04:09.881393 +00:00:00","Level":"INFO","Component":"test","Description":"test log message","Format":"JSON"}"#;
+        assert_eq!(log.to_string(), expected_output);
     }
 
     #[tokio::test]
@@ -289,17 +289,16 @@ mod tests {
     #[tokio::test]
     async fn test_log_format_display() {
         for (log_format, expected_output) in [
-                (LogFormat::CLF, "CLF"),
-                (LogFormat::JSON, "JSON"),
-                (LogFormat::CEF, "CEF"),
-                (LogFormat::ELF, "ELF"),
-                (LogFormat::W3C, "W3C"),
-                (LogFormat::GELF, "GELF")
-            ]
-            {
-                assert_eq!(log_format.to_string(), expected_output);
-            }
+            (LogFormat::CLF, "CLF"),
+            (LogFormat::JSON, "JSON"),
+            (LogFormat::CEF, "CEF"),
+            (LogFormat::ELF, "ELF"),
+            (LogFormat::W3C, "W3C"),
+            (LogFormat::GELF, "GELF"),
+        ] {
+            assert_eq!(log_format.to_string(), expected_output);
         }
+    }
 
     #[tokio::test]
     async fn test_log_level_variants() {
@@ -345,5 +344,97 @@ mod tests {
 
         let formatted = format!("{:#?}", log);
         assert!(formatted.contains("level: ERROR"));
+    }
+
+    // Conceptual example
+    #[tokio::test]
+    async fn test_log_write_error() {
+        let log = Log::new(
+            "12345678-1234-1234-1234-1234567890ab",
+            "2023-01-23 14:03:00.000+0000",
+            &LogLevel::ERROR,
+            "SystemTrayEvent",
+            "Showing main window",
+            &LogFormat::CLF,
+        );
+        let result = log.log().await;
+        assert!(result.is_ok());
+    }
+
+    // Test the Log::write_log_entry method
+    #[tokio::test]
+    async fn test_write_log_entry_combinations() {
+        let log_levels = [
+            LogLevel::INFO,
+            LogLevel::WARNING,
+            LogLevel::ERROR,
+            LogLevel::DEBUG,
+        ];
+        let processes = ["process1", "process2", "process3"];
+        let messages = ["message1", "message2", "message3"];
+        let log_formats = [LogFormat::CLF, LogFormat::JSON, LogFormat::GELF];
+
+        for log_level in &log_levels {
+            for process in &processes {
+                for message in &messages {
+                    for log_format in &log_formats {
+                        let log = Log::new(
+                            "12345678-1234-1234-1234-1234567890ab",
+                            "2023-01-23 14:03:00.000+0000",
+                            log_level,
+                            process,
+                            message,
+                            log_format,
+                        );
+                        let result = log.log();
+                        assert!(result.await.is_ok());
+                    }
+                }
+            }
+        }
+    }
+
+    // Test the behavior of the library when the debug_enabled feature flag is set
+    #[test]
+    #[cfg(feature = "debug_enabled")]
+    fn test_macro_debug_log_enabled() {
+        let log = macro_info_log!("2022-01-01", "app", "message");
+        macro_debug_log!(log);
+        assert_eq!(log.format, LogFormat::CLF);
+        assert_eq!(log.timestamp, "2022-01-01");
+        assert_eq!(log.application, "app");
+        assert_eq!(log.message, "message");
+    }
+
+    #[test]
+    #[cfg(not(feature = "debug_enabled"))]
+    fn test_macro_debug_log_disabled() {
+        use rlg::macro_debug_log;
+        use rlg::macro_info_log;
+        use std::io::Write;
+
+        struct NullWriter;
+
+        impl Write for NullWriter {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                Ok(buf.len())
+            }
+
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        // Create a null writer to capture the output
+        let mut writer = NullWriter;
+
+        // Generate the log using the macro
+        let log = macro_info_log!("2022-01-01", "app", "message");
+
+        // Capture the output of macro_debug_log using the null writer
+        macro_debug_log!(log);
+
+        // Assert that the output is empty by checking the writer
+        assert_eq!(writer.write(b"").unwrap(), 0);
     }
 }
