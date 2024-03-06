@@ -440,9 +440,13 @@ mod tests {
         // Assert that the log is unchanged
         assert_eq!(log.format, LogFormat::CLF);
     }
+
     // Test for Apache Access Log Format
     #[tokio::test]
     async fn test_log_apache_access_format() {
+        // Dynamically get the hostname
+        let hostname = hostname::get().expect("Failed to get hostname").to_string_lossy().into_owned();
+
         let log = Log::new(
             "session_id_123",
             "2022-01-01T00:00:00Z",
@@ -451,11 +455,13 @@ mod tests {
             "description_a",
             &LogFormat::ApacheAccessLog,
         );
-        // Expected format: "%h %l %u %t \"%r\" %>s %b"
-        // This is a simplified assertion; adjust according to your actual Apache Access Log format implementation
-        let expected_output = "rousseau-mbp-m1 - - [2022-01-01T00:00:00Z] \"description_a\" INFO component_a";
+
+        // Construct the expected output using the dynamic hostname
+        let expected_output = format!("{} - - [2022-01-01T00:00:00Z] \"description_a\" INFO component_a", hostname);
+
         assert_eq!(log.to_string(), expected_output);
     }
+
     // Test for Logstash Format
     #[tokio::test]
     async fn test_log_logstash_format() {
