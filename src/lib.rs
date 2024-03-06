@@ -74,7 +74,7 @@
 //! ### Custom Log Configuration
 //!
 //! ```rust,no_run
-//! use rlg::{Config, LogLevel, Log, LogFormat};
+//! use rlg::{config::Config, LogLevel, Log, LogFormat};
 //!
 //! // Customize log file path
 //! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
@@ -138,29 +138,16 @@
 
 use tokio::io::{self, AsyncWriteExt};
 use std::{
-    env,
     fmt::{self, Write as FmtWrite},
     fs::OpenOptions,
     io::{stdout, Write}
 };
 use vrd::Random;
 use dtt::DateTime;
+use crate::config::Config;
 
-
-/// Configuration struct for logging system.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub struct Config {
-    /// Path and name of the log file.
-    pub log_file_path: String,
-}
-
-impl Config {
-    /// Loads configuration from environment variables or defaults.
-    pub fn load() -> Config {
-        let log_file_path = env::var("LOG_FILE_PATH").unwrap_or_else(|_| "RLG.log".into());
-        Config { log_file_path }
-    }
-}
+/// The `config` module contains the configuration struct for the logging system.
+pub mod config;
 
 /// The `macros` module contains functions for generating macros.
 pub mod macros;

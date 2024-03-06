@@ -8,7 +8,7 @@ mod tests {
     use self::dtt::DateTime;
     use self::rlg::LogLevel::ERROR;
     use self::rlg::{Log, LogFormat, LogLevel};
-    use rlg::LogFormat::CLF;
+    use crate::tests::LogFormat::CLF;
 
     #[tokio::test]
     async fn test_log_common_format() {
