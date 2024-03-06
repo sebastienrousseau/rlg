@@ -440,7 +440,6 @@ mod tests {
         // Assert that the log is unchanged
         assert_eq!(log.format, LogFormat::CLF);
     }
-
     // Test for Apache Access Log Format
     #[tokio::test]
     async fn test_log_apache_access_format() {
