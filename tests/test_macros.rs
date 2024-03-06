@@ -128,7 +128,7 @@ mod tests {
 
         // Clear or create the test log file before writing entries
         // Adjusted to use ? for error propagation
-        File::create(&test_log_file)?;
+        File::create(test_log_file)?;
 
         // Act
         // Assuming Log::write_log_entry correctly handles writing to `test_log_file`
@@ -139,7 +139,7 @@ mod tests {
         // Need to open the file with read permission
         let mut contents = String::new();
         {
-            let mut file = File::open(&test_log_file)?; // Open for reading
+            let mut file = File::open(test_log_file)?; // Open for reading
             file.read_to_string(&mut contents)?;
         }
         assert!(contents.contains(process), "The log file does not contain the process.");
