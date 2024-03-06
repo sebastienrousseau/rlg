@@ -6,9 +6,10 @@ mod tests {
     extern crate rlg;
 
     use self::dtt::DateTime;
-    use self::rlg::LogLevel::ERROR;
-    use self::rlg::{Log, LogLevel};
+    use self::rlg::Log;
     use self::rlg::log_format::LogFormat;
+    use self::rlg::log_level::LogLevel;
+    use self::rlg::log_level::LogLevel::ERROR;
     use crate::tests::LogFormat::CLF;
 
     #[tokio::test]

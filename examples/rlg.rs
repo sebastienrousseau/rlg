@@ -14,10 +14,11 @@ use rlg::{
     macro_print_log,
     macro_trace_log,
     // Importing Log related structs and enums
-    Log,
-    LogLevel
+    Log
 };
 use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
+
 
 
 /// Main function

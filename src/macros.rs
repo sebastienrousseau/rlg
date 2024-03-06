@@ -28,7 +28,7 @@ macro_rules! macro_info_log {
         $crate::Log::new(
             &vrd::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
-            &$crate::LogLevel::INFO,
+            &$crate::log_level::LogLevel::INFO,
             $component,
             $description,
             &$crate::log_format::LogFormat::CLF,
