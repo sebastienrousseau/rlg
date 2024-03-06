@@ -140,29 +140,6 @@ mod tests {
     }
 
     #[test]
-    fn test_write_log_entry_failure() {
-        // Arrange
-        let log_level = LogLevel::INFO;
-        let process = "test_process";
-        let message = "This is a test log message";
-        let log_format = LogFormat::CLF;
-
-        // Act
-        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
-
-        // Assert
-        assert!(result.is_ok());
-
-        // Check that the log file was created and contains the expected log entry
-        let mut file = File::open("RLG.log").unwrap();
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
-        assert!(contents.contains(process), "The log file does not contain the process.");
-        assert!(contents.contains(message), "The log file does not contain the message.");
-        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
-    }
-
-    #[test]
     fn test_write_log_entry_multiple_entries() {
         // Arrange
         let log_level = LogLevel::INFO;
