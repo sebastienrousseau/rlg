@@ -850,6 +850,7 @@ dependencies = [
  "criterion",
  "dtt",
  "hostname",
+ "serde_json",
  "tokio",
  "vrd",
 ]

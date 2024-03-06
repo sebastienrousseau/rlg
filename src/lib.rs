@@ -89,7 +89,7 @@
 //!     &LogLevel::INFO,
 //!     "MyComponent",
 //!     "This is a sample log message",
-//!     &LogFormat::Syslog, // Example showing Syslog format usage
+//!     &LogFormat::ApacheAccessLog
 //! );
 //!
 //! // Log the entry asynchronously

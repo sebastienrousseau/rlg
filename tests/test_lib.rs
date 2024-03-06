@@ -440,4 +440,66 @@ mod tests {
         // Assert that the log is unchanged
         assert_eq!(log.format, LogFormat::CLF);
     }
+    // Test for Apache Access Log Format
+    #[tokio::test]
+    async fn test_log_apache_access_format() {
+        let log = Log::new(
+            "session_id_123",
+            "2022-01-01T00:00:00Z",
+            &LogLevel::INFO,
+            "component_a",
+            "description_a",
+            &LogFormat::ApacheAccessLog,
+        );
+        // Expected format: "%h %l %u %t \"%r\" %>s %b"
+        // This is a simplified assertion; adjust according to your actual Apache Access Log format implementation
+        let expected_output = "rousseau-mbp-m1 - - [2022-01-01T00:00:00Z] \"description_a\" INFO component_a";
+        assert_eq!(log.to_string(), expected_output);
+    }
+    // Test for Logstash Format
+    #[tokio::test]
+    async fn test_log_logstash_format() {
+        let log = Log::new(
+            "session_id_123",
+            "2022-01-01T00:00:00Z",
+            &LogLevel::INFO,
+            "component_a",
+            "description_a",
+            &LogFormat::Logstash,
+        );
+        // Print the actual output for debugging
+        let log_string = log.to_string();
+        let log_json: serde_json::Value = serde_json::from_str(&log_string).expect("Failed to parse JSON");
+        assert_eq!(log_json["@timestamp"], "2022-01-01T00:00:00Z");
+    }
+    // Test for Log4j XML Format
+    #[tokio::test]
+    async fn test_log_log4j_xml_format() {
+        let log = Log::new(
+            "session_id_123",
+            "2022-01-01T00:00:00Z",
+            &LogLevel::INFO,
+            "component_a",
+            "description_a",
+            &LogFormat::Log4jXML,
+        );
+        // Expected XML format
+        let expected_output = "<log4j:event logger=\"component_a\" timestamp=\"2022-01-01T00:00:00Z\" level=\"INFO\" thread=\"session_id_123\"><log4j:message>description_a</log4j:message></log4j:event>";
+        assert_eq!(log.to_string(), expected_output);
+    }
+    // Test for NDJSON Format
+    #[tokio::test]
+    async fn test_log_ndjson_format() {
+        let log = Log::new(
+            "session_id_123",
+            "2022-01-01T00:00:00Z",
+            &LogLevel::INFO,
+            "component_a",
+            "description_a",
+            &LogFormat::NDJSON,
+        );
+        // Expected NDJSON format
+        let expected_output = "{\n                            \"timestamp\": \"2022-01-01T00:00:00Z\",\n                            \"level\": \"INFO\",\n                            \"component\": \"component_a\",\n                            \"message\": \"description_a\"\n                        }";
+        assert_eq!(log.to_string(), expected_output);
+    }
 }
