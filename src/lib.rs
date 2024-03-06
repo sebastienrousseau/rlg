@@ -429,18 +429,20 @@ impl Log {
             ),
         };
 
-        // Converting std::fmt::Error to std::io::Error
-        if let Err(e) = write_result {
-            return Err(io::Error::new(io::ErrorKind::Other, e));
-        }
+        // Handle potential formatting errors
+        write_result.map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Formatting error: {}", e)))?;
 
-        // Writing to a file asynchronously
-        let mut file = tokio::fs::File::create("RLG.log").await?;
-        file.write_all(log_message.as_bytes()).await?;
+        // Attempt to write the log message to a file
+        let config = Config::load();
+        let mut file = tokio::fs::File::create(&config.log_file_path).await
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to open log file '{}': {}", config.log_file_path, e)))?;
 
-        // Printing to stdout and flushing
+        file.write_all(log_message.as_bytes()).await
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to write to log file: {}", e)))?;
+
+        // Printing to stdout and flushing, with error handling if needed
         println!("{log_message}");
-        stdout().flush()?;
+        stdout().flush().map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to flush stdout: {}", e)))?;
 
         Ok(())
     }
@@ -482,27 +484,24 @@ impl Log {
     ///
     /// A `std::io::Result<()>` indicating the success or failure of writing the log entry.
     pub fn write_log_entry(log_level: LogLevel, process: &str, message: &str, log_format: LogFormat) -> io::Result<()> {
-        // Configuration is loaded at the beginning of the function
         let config = Config::load();
-
-
-        let date = DateTime::new();
-        let iso = date.iso_8601;
-        let uuid = Random::default().int(0, 1_000_000_000).to_string();
-
-
         let mut log_file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(config.log_file_path)?; // Use the configured path
+            .open(&config.log_file_path)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to open or create log file '{}': {}", config.log_file_path, e)))?;
 
-        // Construct a new log entry and write it to the log file
         let log_entry = Log::new(
-            &uuid, &iso, &log_level,
-            process, message, &log_format,
+            &Random::default().int(0, 1_000_000_000).to_string(),
+            &DateTime::new().iso_8601,
+            &log_level,
+            process,
+            message,
+            &log_format,
         );
 
-        writeln!(log_file, "{}", log_entry)?;
+        writeln!(log_file, "{}", log_entry)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to write log entry: {}", e)))?;
 
         Ok(())
     }
