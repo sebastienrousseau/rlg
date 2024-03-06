@@ -436,5 +436,8 @@ mod tests {
 
         // Assert that the output is empty by checking the writer
         assert_eq!(writer.write(b"").unwrap(), 0);
+
+        // Assert that the log is unchanged
+        assert_eq!(log.format, LogFormat::CLF);
     }
 }
