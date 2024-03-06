@@ -13,13 +13,10 @@ use rlg::{
     macro_log_with_metadata,
     macro_print_log,
     macro_trace_log,
-    // Importing Log related structs and enums
-    Log
 };
+use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
-
-
 
 /// Main function
 fn main() {

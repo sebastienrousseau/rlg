@@ -6,7 +6,7 @@ mod tests {
     extern crate rlg;
 
     use self::dtt::DateTime;
-    use self::rlg::Log;
+    use self::rlg::log::Log;
     use self::rlg::log_format::LogFormat;
     use self::rlg::log_level::LogLevel;
     use self::rlg::log_level::LogLevel::ERROR;

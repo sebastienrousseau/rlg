@@ -8,7 +8,7 @@
 #[macro_export]
 macro_rules! macro_log {
     ($session_id:expr, $time:expr, $level:expr, $component:expr, $description:expr, $format:expr) => {
-        $crate::Log::new(
+        $crate::log::Log::new(
             $session_id,
             $time,
             $level,
@@ -25,7 +25,7 @@ macro_rules! macro_log {
 #[macro_export]
 macro_rules! macro_info_log {
     ($time:expr, $component:expr, $description:expr) => {
-        $crate::Log::new(
+        $crate::log::Log::new(
             &vrd::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &$crate::log_level::LogLevel::INFO,
@@ -169,7 +169,7 @@ macro_rules! macro_log_if {
 macro_rules! macro_log_with_metadata {
     ($session_id:expr, $time:expr, $level:expr, $component:expr, $description:expr, $format:expr) => {
         {
-            let log = $crate::Log::new(
+            let log = $crate::log::Log::new(
                 $session_id,
                 $time,
                 $level,
