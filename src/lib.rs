@@ -28,6 +28,11 @@
 //!    - JavaScript Object Notation (JSON)
 //!    - NCSA Common Log Format (CLF)
 //!    - W3C Extended Log File Format (W3C)
+//!    - Syslog Format
+//!    - Apache Access Log Format
+//!    - Logstash Format
+//!    - Log4j XML Format
+//!    - NDJSON (Newline Delimited JSON)
 //!    - and many more.
 //!
 //! ## Usage
@@ -57,7 +62,7 @@
 //!     &LogLevel::INFO,
 //!     "MyComponent",
 //!     "This is a sample log message",
-//!     &LogFormat::JSON,
+//!     &LogFormat::JSON, // Choose from various formats like JSON, Syslog, NDJSON, etc.
 //! );
 //!
 //! // Log the entry asynchronously
@@ -84,7 +89,7 @@
 //!     &LogLevel::INFO,
 //!     "MyComponent",
 //!     "This is a sample log message",
-//!     &LogFormat::JSON,
+//!     &LogFormat::Syslog, // Example showing Syslog format usage
 //! );
 //!
 //! // Log the entry asynchronously
@@ -106,7 +111,7 @@
 //!     &LogLevel::INFO,
 //!     "MyComponent",
 //!     "This is a sample log message",
-//!     &LogFormat::JSON,
+//!     &LogFormat::NDJSON, // Using NDJSON format for this example
 //! );
 //!
 //! // Log the entry asynchronously and handle potential errors
@@ -117,7 +122,6 @@
 //!     }
 //! });
 //! ```
-//!
 #![cfg_attr(feature = "bench", feature(test))]
 #![deny(dead_code)]
 #![deny(missing_debug_implementations)]
