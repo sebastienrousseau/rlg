@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (b11fbfbf3 2024-02-03)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (7d3702e47 2024-03-06)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rlg/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -165,266 +165,16 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
-<a href="#402" id="402">402</a>
-<a href="#403" id="403">403</a>
-<a href="#404" id="404">404</a>
-<a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
-</pre></div><pre class="rust"><code><span class="comment">// Copyright © 2022-2023 Mini Functions. All rights reserved.
+</pre></div><pre class="rust"><code><span class="comment">// Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 </span><span class="doccomment">//!
-//! # A Rust library that implements application-level logging with a simple, readable output format
+//! # RustLogs (RLG)
 //!
-//! [![Rust](https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/logo/logo-rlg.svg)](https://minifunctions.com)
+//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format. 
+//! The library provides logging APIs and various helper macros that simplify many common logging tasks.
 //!
-//! &lt;center&gt;
-//!
-//! [![Rust](https://img.shields.io/badge/rust-f04041?style=for-the-badge&amp;labelColor=c0282d&amp;logo=rust)](https://www.rust-lang.org)
-//! [![Crates.io](https://img.shields.io/crates/v/mini-functions.svg?style=for-the-badge&amp;color=success&amp;labelColor=27A006)](https://crates.io/crates/mini-functions)
-//! [![Lib.rs](https://img.shields.io/badge/lib.rs-v0.0.8-success.svg?style=for-the-badge&amp;color=8A48FF&amp;labelColor=6F36E4)](https://lib.rs/crates/mini-functions)
-//! [![GitHub](https://img.shields.io/badge/github-555555?style=for-the-badge&amp;labelColor=000000&amp;logo=github)](https://github.com/sebastienrousseau/mini-functions)
-//! [![License](https://img.shields.io/crates/l/mini-functions.svg?style=for-the-badge&amp;color=007EC6&amp;labelColor=03589B)](http://opensource.org/licenses/MIT)
-//!
-//! &lt;/center&gt;
+//! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
 //!
 //! ## Overview
 //!
@@ -432,28 +182,120 @@
 //! logging in a simple, readable output format. The library provides
 //! logging APIs and various helper macros that simplify many common
 //! logging tasks.
-
 //!
 //! ## Features
 //!
-//!- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-//!  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE` and `WARNING`,
-//!- Provides structured log formats that are easy to parse and filter,
-//!- Compatible with multiple output formats including:
-//!  - Common Event Format (CEF),
-//!  - Extended Log Format (ELF),
-//!  - Graylog Extended Log Format (GELF),
-//!  - JavaScript Object Notation (JSON),
-//!  - NCSA Common Log Format (CLF),
-//!  - W3C Extended Log File Format (W3C),
-//!  - and many more
+//! - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
+//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`.
+//! - Provides structured log formats that are easy to parse and filter.
+//! - Compatible with multiple output formats including:
+//!    - Common Event Format (CEF)
+//!    - Extended Log Format (ELF)
+//!    - Graylog Extended Log Format (GELF)
+//!    - JavaScript Object Notation (JSON)
+//!    - NCSA Common Log Format (CLF)
+//!    - W3C Extended Log File Format (W3C)
+//!    - Syslog Format
+//!    - Apache Access Log Format
+//!    - Logstash Format
+//!    - Log4j XML Format
+//!    - NDJSON (Newline Delimited JSON)
+//!    - and many more.
 //!
 //! ## Usage
 //!
-//! - [`serde`][]: Enable serialization/deserialization via serde
+//! Add this to your `Cargo.toml`:
 //!
-//! [`serde`]: https://github.com/serde-rs/serde
+//! ```toml
+//! [dependencies]
+//! rlg = "0.0.3"
+//! ```
 //!
+//! ## Configuration
+//!
+//! By default, RustLogs (RLG) logs to a file named "RLG.log" in the current directory. You can customize the log file path by setting the `LOG_FILE_PATH` environment variable.
+//!
+//! ## Examples
+//!
+//! ### Basic Logging
+//!
+//! ```rust
+//! use rlg::log::Log;
+//! use rlg::log_format::LogFormat;
+//! use rlg::log_level::LogLevel;
+//!
+//! // Create a new log entry
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &amp;LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &amp;LogFormat::JSON, // Choose from various formats like JSON, Syslog, NDJSON, etc.
+//! );
+//!
+//! // Log the entry asynchronously
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     log_entry.log().await.unwrap();
+//! });
+//! ```
+//!
+//! ### Custom Log Configuration
+//!
+//! ```rust,no_run
+//! use rlg::config::Config;
+//! use rlg::log::Log;
+//! use rlg::log_format::LogFormat;
+//! use rlg::log_level::LogLevel;
+//!
+//! // Customize log file path
+//! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
+//!
+//! // Load custom configuration
+//! let config = Config::load();
+//!
+//! // Create a new log entry with custom configuration
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &amp;LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &amp;LogFormat::ApacheAccessLog
+//! );
+//!
+//! // Log the entry asynchronously
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     log_entry.log().await.unwrap();
+//! });
+//! ```
+//! ## Error Handling
+//!
+//! Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result&lt;(), io::Error&gt;` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
+//!
+//! ```rust,no_run
+//! use rlg::log::Log;
+//! use rlg::log_format::LogFormat;
+//! use rlg::log_level::LogLevel;
+//!
+//! // Create a new log entry
+//! let log_entry = Log::new(
+//!     "12345",
+//!     "2023-01-01T12:00:00Z",
+//!     &amp;LogLevel::INFO,
+//!     "MyComponent",
+//!     "This is a sample log message",
+//!     &amp;LogFormat::NDJSON, // Using NDJSON format for this example
+//! );
+//!
+//! // Log the entry asynchronously and handle potential errors
+//! tokio::runtime::Runtime::new().unwrap().block_on(async {
+//!     match log_entry.log().await {
+//!         Ok(_) =&gt; println!("Log entry successfully written"),
+//!         Err(err) =&gt; eprintln!("Error logging entry: {}", err),
+//!     }
+//! });
+//! ```
 </span><span class="attr">#![cfg_attr(feature = <span class="string">"bench"</span>, feature(test))]
 #![deny(dead_code)]
 #![deny(missing_debug_implementations)]
@@ -461,359 +303,31 @@
 #![forbid(unsafe_code)]
 #![warn(unreachable_pub)]
 #![doc(
-    html_favicon_url = <span class="string">"https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg"</span>,
-    html_logo_url = <span class="string">"https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg"</span>,
+    html_favicon_url = <span class="string">"https://kura.pro/rlg/images/favicon.ico"</span>,
+    html_logo_url = <span class="string">"https://kura.pro/rlg/images/logos/rlg.svg"</span>,
     html_root_url = <span class="string">"https://docs.rs/rlg"
 </span>)]
 #![crate_name = <span class="string">"rlg"</span>]
 #![crate_type = <span class="string">"lib"</span>]
 
-</span><span class="kw">use </span>tokio::io::{<span class="self">self</span>, AsyncWriteExt};
-<span class="kw">use </span>std::fmt;
-<span class="kw">use </span>std::fmt::Write <span class="kw">as </span>FmtWrite; <span class="comment">// Import the write trait for formatting strings
-</span><span class="kw">use </span>std::io::{Write, stdout}; <span class="comment">// Import the standard library's Write trait for flushing stdout
+</span><span class="kw">use </span><span class="kw">crate</span>::log_format::LogFormat;
+<span class="kw">use </span><span class="kw">crate</span>::config::Config;
+<span class="kw">use </span><span class="kw">crate</span>::log_level::LogLevel;
 
-</span><span class="doccomment">/// The `macros` module contains functions for generating macros.
+
+<span class="doccomment">/// The `config` module contains the configuration struct for the logging system.
+</span><span class="kw">pub mod </span>config;
+
+<span class="doccomment">/// The `log` module contains the log struct and its implementation.
+</span><span class="kw">pub mod </span>log;
+
+<span class="doccomment">/// The `log_format` module contains the log format enumeration and its implementation.
+</span><span class="kw">pub mod </span>log_format;
+
+<span class="doccomment">/// The `log_level` module contains the log level enumeration and its implementation.
+</span><span class="kw">pub mod </span>log_level;
+
+<span class="doccomment">/// The `macros` module contains functions for generating macros.
 </span><span class="kw">pub mod </span>macros;
 
-<span class="attr">#[derive(Debug, Clone, PartialEq, PartialOrd)]
-</span><span class="doccomment">/// An enumeration of the different log formats that can be used.
-</span><span class="kw">pub enum </span>LogFormat {
-    <span class="doccomment">/// The log format is set to CLF.
-    </span>CLF,
-    <span class="doccomment">/// The log format is set to JSON.
-    </span>JSON,
-    <span class="doccomment">/// The log format is set to CEF.
-    </span>CEF,
-    <span class="doccomment">/// The log format is set to ELF.
-    </span>ELF,
-    <span class="doccomment">/// The log format is set to W3C.
-    </span>W3C,
-    <span class="doccomment">/// The log format is set to GELF.
-    </span>GELF,
-}
-
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>LogFormat {
-    <span class="doccomment">/// Implements [`LogFormat`] to display the log format as a string.
-    /// It allows the LogFormat enumeration to be used with the write!
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
-        <span class="kw">match </span><span class="self">self </span>{
-            LogFormat::CEF =&gt; <span class="macro">write!</span>(f, <span class="string">"CEF"</span>),
-            LogFormat::CLF =&gt; <span class="macro">write!</span>(f, <span class="string">"CLF"</span>),
-            LogFormat::ELF =&gt; <span class="macro">write!</span>(f, <span class="string">"ELF"</span>),
-            LogFormat::GELF =&gt; <span class="macro">write!</span>(f, <span class="string">"GELF"</span>),
-            LogFormat::JSON =&gt; <span class="macro">write!</span>(f, <span class="string">"JSON"</span>),
-            LogFormat::W3C =&gt; <span class="macro">write!</span>(f, <span class="string">"W3C"</span>),
-        }
-    }
-}
-
-<span class="doccomment">/// Implements [`Log`] to log a message to the console with a simple,
-/// readable output format.
-///
-/// # Arguments
-///
-/// * `session_id` - A string slice that holds a session ID. The session
-///    ID is a unique identifier for the current session. A random GUID
-///    (Globally Unique Identifier) is generated by default.
-/// * `time` - A string slice that holds the timestamp in ISO 8601
-///    format.
-/// * `level` - A string slice that holds the level (INFO, WARN, ERROR,
-///     etc.).
-/// * `component` - A string slice that holds the component name.
-/// * `description` - A string slice that holds the description of the
-///    log message.
-///
-
-</span><span class="attr">#[derive(Debug, Clone, PartialEq, PartialOrd)]
-</span><span class="doccomment">/// An enumeration of the different levels that a log message can have.
-/// Each variant of the enumeration represents a different level of
-/// importance.
-///
-/// # Arguments
-///
-/// * `ALL` - The log level is set to all.
-/// * `DEBUG` - The log level is set to debug.
-/// * `DISABLED` - The log level is set to disabled.
-/// * `ERROR` - The log level is set to error.
-/// * `FATAL` - The log level is set to fatal.
-/// * `INFO` - The log level is set to info.
-/// * `NONE` - The log level is set to none.
-/// * `TRACE` - The log level is set to trace.
-/// * `VERBOSE` - The log level is set to verbose.
-/// * `WARNING` - The log level is set to warning.
-///
-</span><span class="kw">pub enum </span>LogLevel {
-    <span class="doccomment">/// The log level is set to all.
-    </span>ALL,
-    <span class="doccomment">/// The log level is set to debug.
-    </span>DEBUG,
-    <span class="doccomment">/// The log level is set to disabled.
-    </span>DISABLED,
-    <span class="doccomment">/// The log level is set to error.
-    </span>ERROR,
-    <span class="doccomment">/// The log level is set to fatal.
-    </span>FATAL,
-    <span class="doccomment">/// The log level is set to info.
-    </span>INFO,
-    <span class="doccomment">/// The log level is set to none.
-    </span>NONE,
-    <span class="doccomment">/// The log level is set to trace.
-    </span>TRACE,
-    <span class="doccomment">/// The log level is set to verbose.
-    </span>VERBOSE,
-    <span class="doccomment">/// The log level is set to warning.
-    </span>WARNING,
-}
-
-<span class="doccomment">/// Implements [`LogLevel`] to display the log level as a string. It
-/// allows the LogLevel enumeration to be used with the write! and
-/// print! macros. It provides a human-readable string representation of
-/// the variant, that will be used when displaying the log message.
-</span><span class="kw">impl </span>fmt::Display <span class="kw">for </span>LogLevel {
-    <span class="doccomment">/// Implements [`LogLevel`] to display the log level as a string.
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
-        <span class="kw">match </span><span class="self">self </span>{
-            LogLevel::ALL =&gt; <span class="macro">write!</span>(f, <span class="string">"ALL"</span>),
-            LogLevel::DEBUG =&gt; <span class="macro">write!</span>(f, <span class="string">"DEBUG"</span>),
-            LogLevel::DISABLED =&gt; <span class="macro">write!</span>(f, <span class="string">"DISABLED"</span>),
-            LogLevel::ERROR =&gt; <span class="macro">write!</span>(f, <span class="string">"ERROR"</span>),
-            LogLevel::FATAL =&gt; <span class="macro">write!</span>(f, <span class="string">"FATAL"</span>),
-            LogLevel::INFO =&gt; <span class="macro">write!</span>(f, <span class="string">"INFO"</span>),
-            LogLevel::NONE =&gt; <span class="macro">write!</span>(f, <span class="string">"NONE"</span>),
-            LogLevel::TRACE =&gt; <span class="macro">write!</span>(f, <span class="string">"TRACE"</span>),
-            LogLevel::VERBOSE =&gt; <span class="macro">write!</span>(f, <span class="string">"VERBOSE"</span>),
-            LogLevel::WARNING =&gt; <span class="macro">write!</span>(f, <span class="string">"WARNING"</span>),
-        }
-    }
-}
-
-<span class="attr">#[non_exhaustive]
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-</span><span class="doccomment">/// The `Log` struct provides an easy way to log a message to the
-/// console. It contains a set of defined fields to create a simple,
-/// log message with a readable output format.
-///
-/// # Arguments
-///
-/// * `session_id` - A string slice that holds a session ID. The session
-///    ID is a unique identifier for the current session. A random GUID
-///    (Globally Unique Identifier) is generated by default.
-/// * `time` - A string slice that holds the timestamp in ISO 8601
-///    format.
-/// * `level` - A string slice that holds the level (INFO, WARN, ERROR,
-///     etc.).
-/// * `component` - A string slice that holds the component name.
-/// * `description` - A string slice that holds the description of the
-///    log message.
-///
-</span><span class="kw">pub struct </span>Log {
-    <span class="doccomment">/// A string that holds a session ID. The session ID is a unique
-    /// identifier for the current session. A random GUID (Globally
-    /// Unique Identifier) is generated by default.
-    </span><span class="kw">pub </span>session_id: String,
-    <span class="doccomment">/// A string that holds the timestamp in ISO 8601 format.
-    </span><span class="kw">pub </span>time: String,
-    <span class="doccomment">/// A string that holds the level (INFO, WARN, ERROR, etc.).
-    </span><span class="kw">pub </span>level: LogLevel,
-    <span class="doccomment">/// A string that holds the component name.
-    </span><span class="kw">pub </span>component: String,
-    <span class="doccomment">/// A string that holds the description of the log message.
-    </span><span class="kw">pub </span>description: String,
-    <span class="doccomment">/// A string that holds the log format.
-    </span><span class="kw">pub </span>format: LogFormat,
-}
-
-<span class="doccomment">/// This implementation allows the Log struct to be created with default
-/// values. It creates a new instance of the Log struct with empty
-/// strings for the session_id, time, component and description fields,
-///  and LogLevel::INFO for level field. This is useful when creating a
-/// new instance of the Log struct. It allows the struct to be created
-/// with default values, and then the fields can be set to the desired
-/// values.
-</span><span class="kw">impl </span>Default <span class="kw">for </span>Log {
-    <span class="doccomment">/// This implementation allows the Log struct to be created with
-    /// default values.
-    </span><span class="kw">fn </span>default() -&gt; Log {
-        Log {
-            session_id: String::default(),
-            time: String::default(),
-            level: LogLevel::INFO,
-            component: String::default(),
-            description: String::default(),
-            format: LogFormat::CLF,
-        }
-    }
-}
-
-<span class="kw">impl </span>Log {
-    <span class="doccomment">/// Logs a message asynchronously using a pre-allocated buffer to reduce memory allocation.
-    /// The message is formatted according to the specified log format and then written to a file.
-    /// Additionally, the message is printed to the standard output and the output buffer is flushed.
-    ///
-    /// # Errors
-    ///
-    /// Returns an `io::Result&lt;()&gt;` indicating the outcome of the logging operation.
-    /// An error is returned if there's an issue with string formatting or IO operations (file writing or flushing stdout).
-    ///
-    </span><span class="kw">pub async fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; io::Result&lt;()&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>log_message = String::with_capacity(<span class="number">256</span>);
-
-        <span class="kw">let </span>write_result = <span class="kw">match </span><span class="self">self</span>.format {
-            LogFormat::CLF =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"SessionID={} Timestamp={} Description={} Level={} Component={} Format=CLF"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-            LogFormat::JSON =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\"}} Format=JSON"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-            LogFormat::CEF =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"CEF:0|{}|{}|{}|{}|{}|CEF"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-            LogFormat::ELF =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"ELF:0|{}|{}|{}|{}|{}|ELF"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-            LogFormat::W3C =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"W3C:0|{}|{}|{}|{}|{}|W3C"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-            LogFormat::GELF =&gt; <span class="macro">write!</span>(
-                log_message,
-                <span class="string">"GELF:0|{}|{}|{}|{}|{}|GELF"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-            ),
-        };
-
-        <span class="comment">// Converting std::fmt::Error to std::io::Error
-        </span><span class="kw">if let </span><span class="prelude-val">Err</span>(e) = write_result {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(io::Error::new(io::ErrorKind::Other, e));
-        }
-
-        <span class="comment">// Writing to a file asynchronously
-        </span><span class="kw">let </span><span class="kw-2">mut </span>file = tokio::fs::File::create(<span class="string">"log.txt"</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        file.write_all(log_message.as_bytes()).<span class="kw">await</span><span class="question-mark">?</span>;
-
-        <span class="comment">// Printing to stdout and flushing
-        </span><span class="macro">println!</span>(<span class="string">"{log_message}"</span>);
-        stdout().flush()<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="doccomment">/// Creates a new instance of the `Log` struct with the provided
-    /// parameters.
-    ///
-    /// # Parameters
-    /// * `component`: A string slice representing the component.
-    /// * `description`: A string slice representing the log description.
-    /// * `format`: A string slice representing the log format.
-    /// * `level`: A string slice representing the log level.
-    /// * `session_id`: A string slice representing the session ID.
-    /// * `time`: A string slice representing the timestamp.
-    ///
-    /// # Returns
-    ///
-    /// A new instance of the `Log` struct with the provided parameters.
-    </span><span class="attr">#[must_use]
-    </span><span class="kw">pub fn </span>new(
-        session_id: <span class="kw-2">&amp;</span>str,
-        time: <span class="kw-2">&amp;</span>str,
-        level: <span class="kw-2">&amp;</span>LogLevel,
-        component: <span class="kw-2">&amp;</span>str,
-        description: <span class="kw-2">&amp;</span>str,
-        format: <span class="kw-2">&amp;</span>LogFormat,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            session_id: session_id.to_string(),
-            time: time.to_string(),
-            level: level.clone(),
-            component: component.to_string(),
-            description: description.to_string(),
-            format: format.clone(),
-        }
-    }
-}
-
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>Log {
-    <span class="doccomment">/// Formats the value using the given formatter.
-    </span><span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
-        <span class="kw">match </span><span class="self">self</span>.format {
-            LogFormat::CLF =&gt; {
-                <span class="macro">write!</span>(
-                    f,
-                    <span class="string">"SessionID={} Timestamp={} Description={} Level={} Component={}"</span>,
-                    <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.description, <span class="self">self</span>.level, <span class="self">self</span>.component
-                )
-                .expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-            LogFormat::JSON =&gt; {
-                <span class="macro">write!</span>(
-                f,
-                <span class="string">"{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\",\"Format\":\"JSON\"}}"</span>,
-                <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description)
-                .expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-            LogFormat::CEF =&gt; {
-                <span class="macro">write!</span>(
-                    f,
-                    <span class="string">"CEF:0|{}|{}|{}|{}|{}|CEF"</span>,
-                    <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-                )
-                .expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-            LogFormat::ELF =&gt; {
-                <span class="macro">write!</span>(
-                    f,
-                    <span class="string">"ELF:0|{}|{}|{}|{}|{}|ELF"</span>,
-                    <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-                )
-                .expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-            LogFormat::W3C =&gt; {
-                <span class="macro">write!</span>(
-                    f,
-                    <span class="string">"W3C:0|{}|{}|{}|{}|{}|W3C"</span>,
-                    <span class="self">self</span>.session_id, <span class="self">self</span>.time, <span class="self">self</span>.level, <span class="self">self</span>.component, <span class="self">self</span>.description
-                )
-                <span class="comment">// self.session_id, self.time, self.level, self.component, self.description)
-                </span>.expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-            LogFormat::GELF =&gt; {
-                <span class="macro">write!</span>(
-                    f,
-                    <span class="string">r#"{{
-                            "version": "1.1",
-                            "host": "{}",
-                            "short_message": "{}",
-                            "level": "{:?}",
-                            "timestamp": "{}",
-                            "_component": "{}",
-                            "_session_id": "{}"
-                        }}"#</span>,
-                    <span class="self">self</span>.component,
-                    <span class="self">self</span>.description,
-                    <span class="self">self</span>.level,
-                    <span class="self">self</span>.time,
-                    <span class="self">self</span>.component,
-                    <span class="self">self</span>.session_id
-                )
-                .expect(<span class="string">"Unable to write log message"</span>);
-                <span class="prelude-val">Ok</span>(())
-            }
-        }
-    }
-}
 </code></pre></div></section></main></body></html>

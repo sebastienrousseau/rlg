@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (b11fbfbf3 2024-02-03)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/mini-functions/icons/ico-rlg.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/macros.rs`."><title>macros.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-e935ef01ae1c1829.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (7d3702e47 2024-03-06)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-12cf3b4f4f9dc36d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rlg/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -111,7 +111,83 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
-</pre></div><pre class="rust"><code><span class="comment">// Copyright © 2022-2023 Mini Functions. All rights reserved.
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+</pre></div><pre class="rust"><code><span class="comment">// Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -119,9 +195,9 @@
 /// Usage:
 /// let log = macro_log!(session_id, time, level, component, description, format);
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_log {
+</span><span class="macro">macro_rules!</span> macro_log {
     (<span class="macro-nonterminal">$session_id</span>:expr, <span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$level</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr, <span class="macro-nonterminal">$format</span>:expr) =&gt; {
-        <span class="macro-nonterminal">$crate::Log::new</span>(
+        <span class="macro-nonterminal">$crate::log::Log::new</span>(
             <span class="macro-nonterminal">$session_id</span>,
             <span class="macro-nonterminal">$time</span>,
             <span class="macro-nonterminal">$level</span>,
@@ -136,15 +212,15 @@
 /// Usage:
 /// let log = macro_info_log!(time, component, description);
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_info_log {
+</span><span class="macro">macro_rules!</span> macro_info_log {
     (<span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr) =&gt; {
-        <span class="macro-nonterminal">$crate::Log::new</span>(
+        <span class="macro-nonterminal">$crate::log::Log::new</span>(
             <span class="kw-2">&amp;</span>vrd::Random::default().int(<span class="number">0</span>, <span class="number">1_000_000_000</span>).to_string(),
             <span class="macro-nonterminal">$time</span>,
-            <span class="kw-2">&amp;</span><span class="macro-nonterminal">$crate::LogLevel::INFO</span>,
+            <span class="kw-2">&amp;</span><span class="macro-nonterminal">$crate::log_level::LogLevel::INFO</span>,
             <span class="macro-nonterminal">$component</span>,
             <span class="macro-nonterminal">$description</span>,
-            <span class="kw-2">&amp;</span><span class="macro-nonterminal">$crate::LogFormat::CLF</span>,
+            <span class="kw-2">&amp;</span><span class="macro-nonterminal">$crate::log_format::LogFormat::CLF</span>,
         )
     };
 }
@@ -153,7 +229,7 @@
 /// Usage:
 /// macro_print_log!(log);
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_print_log {
+</span><span class="macro">macro_rules!</span> macro_print_log {
     (<span class="macro-nonterminal">$log</span>:expr) =&gt; {
         <span class="macro">println!</span>(<span class="string">"{}"</span>, <span class="macro-nonterminal">$log</span>);
     };
@@ -163,7 +239,7 @@
 /// Usage:
 /// let result = macro_log_to_file!(log);
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_log_to_file {
+</span><span class="macro">macro_rules!</span> macro_log_to_file {
     (<span class="macro-nonterminal">$log</span>:expr) =&gt; {{
         <span class="kw">let </span>result = <span class="macro-nonterminal">$log</span>.log().<span class="kw">await</span>;
         result
@@ -172,7 +248,7 @@
 
 <span class="doccomment">/// Macro for warn log
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_warn_log {
+</span><span class="macro">macro_rules!</span> macro_warn_log {
     (<span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr) =&gt; {
         <span class="macro">macro_log!</span>(
             <span class="kw-2">&amp;</span>vrd::Random::default().int(<span class="number">0</span>, <span class="number">1_000_000_000</span>).to_string(),
@@ -187,7 +263,7 @@
 
 <span class="doccomment">/// Macro for error log with default format
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_error_log {
+</span><span class="macro">macro_rules!</span> macro_error_log {
     (<span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr) =&gt; {
         <span class="macro">macro_log!</span>(
             <span class="kw-2">&amp;</span>vrd::Random::default().int(<span class="number">0</span>, <span class="number">1_000_000_000</span>).to_string(),
@@ -204,21 +280,97 @@
 /// Usage:
 /// macro_set_log_format_clf!(log);
 </span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_set_log_format_clf {
+</span><span class="macro">macro_rules!</span> macro_set_log_format_clf {
     (<span class="macro-nonterminal">$log</span>:expr) =&gt; {
-        <span class="kw">if </span><span class="macro-nonterminal">$log</span>.format != <span class="macro-nonterminal">$crate::LogFormat::CLF </span>{
-            <span class="macro-nonterminal">$log</span>.format = <span class="macro-nonterminal">$crate::LogFormat::CLF</span>;
+        <span class="kw">if </span><span class="macro-nonterminal">$log</span>.format != <span class="macro-nonterminal">$crate::log_format::LogFormat::CLF </span>{
+            <span class="macro-nonterminal">$log</span>.format = <span class="macro-nonterminal">$crate::log_format::LogFormat::CLF</span>;
         }
     };
 }
 
 <span class="doccomment">/// Conditional debug logging
 /// Logs if `debug_enabled` feature flag set
-</span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules! </span>macro_debug_log {
+</span><span class="attr">#[cfg(feature = <span class="string">"debug_enabled"</span>)]
+#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_debug_log {
     (<span class="macro-nonterminal">$log</span>:expr) =&gt; {
-        <span class="kw">if </span><span class="macro">cfg!</span>(debug_enabled) {
+        <span class="macro">macro_print_log!</span>(<span class="macro-nonterminal">$log</span>);
+    };
+}
+
+<span class="doccomment">/// Conditional debug logging
+/// Logs if `debug_enabled` feature flag set
+</span><span class="attr">#[cfg(not(feature = <span class="string">"debug_enabled"</span>))]
+#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_debug_log {
+    (<span class="macro-nonterminal">$log</span>:expr) =&gt; {
+        <span class="comment">// Do nothing if `debug_enabled` feature flag is not set
+    </span>};
+}
+
+<span class="doccomment">/// Macro for trace log
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_trace_log {
+    (<span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr) =&gt; {
+        <span class="macro">macro_log!</span>(
+            <span class="kw-2">&amp;</span>vrd::Random::default().int(<span class="number">0</span>, <span class="number">1_000_000_000</span>).to_string(),
+            <span class="macro-nonterminal">$time</span>,
+            <span class="kw-2">&amp;</span>LogLevel::TRACE,
+            <span class="macro-nonterminal">$component</span>,
+            <span class="macro-nonterminal">$description</span>,
+            <span class="kw-2">&amp;</span>LogFormat::CLF
+        )
+    };
+}
+
+<span class="doccomment">/// Macro for fatal log
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_fatal_log {
+    (<span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr) =&gt; {
+        <span class="macro">macro_log!</span>(
+            <span class="kw-2">&amp;</span>vrd::Random::default().int(<span class="number">0</span>, <span class="number">1_000_000_000</span>).to_string(),
+            <span class="macro-nonterminal">$time</span>,
+            <span class="kw-2">&amp;</span>LogLevel::FATAL,
+            <span class="macro-nonterminal">$component</span>,
+            <span class="macro-nonterminal">$description</span>,
+            <span class="kw-2">&amp;</span>LogFormat::CLF
+        )
+    };
+}
+
+<span class="doccomment">/// Conditional logging based on a predicate
+/// Usage:
+/// macro_log_if!(predicate, log);
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_log_if {
+    (<span class="macro-nonterminal">$predicate</span>:expr, <span class="macro-nonterminal">$log</span>:expr) =&gt; {
+        <span class="kw">if </span><span class="macro-nonterminal">$predicate </span>{
             <span class="macro">macro_print_log!</span>(<span class="macro-nonterminal">$log</span>);
+        }
+    };
+}
+
+<span class="doccomment">/// Macro for logging with metadata
+/// Usage:
+/// let log = macro_log_with_metadata!(session_id, time, level, component, description, format);
+/// println!("{log} | Metadata: {metadata}");
+</span><span class="attr">#[macro_export]
+</span><span class="macro">macro_rules!</span> macro_log_with_metadata {
+    (<span class="macro-nonterminal">$session_id</span>:expr, <span class="macro-nonterminal">$time</span>:expr, <span class="macro-nonterminal">$level</span>:expr, <span class="macro-nonterminal">$component</span>:expr, <span class="macro-nonterminal">$description</span>:expr, <span class="macro-nonterminal">$format</span>:expr) =&gt; {
+        {
+            <span class="kw">let </span>log = <span class="macro-nonterminal">$crate::log::Log::new</span>(
+                <span class="macro-nonterminal">$session_id</span>,
+                <span class="macro-nonterminal">$time</span>,
+                <span class="macro-nonterminal">$level</span>,
+                <span class="macro-nonterminal">$component</span>,
+                <span class="macro-nonterminal">$description</span>,
+                <span class="macro-nonterminal">$format</span>,
+            );
+            <span class="comment">// Replace keys in the log message with consistent ones
+            </span><span class="kw">let </span>log_message = log.to_string()
+                .replace(<span class="string">"\"component\""</span>, <span class="string">"\"component\""</span>)
+                .replace(<span class="string">"\"session_id\""</span>, <span class="string">"\"session_id\""</span>);
+            log_message
         }
     };
 }
