@@ -3,11 +3,17 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 // Import rlg crate to test it
 extern crate rlg;
 
-// Bring rlg types into scope for convenience
-use rlg::*;
+// Import Log struct for benchmarking
+use rlg::log::Log;
 
 // Import tokio for async file writing
 use tokio::io::AsyncWriteExt;
+
+// Import LogFormat for benchmarking log formatting
+use rlg::log_format::LogFormat;
+
+// Import LogLevel for benchmarking log formatting
+use rlg::log_level::LogLevel;
 
 // Benchmark creating new Log instances
 fn new_benchmark(c: &mut Criterion) {

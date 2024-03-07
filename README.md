@@ -43,15 +43,20 @@ macros to simplify common logging tasks.
 ## Features ✨
 
 - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE` and `WARNING`,
-- Provides structured log formats that are easy to parse and filter,
+  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`
+- Provides structured log formats that are easy to parse and filter
 - Compatible with multiple output formats including:
-  - Common Event Format (CEF),
-  - Extended Log Format (ELF),
-  - Graylog Extended Log Format (GELF),
+  - Common Event Format (CEF)
+  - Extended Log Format (ELF)
+  - Graylog Extended Log Format (GELF)
   - JavaScript Object Notation (JSON)
-  - NCSA Common Log Format (CLF),
-  - W3C Extended Log File Format (W3C),
+  - NCSA Common Log Format (CLF)
+  - W3C Extended Log File Format (W3C)
+  - Syslog Format
+  - Apache Access Log Format
+  - Logstash Format
+  - Log4j XML Format
+  - NDJSON (Newline Delimited JSON)
   - and more
 
 ## Installation 📦
@@ -60,7 +65,7 @@ To use `rlg` in your Rust project, add the following line to your `Cargo.toml` f
 
 ```toml
 [dependencies]
-rlg = "0.0.2"
+rlg = "0.0.3"
 ```
 
 ### Requirements
@@ -70,54 +75,116 @@ rlg = "0.0.2"
 ### Documentation
 
 > ℹ️ **Info:** Please check out our [website][00] for more information
-and find our documentation on [docs.rs][08], [lib.rs][09] and
+and find our documentation on [docs.rs][08], [lib.rs][09], and
 [crates.io][07].
 
 ## Usage 📖
 
-## Macros 🔨
-
-The `rlg` library provides the following macros for logging:
-
-- `macro_log!`: Main macro for logging messages with customizable format.
-- `macro_print_log!`: Print log message to stdout.
-- `macro_log_to_file!`: Asynchronously log message to a file.
-- `macro_warn_log!`: Macro for warning log messages.
-- `macro_error_log!`: Macro for error log messages.
-- `macro_set_log_format_clf!`: Set log format to Common Log Format (CLF).
-- `macro_debug_log!`: Conditional debug logging.
-
-### macro_log!
-
-The `macro_log!` macro is the main macro for logging messages. It takes the following arguments:
-
-- **session_id**: A unique identifier for the log session.
-- **time**: The timestamp of the log message.
-- **level**: The log level, such as DEBUG, INFO, WARN, or ERROR.
-- **component**: The name of the component that generated the log message.
-- **description**: The description of the log message.
-- **format**: The log format, such as CLF, JSON, or GELF.
-
-
-Example usage of the `macro_log!` macro:
+### Basic Logging
 
 ```rust
-use rlg::{Log, LogLevel, LogFormat};
-use vrd::Random;
+use rlg::log::Log;
+use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
 
-let log = macro_log!(
-    &Random::default().int(0, 1_000_000_000).to_string(),
-    "2023-04-18T12:38:55Z",
+// Create a new log entry
+let log_entry = Log::new(
+    "12345",
+    "2023-01-01T12:00:00Z",
     &LogLevel::INFO,
-    "ComponentName",
-    "Log message description",
-    &LogFormat::CLF,
+    "MyComponent",
+    "This is a sample log message",
+    &LogFormat::JSON, // Choose from various formats like JSON, Syslog, NDJSON, etc.
 );
 
-macro_log!(log);
+// Log the entry asynchronously
+tokio::runtime::Runtime::new().unwrap().block_on(async {
+    log_entry.log().await.unwrap();
+});
 ```
 
-### Examples
+### Custom Log Configuration
+
+```rust
+use rlg::config::Config;
+use rlg::log::Log;
+use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
+
+// Customize log file path
+std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
+
+// Load custom configuration
+let config = Config::load();
+
+// Create a new log entry with custom configuration
+let log_entry = Log::new(
+    "12345",
+    "2023-01-01T12:00:00Z",
+    &LogLevel::INFO,
+    "MyComponent",
+    "This is a sample log message",
+    &LogFormat::ApacheAccessLog
+);
+
+// Log the entry asynchronously
+tokio::runtime::Runtime::new().unwrap().block_on(async {
+    log_entry.log().await.unwrap();
+});
+```
+
+## Configuration 🔧
+
+By default, RustLogs (RLG) logs to a file named "RLG.log" in the current directory. You can customize the log file path by setting the `LOG_FILE_PATH` environment variable.
+
+## Error Handling 🚨
+
+Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result<(), io::Error>` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
+
+```rust
+use rlg::log::Log;
+use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
+
+// Create a new log entry
+let log_entry = Log::new(
+    "12345",
+    "2023-01-01T12:00:00Z",
+    &LogLevel::INFO,
+    "MyComponent",
+    "This is a sample log message",
+    &LogFormat::NDJSON, // Using NDJSON format for this example
+);
+
+// Log the entry asynchronously and handle potential errors
+tokio::runtime::Runtime::new().unwrap().block_on(async {
+    match log_entry.log().await {
+        Ok(_) => println!("Log entry successfully written"),
+        Err(err) => eprintln!("Error logging entry: {}", err),
+    }
+});
+```
+
+## Macros 🔧
+
+RustLogs (RLG) provides a set of useful macros to simplify logging tasks:
+
+- `macro_log!`: Creates a new log entry with specified parameters.
+- `macro_info_log!`: Creates an info log with default session ID and format.
+- `macro_print_log!`: Prints a log to stdout.
+- `macro_log_to_file!`: Asynchronously logs a message to a file.
+- `macro_warn_log!`: Creates a warning log.
+- `macro_error_log!`: Creates an error log with default format.
+- `macro_set_log_format_clf!`: Sets the log format to CLF if not already defined.
+- `macro_debug_log!`: Conditionally logs a message based on the `debug_enabled` feature flag.
+- `macro_trace_log!`: Creates a trace log.
+- `macro_fatal_log!`: Creates a fatal log.
+- `macro_log_if!`: Conditionally logs a message based on a predicate.
+- `macro_log_with_metadata!`: Logs a message with additional metadata.
+
+Refer to the [documentation][08] for more details on how to use these macros.
+
+## Examples 📝
 
 `RLG` comes with a set of examples that you can use to get started. The
 examples are located in the `examples` directory of the project. To run
@@ -131,7 +198,7 @@ cargo run --example rlg
 ## Semantic Versioning Policy 🚥
 
 For transparency into our release cycle and in striving to maintain
-backward compatibility, `QRC` follows [semantic versioning][06].
+backward compatibility, `RLG` follows [semantic versioning][06].
 
 ## License 📝
 
@@ -173,6 +240,6 @@ lot of useful suggestions on how to improve this project.
 [crates-badge]: https://img.shields.io/crates/v/rlg.svg?style=for-the-badge 'Crates.io'
 [divider]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/rlg.svg?style=for-the-badge 'Docs.rs'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.2-orange.svg?style=for-the-badge 'Lib.rs'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.3-orange.svg?style=for-the-badge 'Lib.rs'
 [license-badge]: https://img.shields.io/crates/l/rlg.svg?style=for-the-badge 'License'
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust'
