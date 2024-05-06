@@ -68,22 +68,15 @@ fn write_benchmark(c: &mut Criterion) {
     c.bench_function("clf_write", |b| {
         b.iter(|| {
             // Runtime for async block to write to file
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(async {
-                    // Open file and write log
-                    let mut file = tokio::fs::File::create("log.txt").await.unwrap();
-                    let _ = file.write_all(format!("{clf_log}").as_bytes()).await;
-                })
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
+                // Open file and write log
+                let mut file = tokio::fs::File::create("log.txt").await.unwrap();
+                let _ = file.write_all(format!("{clf_log}").as_bytes()).await;
+            })
         })
     });
 }
 
 // Group benchmarks together
-criterion_group!(
-    benches,
-    new_benchmark,
-    format_benchmark,
-    write_benchmark
-);
+criterion_group!(benches, new_benchmark, format_benchmark, write_benchmark);
 criterion_main!(benches);

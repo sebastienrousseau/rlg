@@ -5,7 +5,7 @@
 //!
 //! # RustLogs (RLG)
 //!
-//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format. 
+//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format.
 //! The library provides logging APIs and various helper macros that simplify many common logging tasks.
 //!
 //! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
@@ -138,10 +138,9 @@
 #![crate_name = "rlg"]
 #![crate_type = "lib"]
 
-use crate::log_format::LogFormat;
 use crate::config::Config;
+use crate::log_format::LogFormat;
 use crate::log_level::LogLevel;
-
 
 /// The `config` module contains the configuration struct for the logging system.
 pub mod config;
@@ -157,4 +156,3 @@ pub mod log_level;
 
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
-

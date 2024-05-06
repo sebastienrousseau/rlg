@@ -5,7 +5,9 @@
 #[cfg(test)]
 
 mod tests {
-    use crate::tests::LogFormat::{ApacheAccessLog, CEF, CLF, ELF, GELF, JSON, Log4jXML, Logstash, NDJSON, W3C};
+    use crate::tests::LogFormat::{
+        ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON, NDJSON, W3C,
+    };
     use dtt::DateTime;
     use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel::*};
 
@@ -363,12 +365,7 @@ mod tests {
     // Test the Log::write_log_entry method
     #[tokio::test]
     async fn test_write_log_entry_combinations() {
-        let log_levels = [
-            INFO,
-            WARNING,
-            ERROR,
-            DEBUG,
-        ];
+        let log_levels = [INFO, WARNING, ERROR, DEBUG];
         let processes = ["process1", "process2", "process3"];
         let messages = ["message1", "message2", "message3"];
         let log_formats = [CLF, JSON, GELF];
@@ -443,7 +440,10 @@ mod tests {
     #[tokio::test]
     async fn test_log_apache_access_format() {
         // Dynamically get the hostname
-        let hostname = hostname::get().expect("Failed to get hostname").to_string_lossy().into_owned();
+        let hostname = hostname::get()
+            .expect("Failed to get hostname")
+            .to_string_lossy()
+            .into_owned();
 
         let log = Log::new(
             "session_id_123",
@@ -455,7 +455,10 @@ mod tests {
         );
 
         // Construct the expected output using the dynamic hostname
-        let expected_output = format!("{} - - [2022-01-01T00:00:00Z] \"description_a\" INFO component_a", hostname);
+        let expected_output = format!(
+            "{} - - [2022-01-01T00:00:00Z] \"description_a\" INFO component_a",
+            hostname
+        );
 
         assert_eq!(log.to_string(), expected_output);
     }
@@ -473,7 +476,8 @@ mod tests {
         );
         // Print the actual output for debugging
         let log_string = log.to_string();
-        let log_json: serde_json::Value = serde_json::from_str(&log_string).expect("Failed to parse JSON");
+        let log_json: serde_json::Value =
+            serde_json::from_str(&log_string).expect("Failed to parse JSON");
         assert_eq!(log_json["@timestamp"], "2022-01-01T00:00:00Z");
     }
     // Test for Log4j XML Format
