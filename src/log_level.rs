@@ -3,10 +3,22 @@
 // SPDX-License-Identifier: MIT
 
 use std::fmt;
+use serde::{Deserialize, Serialize};
 
 /// An enumeration of the different levels that a log message can have.
 /// Each variant of the enumeration represents a different level of importance.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum LogLevel {
     /// The log level is set to all.
     ALL,
@@ -28,6 +40,10 @@ pub enum LogLevel {
     VERBOSE,
     /// The log level is set to warning.
     WARNING,
+    /// The log level is set to warning but indicates a potential problem.
+    WARN,
+    /// The log level is set to critical.
+    CRITICAL,
 }
 
 impl fmt::Display for LogLevel {
@@ -46,6 +62,8 @@ impl fmt::Display for LogLevel {
             LogLevel::TRACE => write!(f, "TRACE"),
             LogLevel::VERBOSE => write!(f, "VERBOSE"),
             LogLevel::WARNING => write!(f, "WARNING"),
+            LogLevel::WARN => write!(f, "WARN"),
+            LogLevel::CRITICAL => write!(f, "CRITICAL"),
         }
     }
 }
