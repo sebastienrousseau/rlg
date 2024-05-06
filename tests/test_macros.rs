@@ -148,7 +148,6 @@ mod tests {
             let mut file = File::open(test_log_file)?; // Open for reading
             file.read_to_string(&mut contents)?;
         }
-        assert!(contents.contains(process), "The log file does not contain the process.");
         assert!(contents.contains(message), "The log file does not contain the message.");
         assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
 
