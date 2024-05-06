@@ -1,16 +1,13 @@
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
 #[cfg(test)]
 
 mod tests {
-
-    extern crate dtt;
-    extern crate rlg;
-
-    use self::dtt::DateTime;
-    use self::rlg::log::Log;
-    use self::rlg::log_format::LogFormat;
-    use self::rlg::log_level::LogLevel;
-    use self::rlg::log_level::LogLevel::ERROR;
-    use crate::tests::LogFormat::CLF;
+    use crate::tests::LogFormat::{ApacheAccessLog, CEF, CLF, ELF, GELF, JSON, Log4jXML, Logstash, NDJSON, W3C};
+    use dtt::DateTime;
+    use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel::*};
 
     #[tokio::test]
     async fn test_log_common_format() {
@@ -32,10 +29,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.now,
-            &LogLevel::INFO,
+            &INFO,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
@@ -46,10 +43,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.now,
-            &LogLevel::INFO,
+            &INFO,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
@@ -60,10 +57,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.now,
-            &LogLevel::INFO,
+            &INFO,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
@@ -74,10 +71,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.now,
-            &LogLevel::INFO,
+            &INFO,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
@@ -88,20 +85,20 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.now,
-            &LogLevel::INFO,
+            &INFO,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
     }
     #[tokio::test]
     async fn test_log_level_display() {
-        let log_level = LogLevel::ERROR;
+        let log_level = ERROR;
         assert_eq!(log_level.to_string(), "ERROR");
 
-        let log_level = LogLevel::WARNING;
+        let log_level = WARNING;
         assert_eq!(log_level.to_string(), "WARNING");
     }
 
@@ -110,10 +107,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             "2023-01-23 14:03:00.000+0000",
-            &LogLevel::ERROR,
+            &ERROR,
             "Test",
             "This is a test log message",
-            &LogFormat::CLF,
+            &CLF,
         );
         assert_eq!(
         log.to_string(),
@@ -125,7 +122,7 @@ mod tests {
         let log = Log::default();
         assert_eq!(log.session_id, "");
         assert_eq!(log.time, "");
-        assert_eq!(log.level, LogLevel::INFO);
+        assert_eq!(log.level, INFO);
         assert_eq!(log.component, "");
         assert_eq!(log.description, "");
     }
@@ -135,10 +132,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             "2023-01-23 14:03:00.000+0000",
-            &LogLevel::ERROR,
+            &ERROR,
             "Test",
             "This is a test log message",
-            &LogFormat::CLF,
+            &CLF,
         );
         let log_string = format!("{log}");
         println!("{log_string}");
@@ -147,61 +144,61 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_level_all_display() {
-        let log_level = LogLevel::ALL;
+        let log_level = ALL;
         assert_eq!(log_level.to_string(), "ALL");
     }
 
     #[tokio::test]
     async fn test_log_level_debug_display() {
-        let log_level = LogLevel::DEBUG;
+        let log_level = DEBUG;
         assert_eq!(log_level.to_string(), "DEBUG");
     }
 
     #[tokio::test]
     async fn test_log_level_disabled_display() {
-        let log_level = LogLevel::DISABLED;
+        let log_level = DISABLED;
         assert_eq!(log_level.to_string(), "DISABLED");
     }
 
     #[tokio::test]
     async fn test_log_level_error_display() {
-        let log_level = LogLevel::ERROR;
+        let log_level = ERROR;
         assert_eq!(log_level.to_string(), "ERROR");
     }
 
     #[tokio::test]
     async fn test_log_level_fatal_display() {
-        let log_level = LogLevel::FATAL;
+        let log_level = FATAL;
         assert_eq!(log_level.to_string(), "FATAL");
     }
 
     #[tokio::test]
     async fn test_log_level_info_display() {
-        let log_level = LogLevel::INFO;
+        let log_level = INFO;
         assert_eq!(log_level.to_string(), "INFO");
     }
 
     #[tokio::test]
     async fn test_log_level_none_display() {
-        let log_level = LogLevel::NONE;
+        let log_level = NONE;
         assert_eq!(log_level.to_string(), "NONE");
     }
 
     #[tokio::test]
     async fn test_log_level_trace_display() {
-        let log_level = LogLevel::TRACE;
+        let log_level = TRACE;
         assert_eq!(log_level.to_string(), "TRACE");
     }
 
     #[tokio::test]
     async fn test_log_level_verbose_display() {
-        let log_level = LogLevel::VERBOSE;
+        let log_level = VERBOSE;
         assert_eq!(log_level.to_string(), "VERBOSE");
     }
 
     #[tokio::test]
     async fn test_log_level_warning_display() {
-        let log_level = LogLevel::WARNING;
+        let log_level = WARNING;
         assert_eq!(log_level.to_string(), "WARNING");
     }
     #[tokio::test]
@@ -209,10 +206,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::CLF,
+            &CLF,
         );
         let expected_output = "SessionID=123 Timestamp=2023-01-23 14:04:09.881393 +00:00:00 Description=test log message Level=INFO Component=test";
         assert_eq!(log.to_string(), expected_output);
@@ -223,10 +220,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::JSON,
+            &JSON,
         );
         let expected_output = r#"{"SessionID":"123","Timestamp":"2023-01-23 14:04:09.881393 +00:00:00","Level":"INFO","Component":"test","Description":"test log message","Format":"JSON"}"#;
         assert_eq!(log.to_string(), expected_output);
@@ -237,10 +234,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::CEF,
+            &CEF,
         );
         let expected_output =
             "CEF:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|CEF";
@@ -251,10 +248,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::ELF,
+            &ELF,
         );
         let expected_output =
             "ELF:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|ELF";
@@ -265,10 +262,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::W3C,
+            &W3C,
         );
         let expected_output =
             "W3C:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|W3C";
@@ -279,10 +276,10 @@ mod tests {
         let log = Log::new(
             "123",
             "2023-01-23 14:04:09.881393 +00:00:00",
-            &LogLevel::INFO,
+            &INFO,
             "test",
             "test log message",
-            &LogFormat::GELF,
+            &GELF,
         );
         let expected_output =
             "{\n                            \"version\": \"1.1\",\n                            \"host\": \"test\",\n                            \"short_message\": \"test log message\",\n                            \"level\": \"INFO\",\n                            \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                            \"component\": \"test\",\n                            \"session_id\": \"123\"\n                        }";
@@ -291,12 +288,12 @@ mod tests {
     #[tokio::test]
     async fn test_log_format_display() {
         for (log_format, expected_output) in [
-            (LogFormat::CLF, "CLF"),
-            (LogFormat::JSON, "JSON"),
-            (LogFormat::CEF, "CEF"),
-            (LogFormat::ELF, "ELF"),
-            (LogFormat::W3C, "W3C"),
-            (LogFormat::GELF, "GELF"),
+            (CLF, "CLF"),
+            (JSON, "JSON"),
+            (CEF, "CEF"),
+            (ELF, "ELF"),
+            (W3C, "W3C"),
+            (GELF, "GELF"),
         ] {
             assert_eq!(log_format.to_string(), expected_output);
         }
@@ -304,42 +301,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_level_variants() {
-        let log = Log::new("", "", &LogLevel::ALL, "", "", &LogFormat::CLF);
-        assert_eq!(log.level, LogLevel::ALL);
+        let log = Log::new("", "", &ALL, "", "", &CLF);
+        assert_eq!(log.level, ALL);
 
-        let log = Log::new("", "", &LogLevel::DEBUG, "", "", &LogFormat::CLF);
-        assert_eq!(log.level, LogLevel::DEBUG);
+        let log = Log::new("", "", &DEBUG, "", "", &CLF);
+        assert_eq!(log.level, DEBUG);
 
         // Test for all other variants
-        let log1 = Log::new("", "", &LogLevel::DISABLED, "", "", &LogFormat::CLF);
-        assert_eq!(log1.level, LogLevel::DISABLED);
+        let log1 = Log::new("", "", &DISABLED, "", "", &CLF);
+        assert_eq!(log1.level, DISABLED);
 
-        let log2 = Log::new("", "", &LogLevel::ERROR, "", "", &LogFormat::CLF);
-        assert_eq!(log2.level, LogLevel::ERROR);
+        let log2 = Log::new("", "", &ERROR, "", "", &CLF);
+        assert_eq!(log2.level, ERROR);
 
-        let log3 = Log::new("", "", &LogLevel::FATAL, "", "", &LogFormat::CLF);
-        assert_eq!(log3.level, LogLevel::FATAL);
+        let log3 = Log::new("", "", &FATAL, "", "", &CLF);
+        assert_eq!(log3.level, FATAL);
 
-        let log4 = Log::new("", "", &LogLevel::INFO, "", "", &LogFormat::CLF);
-        assert_eq!(log4.level, LogLevel::INFO);
+        let log4 = Log::new("", "", &INFO, "", "", &CLF);
+        assert_eq!(log4.level, INFO);
 
-        let log5 = Log::new("", "", &LogLevel::NONE, "", "", &LogFormat::CLF);
-        assert_eq!(log5.level, LogLevel::NONE);
+        let log5 = Log::new("", "", &NONE, "", "", &CLF);
+        assert_eq!(log5.level, NONE);
 
-        let log6 = Log::new("", "", &LogLevel::TRACE, "", "", &LogFormat::CLF);
-        assert_eq!(log6.level, LogLevel::TRACE);
+        let log6 = Log::new("", "", &TRACE, "", "", &CLF);
+        assert_eq!(log6.level, TRACE);
 
-        let log7 = Log::new("", "", &LogLevel::VERBOSE, "", "", &LogFormat::CLF);
-        assert_eq!(log7.level, LogLevel::VERBOSE);
+        let log7 = Log::new("", "", &VERBOSE, "", "", &CLF);
+        assert_eq!(log7.level, VERBOSE);
 
-        let log8 = Log::new("", "", &LogLevel::WARNING, "", "", &LogFormat::CLF);
-        assert_eq!(log8.level, LogLevel::WARNING);
+        let log8 = Log::new("", "", &WARNING, "", "", &CLF);
+        assert_eq!(log8.level, WARNING);
     }
 
     #[tokio::test]
     async fn test_log_display_fully() {
-        let log_level = LogLevel::ERROR;
-        let log = Log::new("", "", &log_level, "", "", &LogFormat::CLF);
+        let log_level = ERROR;
+        let log = Log::new("", "", &log_level, "", "", &CLF);
 
         let formatted = format!("{log}");
         assert!(formatted.contains("Level=ERROR"));
@@ -354,10 +351,10 @@ mod tests {
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             "2023-01-23 14:03:00.000+0000",
-            &LogLevel::ERROR,
+            &ERROR,
             "SystemTrayEvent",
             "Showing main window",
-            &LogFormat::CLF,
+            &CLF,
         );
         let result = log.log().await;
         assert!(result.is_ok());
@@ -367,14 +364,14 @@ mod tests {
     #[tokio::test]
     async fn test_write_log_entry_combinations() {
         let log_levels = [
-            LogLevel::INFO,
-            LogLevel::WARNING,
-            LogLevel::ERROR,
-            LogLevel::DEBUG,
+            INFO,
+            WARNING,
+            ERROR,
+            DEBUG,
         ];
         let processes = ["process1", "process2", "process3"];
         let messages = ["message1", "message2", "message3"];
-        let log_formats = [LogFormat::CLF, LogFormat::JSON, LogFormat::GELF];
+        let log_formats = [CLF, JSON, GELF];
 
         for log_level in &log_levels {
             for process in &processes {
@@ -402,7 +399,7 @@ mod tests {
     fn test_macro_debug_log_enabled() {
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_debug_log!(log);
-        assert_eq!(log.format, LogFormat::CLF);
+        assert_eq!(log.format, CLF);
         assert_eq!(log.timestamp, "2022-01-01");
         assert_eq!(log.application, "app");
         assert_eq!(log.message, "message");
@@ -440,7 +437,7 @@ mod tests {
         assert_eq!(writer.write(b"").unwrap(), 0);
 
         // Assert that the log is unchanged
-        assert_eq!(log.format, LogFormat::CLF);
+        assert_eq!(log.format, CLF);
     }
     // Test for Apache Access Log Format
     #[tokio::test]
@@ -451,10 +448,10 @@ mod tests {
         let log = Log::new(
             "session_id_123",
             "2022-01-01T00:00:00Z",
-            &LogLevel::INFO,
+            &INFO,
             "component_a",
             "description_a",
-            &LogFormat::ApacheAccessLog,
+            &ApacheAccessLog,
         );
 
         // Construct the expected output using the dynamic hostname
@@ -469,10 +466,10 @@ mod tests {
         let log = Log::new(
             "session_id_123",
             "2022-01-01T00:00:00Z",
-            &LogLevel::INFO,
+            &INFO,
             "component_a",
             "description_a",
-            &LogFormat::Logstash,
+            &Logstash,
         );
         // Print the actual output for debugging
         let log_string = log.to_string();
@@ -485,10 +482,10 @@ mod tests {
         let log = Log::new(
             "session_id_123",
             "2022-01-01T00:00:00Z",
-            &LogLevel::INFO,
+            &INFO,
             "component_a",
             "description_a",
-            &LogFormat::Log4jXML,
+            &Log4jXML,
         );
         // Expected XML format
         let expected_output = "<log4j:event logger=\"component_a\" timestamp=\"2022-01-01T00:00:00Z\" level=\"INFO\" thread=\"session_id_123\"><log4j:message>description_a</log4j:message></log4j:event>";
@@ -500,10 +497,10 @@ mod tests {
         let log = Log::new(
             "session_id_123",
             "2022-01-01T00:00:00Z",
-            &LogLevel::INFO,
+            &INFO,
             "component_a",
             "description_a",
-            &LogFormat::NDJSON,
+            &NDJSON,
         );
         // Expected NDJSON format
         let expected_output = "{\n                            \"timestamp\": \"2022-01-01T00:00:00Z\",\n                            \"level\": \"INFO\",\n                            \"component\": \"component_a\",\n                            \"message\": \"description_a\"\n                        }";

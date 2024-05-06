@@ -1,7 +1,6 @@
-
-/// Importing external crates
-extern crate dtt;
-extern crate rlg;
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
 /// Importing necessary items from external crates
 use dtt::DateTime;

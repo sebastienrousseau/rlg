@@ -11,7 +11,7 @@ use std::{
     io::{self, stdout, Write},
 };
 use tokio::io::AsyncWriteExt;
-use vrd::Random;
+use vrd::random::Random;
 
 /// The `Log` struct provides an easy way to log a message to the console.
 /// It contains a set of defined fields to create a simple log message with a readable output format.

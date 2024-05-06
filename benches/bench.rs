@@ -1,8 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-// Import rlg crate to test it
-extern crate rlg;
-
 // Import Log struct for benchmarking
 use rlg::log::Log;
 

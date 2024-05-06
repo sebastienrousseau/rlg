@@ -6,6 +6,7 @@
 /// Usage:
 /// let log = macro_log!(session_id, time, level, component, description, format);
 #[macro_export]
+#[doc = "Macro to create a new log easily"]
 macro_rules! macro_log {
     ($session_id:expr, $time:expr, $level:expr, $component:expr, $description:expr, $format:expr) => {
         $crate::log::Log::new(
@@ -23,10 +24,11 @@ macro_rules! macro_log {
 /// Usage:
 /// let log = macro_info_log!(time, component, description);
 #[macro_export]
+#[doc = "Macro for info log with default session id and format"]
 macro_rules! macro_info_log {
     ($time:expr, $component:expr, $description:expr) => {
         $crate::log::Log::new(
-            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &$crate::log_level::LogLevel::INFO,
             $component,
@@ -40,6 +42,7 @@ macro_rules! macro_info_log {
 /// Usage:
 /// macro_print_log!(log);
 #[macro_export]
+#[doc = "Print log to stdout"]
 macro_rules! macro_print_log {
     ($log:expr) => {
         println!("{}", $log);
@@ -50,6 +53,7 @@ macro_rules! macro_print_log {
 /// Usage:
 /// let result = macro_log_to_file!(log);
 #[macro_export]
+#[doc = "Async log message to file"]
 macro_rules! macro_log_to_file {
     ($log:expr) => {{
         let result = $log.log().await;
@@ -59,10 +63,11 @@ macro_rules! macro_log_to_file {
 
 /// Macro for warn log
 #[macro_export]
+#[doc = "Macro for warn log"]
 macro_rules! macro_warn_log {
     ($time:expr, $component:expr, $description:expr) => {
         macro_log!(
-            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &LogLevel::WARNING,
             $component,
@@ -74,10 +79,11 @@ macro_rules! macro_warn_log {
 
 /// Macro for error log with default format
 #[macro_export]
+#[doc = "Macro for error log with default format"]
 macro_rules! macro_error_log {
     ($time:expr, $component:expr, $description:expr) => {
         macro_log!(
-            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &LogLevel::ERROR,
             $component,
@@ -91,6 +97,7 @@ macro_rules! macro_error_log {
 /// Usage:
 /// macro_set_log_format_clf!(log);
 #[macro_export]
+#[doc = "Set log format if not already defined"]
 macro_rules! macro_set_log_format_clf {
     ($log:expr) => {
         if $log.format != $crate::log_format::LogFormat::CLF {
@@ -103,6 +110,7 @@ macro_rules! macro_set_log_format_clf {
 /// Logs if `debug_enabled` feature flag set
 #[cfg(feature = "debug_enabled")]
 #[macro_export]
+#[doc = "Conditional debug logging"]
 macro_rules! macro_debug_log {
     ($log:expr) => {
         macro_print_log!($log);
@@ -113,6 +121,7 @@ macro_rules! macro_debug_log {
 /// Logs if `debug_enabled` feature flag set
 #[cfg(not(feature = "debug_enabled"))]
 #[macro_export]
+#[doc = "Conditional debug logging"]
 macro_rules! macro_debug_log {
     ($log:expr) => {
         // Do nothing if `debug_enabled` feature flag is not set
@@ -121,10 +130,11 @@ macro_rules! macro_debug_log {
 
 /// Macro for trace log
 #[macro_export]
+#[doc = "Macro for trace log"]
 macro_rules! macro_trace_log {
     ($time:expr, $component:expr, $description:expr) => {
         macro_log!(
-            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &LogLevel::TRACE,
             $component,
@@ -136,10 +146,11 @@ macro_rules! macro_trace_log {
 
 /// Macro for fatal log
 #[macro_export]
+#[doc = "Macro for fatal log"]
 macro_rules! macro_fatal_log {
     ($time:expr, $component:expr, $description:expr) => {
         macro_log!(
-            &vrd::Random::default().int(0, 1_000_000_000).to_string(),
+            &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
             $time,
             &LogLevel::FATAL,
             $component,
@@ -153,6 +164,7 @@ macro_rules! macro_fatal_log {
 /// Usage:
 /// macro_log_if!(predicate, log);
 #[macro_export]
+#[doc = "Conditional logging based on a predicate"]
 macro_rules! macro_log_if {
     ($predicate:expr, $log:expr) => {
         if $predicate {
@@ -166,6 +178,7 @@ macro_rules! macro_log_if {
 /// let log = macro_log_with_metadata!(session_id, time, level, component, description, format);
 /// println!("{log} | Metadata: {metadata}");
 #[macro_export]
+#[doc = "Macro for logging with metadata"]
 macro_rules! macro_log_with_metadata {
     ($session_id:expr, $time:expr, $level:expr, $component:expr, $description:expr, $format:expr) => {
         {

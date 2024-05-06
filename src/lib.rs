@@ -1,6 +1,7 @@
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
+
 //!
 //! # RustLogs (RLG)
 //!
@@ -41,7 +42,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rlg = "0.0.3"
+//! rlg = "0.0.4"
 //! ```
 //!
 //! ## Configuration
@@ -129,12 +130,6 @@
 //!     }
 //! });
 //! ```
-#![cfg_attr(feature = "bench", feature(test))]
-#![deny(dead_code)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
-#![forbid(unsafe_code)]
-#![warn(unreachable_pub)]
 #![doc(
     html_favicon_url = "https://kura.pro/rlg/images/favicon.ico",
     html_logo_url = "https://kura.pro/rlg/images/logos/rlg.svg",
