@@ -5,7 +5,7 @@ alt="RustLogs (RLG) logo" height="261" width="261" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# RLG
+# RustLogs (RLG)
 
 A Rust library that implements application-level logging with a simple, readable output format.
 
@@ -17,55 +17,36 @@ A Rust library that implements application-level logging with a simple, readable
 
 ![divider][divider]
 
-## Welcome to RustLogs (RLG) 👋
+## Overview
 
-![RLG Banner][banner]
+RustLogs (RLG) is a Rust library that provides application-level logging with a simple, readable output format. It offers logging APIs and various helper macros to simplify common logging tasks.
 
-<!-- markdownlint-disable MD033 -->
-<center>
+## Features
 
-**[Website][00]
-• [Documentation][08]
-• [Report Bug][03]
-• [Request Feature][03]
-• [Contributing Guidelines][04]**
-
-</center>
-
-<!-- markdownlint-enable MD033 -->
-
-## Overview 📖
-
-`RustLogs (RLG)` is a Rust library that provides application-level logging with
-a simple, readable output format. It offers logging APIs and various helper
-macros to simplify common logging tasks.
-
-## Features ✨
-
-- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE` and `WARNING`,
-- Provides structured log formats that are easy to parse and filter,
+- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`
+- Provides structured log formats that are easy to parse and filter
 - Compatible with multiple output formats including:
-  - Common Event Format (CEF),
-  - Extended Log Format (ELF),
-  - Graylog Extended Log Format (GELF),
+  - Common Event Format (CEF)
+  - Extended Log Format (ELF)
+  - Graylog Extended Log Format (GELF)
   - JavaScript Object Notation (JSON)
-  - NCSA Common Log Format (CLF),
-  - W3C Extended Log File Format (W3C),
-  - and more.
+  - NCSA Common Log Format (CLF)
+  - W3C Extended Log File Format (W3C)
+  - Syslog Format
+  - Apache Access Log Format
+  - Logstash Format
+  - Log4j XML Format
+  - NDJSON (Newline Delimited JSON)
+  - and more
 
-[00]: https://rustlogs.com
 [02]: http://opensource.org/licenses/MIT
-[03]: https://github.com/sebastienrousseau/rlg/issues
-[04]: https://raw.githubusercontent.com/sebastienrousseau/rlg/main/.github/CONTRIBUTING.md
 [05]: https://github.com/sebastienrousseau/rlg/graphs/contributors
 [07]: https://crates.io/crates/rlg
 [08]: https://docs.rs/rlg
 [09]: https://lib.rs/crates/rlg
 
-[banner]: https://kura.pro/rlg/images/titles/title-rlg.svg "RLG Banner"
 [crates-badge]: https://img.shields.io/crates/v/rlg.svg?style=for-the-badge 'Crates.io'
-[divider]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/elements/divider.svg "divider"
+[divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/rlg.svg?style=for-the-badge 'Docs.rs'
 [libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.4-orange.svg?style=for-the-badge 'Lib.rs'
 [license-badge]: https://img.shields.io/crates/l/rlg.svg?style=for-the-badge 'License'
