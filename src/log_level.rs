@@ -68,7 +68,6 @@ impl fmt::Display for LogLevel {
 impl FromStr for LogLevel {
     type Err = String;
 
-    /// Parses a string slice into a LogLevel enum variant.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_lowercase().as_str() {
             "all" => Ok(LogLevel::ALL),
@@ -81,6 +80,8 @@ impl FromStr for LogLevel {
             "trace" => Ok(LogLevel::TRACE),
             "verbose" => Ok(LogLevel::VERBOSE),
             "warning" => Ok(LogLevel::WARNING),
+            "warn" => Ok(LogLevel::WARN),
+            "critical" => Ok(LogLevel::CRITICAL),
             _ => Err(format!("Invalid log level: {}", s)),
         }
     }

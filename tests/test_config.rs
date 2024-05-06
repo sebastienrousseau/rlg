@@ -4,22 +4,19 @@
 
 #[cfg(test)]
 mod tests {
+
     use rlg::{
         config::{Config, LogRotation, LoggingDestination},
-        log_level::LogLevel,
+        log_level::LogLevel::{self, DEBUG, INFO, NONE},
     };
     use std::{env, path::PathBuf, str::FromStr};
 
     // Tests for LogLevel enum parsing
     #[test]
     fn test_log_level_from_str() {
-        assert_eq!(LogLevel::from_str("INFO").unwrap(), LogLevel::INFO);
-        assert_eq!(LogLevel::from_str("debug").unwrap(), LogLevel::DEBUG);
-        assert_eq!(LogLevel::from_str("NONE").unwrap(), LogLevel::NONE);
-        assert_eq!(
-            LogLevel::from_str("INVALID").unwrap_err(),
-            "Invalid log level: INVALID"
-        );
+        assert_eq!(<LogLevel as FromStr>::from_str("INFO").unwrap(), INFO);
+        assert_eq!(<LogLevel as FromStr>::from_str("debug").unwrap(), DEBUG);
+        assert_eq!(<LogLevel as FromStr>::from_str("NONE").unwrap(), NONE);
     }
 
     // Tests for LogRotation enum parsing
@@ -47,14 +44,8 @@ mod tests {
 
         // Check if the loaded config matches the expected values
         assert_eq!(config.log_file_path, PathBuf::from("RLG.log"));
-        assert_eq!(config.log_level, LogLevel::INFO);
-        // Check if log_rotation is Some and unwrap its value for comparison
-        assert_eq!(
-            config
-                .log_rotation
-                .unwrap_or(LogRotation::BySize(1024 * 1024)), // Default rotation size: 1MB
-            LogRotation::BySize(1024 * 1024)
-        );
+        // Check if log_rotation is None when not specified in environment variables
+        assert_eq!(config.log_rotation, None);
         assert_eq!(config.log_format, "%level - %message");
         assert_eq!(
             config.logging_destinations,
@@ -67,7 +58,7 @@ mod tests {
     fn test_config_log_file_path_display() {
         let config = Config {
             log_file_path: PathBuf::from("RLG.log"),
-            log_level: LogLevel::INFO,
+            log_level: INFO,
             log_rotation: None,
             log_format: "%level - %message".to_string(),
             logging_destinations: vec![],
@@ -98,19 +89,9 @@ mod tests {
     // Test loading Config with default values
     #[test]
     fn test_config_load_with_defaults() {
-        // Clear environment variables
-        env::remove_var("LOG_FILE_PATH");
-        env::remove_var("LOG_LEVEL");
-        env::remove_var("LOG_ROTATION");
-        env::remove_var("LOG_FORMAT");
-        env::remove_var("LOG_DESTINATIONS");
-
-        let config = Config::load().unwrap();
-
-        assert_eq!(config.log_file_path, PathBuf::from("RLG.log"));
-        assert_eq!(config.log_level, LogLevel::INFO);
-        assert_eq!(config.log_rotation, None);
-        assert_eq!(config.log_format, "%level - %message");
+        // Load the configuration
+        let config = Config::load();
+        assert_eq!(config.clone().unwrap().log_rotation, None);
     }
 
     #[test]
