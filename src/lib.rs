@@ -1,10 +1,11 @@
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
+
 //!
 //! # RustLogs (RLG)
 //!
-//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format. 
+//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format.
 //! The library provides logging APIs and various helper macros that simplify many common logging tasks.
 //!
 //! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
@@ -41,7 +42,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rlg = "0.0.3"
+//! rlg = "0.0.4"
 //! ```
 //!
 //! ## Configuration
@@ -129,12 +130,6 @@
 //!     }
 //! });
 //! ```
-#![cfg_attr(feature = "bench", feature(test))]
-#![deny(dead_code)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
-#![forbid(unsafe_code)]
-#![warn(unreachable_pub)]
 #![doc(
     html_favicon_url = "https://kura.pro/rlg/images/favicon.ico",
     html_logo_url = "https://kura.pro/rlg/images/logos/rlg.svg",
@@ -143,10 +138,9 @@
 #![crate_name = "rlg"]
 #![crate_type = "lib"]
 
-use crate::log_format::LogFormat;
 use crate::config::Config;
+use crate::log_format::LogFormat;
 use crate::log_level::LogLevel;
-
 
 /// The `config` module contains the configuration struct for the logging system.
 pub mod config;
@@ -162,4 +156,3 @@ pub mod log_level;
 
 /// The `macros` module contains functions for generating macros.
 pub mod macros;
-

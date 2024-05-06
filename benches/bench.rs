@@ -1,7 +1,9 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
-// Import rlg crate to test it
-extern crate rlg;
+#![allow(missing_docs)]
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 // Import Log struct for benchmarking
 use rlg::log::Log;
@@ -71,22 +73,15 @@ fn write_benchmark(c: &mut Criterion) {
     c.bench_function("clf_write", |b| {
         b.iter(|| {
             // Runtime for async block to write to file
-            tokio::runtime::Runtime::new()
-                .unwrap()
-                .block_on(async {
-                    // Open file and write log
-                    let mut file = tokio::fs::File::create("log.txt").await.unwrap();
-                    let _ = file.write_all(format!("{clf_log}").as_bytes()).await;
-                })
+            tokio::runtime::Runtime::new().unwrap().block_on(async {
+                // Open file and write log
+                let mut file = tokio::fs::File::create("log.txt").await.unwrap();
+                let _ = file.write_all(format!("{clf_log}").as_bytes()).await;
+            })
         })
     });
 }
 
 // Group benchmarks together
-criterion_group!(
-    benches,
-    new_benchmark,
-    format_benchmark,
-    write_benchmark
-);
+criterion_group!(benches, new_benchmark, format_benchmark, write_benchmark);
 criterion_main!(benches);

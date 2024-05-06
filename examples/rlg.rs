@@ -1,10 +1,13 @@
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
-/// Importing external crates
-extern crate dtt;
-extern crate rlg;
-
+#![allow(missing_docs)]
 /// Importing necessary items from external crates
 use dtt::DateTime;
+use rlg::log::Log;
+use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
 use rlg::{
     // Importing macros for logging
     macro_fatal_log,
@@ -14,9 +17,6 @@ use rlg::{
     macro_print_log,
     macro_trace_log,
 };
-use rlg::log::Log;
-use rlg::log_format::LogFormat;
-use rlg::log_level::LogLevel;
 
 /// Main function
 fn main() {
@@ -102,7 +102,10 @@ fn main() {
         &LogFormat::JSON
     );
     // Printing success message for log with metadata creation
-    println!("🦀 macro_log_with_metadata: ✅ {} | Metadata: {}", log_with_metadata, metadata);
+    println!(
+        "🦀 macro_log_with_metadata: ✅ {} | Metadata: {}",
+        log_with_metadata, metadata
+    );
 
     // Example usage of macro_print_log
     let log_to_print = Log::new(

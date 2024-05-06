@@ -5,7 +5,7 @@ alt="RustLogs (RLG) logo" height="261" width="261" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
 
-# RLG
+# RustLogs (RLG)
 
 A Rust library that implements application-level logging with a simple, readable output format.
 
@@ -17,33 +17,13 @@ A Rust library that implements application-level logging with a simple, readable
 
 ![divider][divider]
 
-## Welcome to RustLogs (RLG) 👋
+## Overview
 
-![RLG Banner][banner]
+RustLogs (RLG) is a Rust library that provides application-level logging with a simple, readable output format. It offers logging APIs and various helper macros to simplify common logging tasks.
 
-<!-- markdownlint-disable MD033 -->
-<center>
+## Features
 
-**[Website][00]
-• [Documentation][08]
-• [Report Bug][03]
-• [Request Feature][03]
-• [Contributing Guidelines][04]**
-
-</center>
-
-<!-- markdownlint-enable MD033 -->
-
-## Overview 📖
-
-`RustLogs (RLG)` is a Rust library that provides application-level logging with
-a simple, readable output format. It offers logging APIs and various helper
-macros to simplify common logging tasks.
-
-## Features ✨
-
-- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-  `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`
+- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`
 - Provides structured log formats that are easy to parse and filter
 - Compatible with multiple output formats including:
   - Common Event Format (CEF)
@@ -59,26 +39,24 @@ macros to simplify common logging tasks.
   - NDJSON (Newline Delimited JSON)
   - and more
 
-## Installation 📦
+## Installation
 
-To use `rlg` in your Rust project, add the following line to your `Cargo.toml` file:
+To use `rlg` in your Rust project, add the following to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rlg = "0.0.3"
+rlg = "0.0.4"
 ```
 
 ### Requirements
 
-`rlg` requires Rust **1.67.0** or later.
+`rlg` requires Rust **1.60** or later.
 
 ### Documentation
 
-> ℹ️ **Info:** Please check out our [website][00] for more information
-and find our documentation on [docs.rs][08], [lib.rs][09], and
-[crates.io][07].
+> ℹ️ **Info:** Please check out our [website][00] for more information and find our documentation on [docs.rs][08], [lib.rs][09], and [crates.io][07].
 
-## Usage 📖
+## Usage
 
 ### Basic Logging
 
@@ -133,11 +111,11 @@ tokio::runtime::Runtime::new().unwrap().block_on(async {
 });
 ```
 
-## Configuration 🔧
+## Configuration
 
 By default, RustLogs (RLG) logs to a file named "RLG.log" in the current directory. You can customize the log file path by setting the `LOG_FILE_PATH` environment variable.
 
-## Error Handling 🚨
+## Error Handling
 
 Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result<(), io::Error>` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
 
@@ -165,7 +143,7 @@ tokio::runtime::Runtime::new().unwrap().block_on(async {
 });
 ```
 
-## Macros 🔧
+## Macros
 
 RustLogs (RLG) provides a set of useful macros to simplify logging tasks:
 
@@ -184,62 +162,45 @@ RustLogs (RLG) provides a set of useful macros to simplify logging tasks:
 
 Refer to the [documentation][08] for more details on how to use these macros.
 
-## Examples 📝
+## Examples
 
-`RLG` comes with a set of examples that you can use to get started. The
-examples are located in the `examples` directory of the project. To run
-the examples, clone the repository and run the following command in your
-terminal from the project root directory.
+`RLG` comes with a set of examples that you can use to get started. The examples are located in the `examples` directory of the project. To run the examples, clone the repository and run the following command in your terminal from the project root directory:
 
 ```shell
 cargo run --example rlg
 ```
 
-## Semantic Versioning Policy 🚥
+## Semantic Versioning Policy
 
-For transparency into our release cycle and in striving to maintain
-backward compatibility, `RLG` follows [semantic versioning][06].
+For transparency into our release cycle and in striving to maintain backward compatibility, `RLG` follows [semantic versioning][06].
 
-## License 📝
+## License
 
-The project is licensed under the terms of both the MIT license and the
-Apache License (Version 2.0).
+The project is licensed under the terms of both the MIT license and the Apache License (Version 2.0).
 
 - [Apache License, Version 2.0][01]
 - [MIT license][02]
 
-## Contribution 🤝
+## Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0
-license, shall be dual licensed as above, without any additional terms
-or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
-![divider][divider]
+## Acknowledgements
 
-## Acknowledgements 💙
-
-A big thank you to all the awesome contributors of [Mini Functions][05]
-for their help and support. A special thank you goes to the
-[Rust Reddit](https://www.reddit.com/r/rust/) community for providing a
-lot of useful suggestions on how to improve this project.
+A special thank you goes to the [Rust Reddit](https://www.reddit.com/r/rust/) community for providing a lot of useful suggestions on how to improve this project.
 
 [00]: https://rustlogs.com
 [01]: http://www.apache.org/licenses/LICENSE-2.0
 [02]: http://opensource.org/licenses/MIT
-[03]: https://github.com/sebastienrousseau/rlg/issues
-[04]: https://raw.githubusercontent.com/sebastienrousseau/rlg/main/.github/CONTRIBUTING.md
 [05]: https://github.com/sebastienrousseau/rlg/graphs/contributors
 [06]: http://semver.org/
 [07]: https://crates.io/crates/rlg
 [08]: https://docs.rs/rlg
 [09]: https://lib.rs/crates/rlg
-[10]: https://github.com/sebastienrousseau/rlg
 
-[banner]: https://kura.pro/rlg/images/titles/title-rlg.svg "RLG Banner"
 [crates-badge]: https://img.shields.io/crates/v/rlg.svg?style=for-the-badge 'Crates.io'
-[divider]: https://raw.githubusercontent.com/sebastienrousseau/vault/main/assets/elements/divider.svg "divider"
+[divider]: https://kura.pro/common/images/elements/divider.svg "divider"
 [docs-badge]: https://img.shields.io/docsrs/rlg.svg?style=for-the-badge 'Docs.rs'
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.3-orange.svg?style=for-the-badge 'Lib.rs'
+[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.4-orange.svg?style=for-the-badge 'Lib.rs'
 [license-badge]: https://img.shields.io/crates/l/rlg.svg?style=for-the-badge 'License'
 [made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust'

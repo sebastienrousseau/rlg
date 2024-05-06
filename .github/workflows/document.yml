@@ -3,10 +3,12 @@ name: 🧪 Document
 on:
   push:
     branches:
-      - main
+      - feat/rlg
   pull_request:
     branches:
-      - main
+      - feat/rlg
+  release:
+    types: [created]
 
 jobs:
   all:
@@ -43,7 +45,7 @@ jobs:
           retention-days: 1
 
       - name: Write CNAME file
-        run: echo 'doc.rlglib.one' > ./target/doc/CNAME
+        run: echo 'doc.rustlogs.com' > ./target/doc/CNAME
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4

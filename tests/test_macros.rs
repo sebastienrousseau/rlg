@@ -1,16 +1,17 @@
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
 #[cfg(test)]
 
 mod tests {
+    use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel};
     use rlg::{
         macro_debug_log, macro_error_log, macro_fatal_log, macro_info_log, macro_log, macro_log_if,
         macro_log_to_file, macro_log_with_metadata, macro_print_log, macro_set_log_format_clf,
-        macro_trace_log, macro_warn_log
+        macro_trace_log, macro_warn_log,
     };
-    use rlg::log::Log;
-    use rlg::log_format::LogFormat;
-    use rlg::log_level::LogLevel;
-    use std::fs::File;
-    use std::io::Read;
+    use std::{fs::File, io::Read};
 
     #[test]
     fn test_macro_log() {
@@ -134,7 +135,7 @@ mod tests {
 
         // Act
         // Assuming Log::write_log_entry correctly handles writing to `test_log_file`
-        let result = Log::write_log_entry(log_level.clone(), process, message, log_format.clone());
+        let result = Log::write_log_entry(log_level, process, message, log_format);
         assert!(result.is_ok());
 
         // Assert by reading the file's contents to verify
@@ -144,9 +145,14 @@ mod tests {
             let mut file = File::open(test_log_file)?; // Open for reading
             file.read_to_string(&mut contents)?;
         }
-        assert!(contents.contains(process), "The log file does not contain the process.");
-        assert!(contents.contains(message), "The log file does not contain the message.");
-        assert!(contents.contains(&log_level.to_string()), "The log file does not contain the log level.");
+        assert!(
+            contents.contains(message),
+            "The log file does not contain the message."
+        );
+        assert!(
+            contents.contains(&log_level.to_string()),
+            "The log file does not contain the log level."
+        );
 
         // Act again if necessary and perform any additional checks
         // This is where you might write to the file again and verify as needed
