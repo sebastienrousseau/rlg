@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use std::convert::TryFrom;
 use std::fmt;
+use std::str::FromStr;
 
 /// An enumeration of the different log formats that can be used.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -45,5 +47,50 @@ impl fmt::Display for LogFormat {
             LogFormat::Log4jXML => write!(f, "Log4j XML"),
             LogFormat::NDJSON => write!(f, "NDJSON"),
         }
+    }
+}
+
+impl Default for LogFormat {
+    fn default() -> Self {
+        LogFormat::CLF
+    }
+}
+
+impl FromStr for LogFormat {
+    type Err = String;
+
+    /// Parses a string slice into a LogFormat enum variant.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "clf" => Ok(LogFormat::CLF),
+            "json" => Ok(LogFormat::JSON),
+            "cef" => Ok(LogFormat::CEF),
+            "elf" => Ok(LogFormat::ELF),
+            "w3c" => Ok(LogFormat::W3C),
+            "gelf" => Ok(LogFormat::GELF),
+            "apache access log" => Ok(LogFormat::ApacheAccessLog),
+            "logstash" => Ok(LogFormat::Logstash),
+            "log4j xml" => Ok(LogFormat::Log4jXML),
+            "ndjson" => Ok(LogFormat::NDJSON),
+            _ => Err(format!("Invalid log format: {}", s)),
+        }
+    }
+}
+
+impl TryFrom<&str> for LogFormat {
+    type Error = LogFormat;
+
+    /// Attempts to convert a string slice into a LogFormat enum variant.
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        value.parse().map_err(|_| LogFormat::default())
+    }
+}
+
+impl TryFrom<String> for LogFormat {
+    type Error = LogFormat;
+
+    /// Attempts to convert a String into a LogFormat enum variant.
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        value.as_str().try_into()
     }
 }
