@@ -4,7 +4,7 @@
 
 use crate::LogLevel;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, env, path::PathBuf};
+use std::{borrow::Cow, env, path::PathBuf, str::FromStr};
 
 /// Enum representing different log rotation options.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -98,5 +98,17 @@ impl Config {
     /// Convert log_file_path to a displayable representation
     pub fn log_file_path_display(&self) -> Cow<str> {
         self.log_file_path.to_string_lossy()
+    }
+}
+
+impl FromStr for LogRotation {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "size" => Ok(LogRotation::BySize(1024 * 1024)),
+            "time" => Ok(LogRotation::ByTime(86400)),
+            _ => Err(format!("Invalid log rotation option: {}", s)),
+        }
     }
 }
