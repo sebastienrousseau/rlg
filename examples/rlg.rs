@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+#![allow(missing_docs)]
 /// Importing necessary items from external crates
 use dtt::DateTime;
 use rlg::log::Log;

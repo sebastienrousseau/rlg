@@ -9,16 +9,21 @@ use std::{borrow::Cow, env, path::PathBuf};
 /// Enum representing different log rotation options.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum LogRotation {
-    BySize(u64), // Log rotation by size (in bytes)
-    ByTime(u64), // Log rotation by time (in seconds)
+    /// Log rotation by size (in bytes)
+    BySize(u64),
+    /// Log rotation by time (in seconds)
+    ByTime(u64),
 }
 
 /// Enum representing different logging destinations.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum LoggingDestination {
-    File(PathBuf),   // Log to a file with the specified path
-    Stdout,          // Log to standard output (stdout)
-    Network(String), // Log to a network endpoint (e.g., syslog server)
+    /// Log to a file with the specified path
+    File(PathBuf),
+    /// Log to standard output (stdout)
+    Stdout,
+    /// Log to a network endpoint (e.g., syslog server)
+    Network(String),
 }
 
 /// Configuration struct for logging system.

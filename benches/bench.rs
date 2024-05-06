@@ -1,3 +1,8 @@
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
+#![allow(missing_docs)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 // Import Log struct for benchmarking
