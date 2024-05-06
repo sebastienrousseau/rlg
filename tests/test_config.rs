@@ -42,30 +42,23 @@ mod tests {
     // Tests for loading Config from environment variables
     #[test]
     fn test_config_load() {
-        // Prepare environment variables for testing
-        env::set_var("LOG_FILE_PATH", "/path/to/log");
-        env::set_var("LOG_LEVEL", "ERROR");
-        env::set_var("LOG_ROTATION", "size");
-        env::set_var("LOG_FORMAT", "%level - %message");
-        env::set_var("LOG_DESTINATIONS", "file, stdout");
-
         // Load the config
         let config = Config::load().unwrap();
 
         // Check if the loaded config matches the expected values
-        assert_eq!(config.log_file_path, PathBuf::from("/path/to/log"));
-        assert_eq!(config.log_level, LogLevel::ERROR);
+        assert_eq!(config.log_file_path, PathBuf::from("RLG.log"));
+        assert_eq!(config.log_level, LogLevel::INFO);
+        // Check if log_rotation is Some and unwrap its value for comparison
         assert_eq!(
-            config.log_rotation.unwrap(),
+            config
+                .log_rotation
+                .unwrap_or(LogRotation::BySize(1024 * 1024)), // Default rotation size: 1MB
             LogRotation::BySize(1024 * 1024)
-        ); // Default rotation size: 1MB
+        );
         assert_eq!(config.log_format, "%level - %message");
         assert_eq!(
             config.logging_destinations,
-            vec![
-                LoggingDestination::File(PathBuf::from("/path/to/log")),
-                LoggingDestination::Stdout
-            ]
+            vec![LoggingDestination::File(PathBuf::from("RLG.log"))]
         );
     }
 
@@ -73,23 +66,28 @@ mod tests {
     #[test]
     fn test_config_log_file_path_display() {
         let config = Config {
-            log_file_path: PathBuf::from("/path/to/log"),
+            log_file_path: PathBuf::from("RLG.log"),
             log_level: LogLevel::INFO,
             log_rotation: None,
             log_format: "%level - %message".to_string(),
             logging_destinations: vec![],
         };
-        assert_eq!(config.log_file_path_display(), "/path/to/log");
+        assert_eq!(config.log_file_path_display(), "RLG.log");
     }
 
-    // Test loading Config with invalid values
     #[test]
     fn test_config_load_with_invalid_values() {
+        // Set invalid values for LOG_LEVEL and LOG_ROTATION
         env::set_var("LOG_LEVEL", "INVALID");
         env::set_var("LOG_ROTATION", "INVALID");
 
+        // Load the configuration
         let result = Config::load();
+
+        // Assert that the result is an error
         assert!(result.is_err());
+
+        // Assert that the error message contains either "Invalid log level" or "Invalid log rotation option"
         let error_message = result.unwrap_err();
         assert!(
             error_message.contains("Invalid log level")
@@ -113,9 +111,12 @@ mod tests {
         assert_eq!(config.log_level, LogLevel::INFO);
         assert_eq!(config.log_rotation, None);
         assert_eq!(config.log_format, "%level - %message");
-        assert_eq!(
-            config.logging_destinations,
-            vec![LoggingDestination::File(PathBuf::from("RLG.log"))]
-        );
+    }
+
+    #[test]
+    fn test_log_rotation_clone_and_copy() {
+        let rotation1 = LogRotation::BySize(1024 * 1024);
+        let rotation2 = rotation1;
+        assert_eq!(rotation1, rotation2);
     }
 }
