@@ -10,6 +10,7 @@ mod tests {
     };
     use dtt::DateTime;
     use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel::*};
+    use rlg::{macro_debug_log, macro_info_log};
 
     #[tokio::test]
     async fn test_log_common_format() {
