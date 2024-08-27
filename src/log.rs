@@ -259,11 +259,17 @@ impl Log {
         );
 
         // Format the log entry according to the specified log format
-        let formatted_entry =
-            log_format.format_log(&log_entry.to_string());
+        let formatted_entry = log_format
+            .format_log(&log_entry.to_string())
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to format log entry: {}", e),
+                )
+            })?;
 
         // Write the formatted log entry to the file
-        writeln!(log_file, "{:?}", formatted_entry).map_err(|e| {
+        writeln!(log_file, "{}", formatted_entry).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("Failed to write log entry: {}", e),
