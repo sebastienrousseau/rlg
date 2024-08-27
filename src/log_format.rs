@@ -5,9 +5,10 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::str::FromStr;
+use serde::{Deserialize, Serialize};
 
 /// An enumeration of the different log formats that can be used.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub enum LogFormat {
     /// The log format is set to CLF.
     CLF,
