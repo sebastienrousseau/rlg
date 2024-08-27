@@ -57,12 +57,14 @@ fn main() {
     }
 
     // Example usage of macro_trace_log
-    let trace_log = macro_trace_log!(&iso, "TraceComponent", "This is a trace log");
+    let trace_log =
+        macro_trace_log!(&iso, "TraceComponent", "This is a trace log");
     // Printing success message for trace log creation
     println!("🦀 macro_trace_log: ✅ {}", trace_log);
 
     // Example usage of macro_fatal_log
-    let fatal_log = macro_fatal_log!(&iso, "FatalComponent", "This is a fatal log");
+    let fatal_log =
+        macro_fatal_log!(&iso, "FatalComponent", "This is a fatal log");
     // Printing success message for fatal log creation
     println!("🦀 macro_fatal_log: ✅ {}", fatal_log);
 

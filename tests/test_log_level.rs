@@ -27,16 +27,28 @@ mod tests {
     fn test_log_level_from_str() {
         assert_eq!("ALL".parse::<LogLevel>(), Ok(LogLevel::ALL));
         assert_eq!("DEBUG".parse::<LogLevel>(), Ok(LogLevel::DEBUG));
-        assert_eq!("DISABLED".parse::<LogLevel>(), Ok(LogLevel::DISABLED));
+        assert_eq!(
+            "DISABLED".parse::<LogLevel>(),
+            Ok(LogLevel::DISABLED)
+        );
         assert_eq!("ERROR".parse::<LogLevel>(), Ok(LogLevel::ERROR));
         assert_eq!("FATAL".parse::<LogLevel>(), Ok(LogLevel::FATAL));
         assert_eq!("INFO".parse::<LogLevel>(), Ok(LogLevel::INFO));
         assert_eq!("NONE".parse::<LogLevel>(), Ok(LogLevel::NONE));
         assert_eq!("TRACE".parse::<LogLevel>(), Ok(LogLevel::TRACE));
-        assert_eq!("VERBOSE".parse::<LogLevel>(), Ok(LogLevel::VERBOSE));
-        assert_eq!("WARNING".parse::<LogLevel>(), Ok(LogLevel::WARNING));
+        assert_eq!(
+            "VERBOSE".parse::<LogLevel>(),
+            Ok(LogLevel::VERBOSE)
+        );
+        assert_eq!(
+            "WARNING".parse::<LogLevel>(),
+            Ok(LogLevel::WARNING)
+        );
         assert_eq!("WARN".parse::<LogLevel>(), Ok(LogLevel::WARN));
-        assert_eq!("CRITICAL".parse::<LogLevel>(), Ok(LogLevel::CRITICAL));
+        assert_eq!(
+            "CRITICAL".parse::<LogLevel>(),
+            Ok(LogLevel::CRITICAL)
+        );
         assert_eq!(
             "Invalid".parse::<LogLevel>(),
             Err("Invalid log level: Invalid".to_string())
@@ -45,17 +57,38 @@ mod tests {
 
     #[test]
     fn test_log_level_try_from_str() {
-        assert_eq!(TryInto::<LogLevel>::try_into("ALL"), Ok(LogLevel::ALL));
-        assert_eq!(TryInto::<LogLevel>::try_into("DEBUG"), Ok(LogLevel::DEBUG));
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("ALL"),
+            Ok(LogLevel::ALL)
+        );
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("DEBUG"),
+            Ok(LogLevel::DEBUG)
+        );
         assert_eq!(
             TryInto::<LogLevel>::try_into("DISABLED"),
             Ok(LogLevel::DISABLED)
         );
-        assert_eq!(TryInto::<LogLevel>::try_into("ERROR"), Ok(LogLevel::ERROR));
-        assert_eq!(TryInto::<LogLevel>::try_into("FATAL"), Ok(LogLevel::FATAL));
-        assert_eq!(TryInto::<LogLevel>::try_into("INFO"), Ok(LogLevel::INFO));
-        assert_eq!(TryInto::<LogLevel>::try_into("NONE"), Ok(LogLevel::NONE));
-        assert_eq!(TryInto::<LogLevel>::try_into("TRACE"), Ok(LogLevel::TRACE));
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("ERROR"),
+            Ok(LogLevel::ERROR)
+        );
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("FATAL"),
+            Ok(LogLevel::FATAL)
+        );
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("INFO"),
+            Ok(LogLevel::INFO)
+        );
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("NONE"),
+            Ok(LogLevel::NONE)
+        );
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("TRACE"),
+            Ok(LogLevel::TRACE)
+        );
         assert_eq!(
             TryInto::<LogLevel>::try_into("VERBOSE"),
             Ok(LogLevel::VERBOSE)
@@ -64,7 +97,10 @@ mod tests {
             TryInto::<LogLevel>::try_into("WARNING"),
             Ok(LogLevel::WARNING)
         );
-        assert_eq!(TryInto::<LogLevel>::try_into("WARN"), Ok(LogLevel::WARN));
+        assert_eq!(
+            TryInto::<LogLevel>::try_into("WARN"),
+            Ok(LogLevel::WARN)
+        );
         assert_eq!(
             TryInto::<LogLevel>::try_into("CRITICAL"),
             Ok(LogLevel::CRITICAL)

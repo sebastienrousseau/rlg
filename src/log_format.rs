@@ -2,13 +2,24 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::fmt;
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
 
 /// An enumeration of the different log formats that can be used.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum LogFormat {
     /// The log format is set to CLF.
     CLF,
@@ -43,7 +54,9 @@ impl fmt::Display for LogFormat {
             LogFormat::GELF => write!(f, "GELF"),
             LogFormat::JSON => write!(f, "JSON"),
             LogFormat::W3C => write!(f, "W3C"),
-            LogFormat::ApacheAccessLog => write!(f, "Apache Access Log"),
+            LogFormat::ApacheAccessLog => {
+                write!(f, "Apache Access Log")
+            }
             LogFormat::Logstash => write!(f, "Logstash"),
             LogFormat::Log4jXML => write!(f, "Log4j XML"),
             LogFormat::NDJSON => write!(f, "NDJSON"),

@@ -7,7 +7,18 @@ use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 /// An enumeration of the different levels that a log message can have.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum LogLevel {
     /// The log level is set to all.
     ALL,

@@ -14,9 +14,18 @@ mod tests {
     // Tests for LogLevel enum parsing
     #[test]
     fn test_log_level_from_str() {
-        assert_eq!(<LogLevel as FromStr>::from_str("INFO").unwrap(), INFO);
-        assert_eq!(<LogLevel as FromStr>::from_str("debug").unwrap(), DEBUG);
-        assert_eq!(<LogLevel as FromStr>::from_str("NONE").unwrap(), NONE);
+        assert_eq!(
+            <LogLevel as FromStr>::from_str("INFO").unwrap(),
+            INFO
+        );
+        assert_eq!(
+            <LogLevel as FromStr>::from_str("debug").unwrap(),
+            DEBUG
+        );
+        assert_eq!(
+            <LogLevel as FromStr>::from_str("NONE").unwrap(),
+            NONE
+        );
     }
 
     // Tests for LogRotation enum parsing
@@ -83,7 +92,8 @@ mod tests {
         let error_message = result.unwrap_err();
         assert!(
             error_message.contains("Invalid log level")
-                || error_message.contains("Invalid log rotation option")
+                || error_message
+                    .contains("Invalid log rotation option")
         );
     }
 

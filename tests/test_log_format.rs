@@ -36,9 +36,18 @@ mod tests {
             "Apache Access Log".parse::<LogFormat>(),
             Ok(LogFormat::ApacheAccessLog)
         );
-        assert_eq!("Logstash".parse::<LogFormat>(), Ok(LogFormat::Logstash));
-        assert_eq!("Log4j XML".parse::<LogFormat>(), Ok(LogFormat::Log4jXML));
-        assert_eq!("NDJSON".parse::<LogFormat>(), Ok(LogFormat::NDJSON));
+        assert_eq!(
+            "Logstash".parse::<LogFormat>(),
+            Ok(LogFormat::Logstash)
+        );
+        assert_eq!(
+            "Log4j XML".parse::<LogFormat>(),
+            Ok(LogFormat::Log4jXML)
+        );
+        assert_eq!(
+            "NDJSON".parse::<LogFormat>(),
+            Ok(LogFormat::NDJSON)
+        );
         assert_eq!(
             "Invalid".parse::<LogFormat>(),
             Err("Invalid log format: Invalid".to_string())
@@ -47,12 +56,30 @@ mod tests {
 
     #[test]
     fn test_log_format_try_from_str() {
-        assert_eq!(TryInto::<LogFormat>::try_into("CLF"), Ok(LogFormat::CLF));
-        assert_eq!(TryInto::<LogFormat>::try_into("JSON"), Ok(LogFormat::JSON));
-        assert_eq!(TryInto::<LogFormat>::try_into("CEF"), Ok(LogFormat::CEF));
-        assert_eq!(TryInto::<LogFormat>::try_into("ELF"), Ok(LogFormat::ELF));
-        assert_eq!(TryInto::<LogFormat>::try_into("W3C"), Ok(LogFormat::W3C));
-        assert_eq!(TryInto::<LogFormat>::try_into("GELF"), Ok(LogFormat::GELF));
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("CLF"),
+            Ok(LogFormat::CLF)
+        );
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("JSON"),
+            Ok(LogFormat::JSON)
+        );
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("CEF"),
+            Ok(LogFormat::CEF)
+        );
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("ELF"),
+            Ok(LogFormat::ELF)
+        );
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("W3C"),
+            Ok(LogFormat::W3C)
+        );
+        assert_eq!(
+            TryInto::<LogFormat>::try_into("GELF"),
+            Ok(LogFormat::GELF)
+        );
         assert_eq!(
             TryInto::<LogFormat>::try_into("Apache Access Log"),
             Ok(LogFormat::ApacheAccessLog)
@@ -102,7 +129,9 @@ mod tests {
             Ok(LogFormat::GELF)
         );
         assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("Apache Access Log")),
+            TryInto::<LogFormat>::try_into(String::from(
+                "Apache Access Log"
+            )),
             Ok(LogFormat::ApacheAccessLog)
         );
         assert_eq!(

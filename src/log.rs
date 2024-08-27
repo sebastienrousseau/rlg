@@ -133,18 +133,25 @@ impl Log {
 
         // Handle potential formatting errors
         write_result.map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, format!("Formatting error: {}", e))
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Formatting error: {}", e),
+            )
         })?;
 
         // Attempt to write the log message to a file
-        let config = Config::load().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let config = Config::load()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let log_file_path_display = config.log_file_path_display();
         let mut file = tokio::fs::File::create(&config.log_file_path)
             .await
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
-                    format!("Failed to open log file '{}': {}", log_file_path_display, e),
+                    format!(
+                        "Failed to open log file '{}': {}",
+                        log_file_path_display, e
+                    ),
                 )
             })?;
 
@@ -277,7 +284,11 @@ impl fmt::Display for Log {
                 write!(
                     f,
                     "CEF:0|{}|{}|{}|{}|{}|CEF",
-                    self.session_id, self.time, self.level, self.component, self.description
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 .expect("Unable to write log message");
                 Ok(())
@@ -286,7 +297,11 @@ impl fmt::Display for Log {
                 write!(
                     f,
                     "ELF:0|{}|{}|{}|{}|{}|ELF",
-                    self.session_id, self.time, self.level, self.component, self.description
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 .expect("Unable to write log message");
                 Ok(())
@@ -295,7 +310,11 @@ impl fmt::Display for Log {
                 write!(
                     f,
                     "W3C:0|{}|{}|{}|{}|{}|W3C",
-                    self.session_id, self.time, self.level, self.component, self.description
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 // self.session_id, self.time, self.level, self.component, self.description)
                 .expect("Unable to write log message");
@@ -345,7 +364,10 @@ impl fmt::Display for Log {
                             "component": "{}",
                             "message": "{}"
                         }}"#,
-                    self.time, self.level, self.component, self.description
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 .expect("Unable to write log message");
                 Ok(())
@@ -372,7 +394,10 @@ impl fmt::Display for Log {
                             "component": "{}",
                             "message": "{}"
                         }}"#,
-                    self.time, self.level, self.component, self.description
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
                 )
                 .expect("Unable to write log message");
                 Ok(())
