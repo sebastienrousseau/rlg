@@ -132,34 +132,55 @@ mod tests {
         let test_log_file = "RLG.log";
 
         // Clear or create the test log file before writing entries
-        // Adjusted to use ? for error propagation
         File::create(test_log_file)?;
 
-        // Act
-        // Assuming Log::write_log_entry correctly handles writing to `test_log_file`
+        // Act: Write the log entry
         let result = Log::write_log_entry(
             log_level, process, message, log_format,
         );
         assert!(result.is_ok());
 
         // Assert by reading the file's contents to verify
-        // Need to open the file with read permission
         let mut contents = String::new();
         {
             let mut file = File::open(test_log_file)?; // Open for reading
             file.read_to_string(&mut contents)?;
         }
+
+        // Verify that the log file contains the message
         assert!(
             contents.contains(message),
             "The log file does not contain the message."
         );
+        // Verify that the log file contains the log level
         assert!(
             contents.contains(&log_level.to_string()),
             "The log file does not contain the log level."
         );
 
-        // Act again if necessary and perform any additional checks
-        // This is where you might write to the file again and verify as needed
+        // Optionally, write a second log entry to verify multiple entries work
+        let second_message = "This is another test log message";
+        let result = Log::write_log_entry(
+            log_level,
+            process,
+            second_message,
+            log_format,
+        );
+        assert!(result.is_ok());
+
+        // Re-read the contents to verify the second entry
+        contents.clear();
+        {
+            let mut file = File::open(test_log_file)?; // Open for reading
+            file.read_to_string(&mut contents)?;
+        }
+
+        // Verify the second log entry is present
+        assert!(
+            contents.contains(second_message),
+            "The log file does not contain the second message."
+        );
+
         Ok(())
     }
 }
