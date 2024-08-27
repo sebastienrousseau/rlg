@@ -15,22 +15,33 @@ mod tests {
     #[test]
     fn test_log_level_from_str() {
         assert_eq!(LogLevel::from_str("INFO").unwrap(), LogLevel::INFO);
-        assert_eq!(LogLevel::from_str("debug").unwrap(), LogLevel::DEBUG);
+        assert_eq!(
+            LogLevel::from_str("debug").unwrap(),
+            LogLevel::DEBUG
+        );
         assert_eq!(LogLevel::from_str("NONE").unwrap(), LogLevel::NONE);
     }
 
     /// Tests for correctly parsing valid LogRotation enum variants from strings.
     #[test]
     fn test_log_rotation_from_str_valid() {
-        assert_eq!(LogRotation::BySize(1024 * 1024), "size".parse::<LogRotation>().unwrap());
-        assert_eq!(LogRotation::ByTime(86400), "time".parse::<LogRotation>().unwrap());
+        assert_eq!(
+            LogRotation::BySize(1024 * 1024),
+            "size".parse::<LogRotation>().unwrap()
+        );
+        assert_eq!(
+            LogRotation::ByTime(86400),
+            "time".parse::<LogRotation>().unwrap()
+        );
     }
 
     /// Tests that parsing an invalid string as LogRotation returns the appropriate error.
     #[test]
     fn test_log_rotation_from_str_invalid() {
         let error = "invalid".parse::<LogRotation>().unwrap_err();
-        assert!(matches!(error, ConfigError::RotationError(msg) if msg.contains("Invalid log rotation option")));
+        assert!(
+            matches!(error, ConfigError::RotationError(msg) if msg.contains("Invalid log rotation option"))
+        );
     }
 
     /// Tests displaying the log file path from the Config struct.
@@ -55,7 +66,11 @@ mod tests {
         let result = Config::load();
         assert!(result.is_err());
         let error_message = format!("{}", result.unwrap_err());
-        assert!(error_message.contains("Invalid log level") || error_message.contains("Invalid log rotation option"));
+        assert!(
+            error_message.contains("Invalid log level")
+                || error_message
+                    .contains("Invalid log rotation option")
+        );
     }
 
     /// Tests the cloning and copying capabilities of the LogRotation enum.

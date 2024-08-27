@@ -223,22 +223,32 @@ impl Log {
         message: &str,
         log_format: LogFormat,
     ) -> io::Result<()> {
-        let config = Config::load();
-        let log_file = OpenOptions::new()
+        // Load configuration
+        let config = Config::load().map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to load config: {}", e),
+            )
+        })?;
+
+        // Open or create the log file
+        let log_file_path = config.log_file_path.clone();
+        let mut log_file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(config.clone().unwrap().log_file_path)
+            .open(&log_file_path)
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
                     format!(
                         "Failed to open or create log file '{}': {}",
-                        config.unwrap().log_file_path_display(),
+                        log_file_path.display(),
                         e
                     ),
                 )
-            });
+            })?;
 
+        // Create the log entry
         let log_entry = Log::new(
             &Random::default().int(0, 1_000_000_000).to_string(),
             &DateTime::new().iso_8601,
@@ -248,7 +258,12 @@ impl Log {
             &log_format,
         );
 
-        writeln!(log_file?, "{}", log_entry).map_err(|e| {
+        // Format the log entry according to the specified log format
+        let formatted_entry =
+            log_format.format_log(&log_entry.to_string());
+
+        // Write the formatted log entry to the file
+        writeln!(log_file, "{:?}", formatted_entry).map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("Failed to write log entry: {}", e),

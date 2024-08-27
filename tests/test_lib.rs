@@ -15,7 +15,6 @@ mod tests {
     };
     use rlg::{macro_debug_log, macro_info_log};
 
-
     #[tokio::test]
     async fn test_log_common_format() {
         let log = Log::new(

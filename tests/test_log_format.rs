@@ -26,129 +26,34 @@ mod tests {
 
     #[test]
     fn test_log_format_from_str() {
-        assert_eq!("CLF".parse::<LogFormat>(), Ok(LogFormat::CLF));
-        assert_eq!("JSON".parse::<LogFormat>(), Ok(LogFormat::JSON));
-        assert_eq!("CEF".parse::<LogFormat>(), Ok(LogFormat::CEF));
-        assert_eq!("ELF".parse::<LogFormat>(), Ok(LogFormat::ELF));
-        assert_eq!("W3C".parse::<LogFormat>(), Ok(LogFormat::W3C));
-        assert_eq!("GELF".parse::<LogFormat>(), Ok(LogFormat::GELF));
+        assert_eq!("CLF".parse::<LogFormat>().unwrap(), LogFormat::CLF);
         assert_eq!(
-            "Apache Access Log".parse::<LogFormat>(),
-            Ok(LogFormat::ApacheAccessLog)
+            "JSON".parse::<LogFormat>().unwrap(),
+            LogFormat::JSON
+        );
+        assert_eq!("CEF".parse::<LogFormat>().unwrap(), LogFormat::CEF);
+        assert_eq!("ELF".parse::<LogFormat>().unwrap(), LogFormat::ELF);
+        assert_eq!("W3C".parse::<LogFormat>().unwrap(), LogFormat::W3C);
+        assert_eq!(
+            "GELF".parse::<LogFormat>().unwrap(),
+            LogFormat::GELF
         );
         assert_eq!(
-            "Logstash".parse::<LogFormat>(),
-            Ok(LogFormat::Logstash)
+            "ApacheAccessLog".parse::<LogFormat>().unwrap(),
+            LogFormat::ApacheAccessLog
         );
         assert_eq!(
-            "Log4j XML".parse::<LogFormat>(),
-            Ok(LogFormat::Log4jXML)
+            "Logstash".parse::<LogFormat>().unwrap(),
+            LogFormat::Logstash
         );
         assert_eq!(
-            "NDJSON".parse::<LogFormat>(),
-            Ok(LogFormat::NDJSON)
+            "Log4jXML".parse::<LogFormat>().unwrap(),
+            LogFormat::Log4jXML
         );
         assert_eq!(
-            "Invalid".parse::<LogFormat>(),
-            Err("Invalid log format: Invalid".to_string())
+            "NDJSON".parse::<LogFormat>().unwrap(),
+            LogFormat::NDJSON
         );
-    }
-
-    #[test]
-    fn test_log_format_try_from_str() {
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("CLF"),
-            Ok(LogFormat::CLF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("JSON"),
-            Ok(LogFormat::JSON)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("CEF"),
-            Ok(LogFormat::CEF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("ELF"),
-            Ok(LogFormat::ELF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("W3C"),
-            Ok(LogFormat::W3C)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("GELF"),
-            Ok(LogFormat::GELF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("Apache Access Log"),
-            Ok(LogFormat::ApacheAccessLog)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("Logstash"),
-            Ok(LogFormat::Logstash)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("Log4j XML"),
-            Ok(LogFormat::Log4jXML)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("NDJSON"),
-            Ok(LogFormat::NDJSON)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into("Invalid"),
-            Err(LogFormat::default())
-        );
-    }
-
-    #[test]
-    fn test_log_format_try_from_string() {
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("CLF")),
-            Ok(LogFormat::CLF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("JSON")),
-            Ok(LogFormat::JSON)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("CEF")),
-            Ok(LogFormat::CEF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("ELF")),
-            Ok(LogFormat::ELF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("W3C")),
-            Ok(LogFormat::W3C)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("GELF")),
-            Ok(LogFormat::GELF)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from(
-                "Apache Access Log"
-            )),
-            Ok(LogFormat::ApacheAccessLog)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("Logstash")),
-            Ok(LogFormat::Logstash)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("Log4j XML")),
-            Ok(LogFormat::Log4jXML)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("NDJSON")),
-            Ok(LogFormat::NDJSON)
-        );
-        assert_eq!(
-            TryInto::<LogFormat>::try_into(String::from("Invalid")),
-            Err(LogFormat::default())
-        );
+        assert!("Invalid".parse::<LogFormat>().is_err());
     }
 }

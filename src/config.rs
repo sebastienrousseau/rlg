@@ -8,7 +8,18 @@ use std::{env, path::PathBuf, str::FromStr};
 use thiserror::Error;
 
 /// Errors that can occur while constructing a configuration.
-#[derive(Clone, Debug, Deserialize, Eq, Error, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Eq,
+    Error,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum ConfigError {
     #[error("environment variable error: {0}")]
     /// Error message for environment variable errors.
@@ -25,7 +36,18 @@ pub enum ConfigError {
 }
 
 /// Enum representing different log rotation options.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum LogRotation {
     /// Rotate log files based on size.
     BySize(u64),
@@ -38,7 +60,17 @@ pub enum LogRotation {
 }
 
 /// Enum representing different logging destinations.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub enum LoggingDestination {
     /// Log to a file.
     File(PathBuf),
@@ -49,7 +81,17 @@ pub enum LoggingDestination {
 }
 
 /// Struct representing the configuration for the logging system.
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(
+    Clone,
+    Debug,
+    Deserialize,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+)]
 pub struct Config {
     /// The path to the log file.
     pub log_file_path: PathBuf,
@@ -71,7 +113,9 @@ impl Config {
             log_level: LogLevel::INFO,
             log_rotation: Some(LogRotation::BySize(10 * 1024 * 1024)), // Default to 10 MB
             log_format: "%level - %message".into(),
-            logging_destinations: vec![LoggingDestination::File(PathBuf::from("RLG.log"))],
+            logging_destinations: vec![LoggingDestination::File(
+                PathBuf::from("RLG.log"),
+            )],
         }
     }
 
@@ -91,9 +135,8 @@ impl Config {
             .parse::<LogLevel>()
             .map_err(|e| ConfigError::ParseError(e.to_string()))?;
 
-        let log_rotation = env::var("LOG_ROTATION")
-            .ok()
-            .and_then(|r| r.parse().ok());
+        let log_rotation =
+            env::var("LOG_ROTATION").ok().and_then(|r| r.parse().ok());
 
         let log_format = env::var("LOG_FORMAT")
             .unwrap_or_else(|_| Self::default().log_format);
@@ -102,10 +145,17 @@ impl Config {
             .unwrap_or_else(|_| "file".into())
             .split(',')
             .map(|dest| match dest.trim().to_lowercase().as_str() {
-                "file" => Ok(LoggingDestination::File(log_file_path.clone())),
+                "file" => {
+                    Ok(LoggingDestination::File(log_file_path.clone()))
+                }
                 "stdout" => Ok(LoggingDestination::Stdout),
-                "network" => Ok(LoggingDestination::Network("127.0.0.1:514".to_string())),
-                _ => Err(ConfigError::EnvVarError(format!("Invalid logging destination: {}", dest))),
+                "network" => Ok(LoggingDestination::Network(
+                    "127.0.0.1:514".to_string(),
+                )),
+                _ => Err(ConfigError::EnvVarError(format!(
+                    "Invalid logging destination: {}",
+                    dest
+                ))),
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -128,9 +178,21 @@ impl FromStr for LogRotation {
             "size" => Ok(LogRotation::BySize(1024 * 1024)), // Default to 1 MB
             "time" => Ok(LogRotation::ByTime(86400)), // Default to 1 day
             "date" => Ok(LogRotation::ByDate),
-            "count" => s.split(':').nth(1).and_then(|c| c.parse::<u32>().ok()).map(LogRotation::ByFileCount)
-                .ok_or_else(|| ConfigError::RotationError(format!("Invalid rotation count option: {}", s))),
-            _ => Err(ConfigError::RotationError(format!("Invalid log rotation option: {}", s))),
+            "count" => s
+                .split(':')
+                .nth(1)
+                .and_then(|c| c.parse::<u32>().ok())
+                .map(LogRotation::ByFileCount)
+                .ok_or_else(|| {
+                    ConfigError::RotationError(format!(
+                        "Invalid rotation count option: {}",
+                        s
+                    ))
+                }),
+            _ => Err(ConfigError::RotationError(format!(
+                "Invalid log rotation option: {}",
+                s
+            ))),
         }
     }
 }
