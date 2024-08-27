@@ -195,7 +195,7 @@ impl Log {
             level: *level,
             component: component.to_string(),
             description: description.to_string(),
-            format: format.clone(),
+            format: *format,
         }
     }
     /// Writes a log entry to the log file using the provided details.
