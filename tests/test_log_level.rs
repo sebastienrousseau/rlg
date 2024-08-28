@@ -8,6 +8,7 @@ mod tests {
     use rlg::log_level::{LogLevel, ParseLogLevelError};
     use std::collections::HashSet;
     use std::convert::TryInto;
+    use std::error::Error;
     use std::str::FromStr;
 
     /// Tests the display implementation for `LogLevel`.
@@ -309,5 +310,111 @@ mod tests {
                 assert_eq!(a >= b, i >= j);
             }
         }
+    }
+
+    /// Tests the creation of a `ParseLogLevelError` with an invalid value.
+    #[test]
+    fn test_parse_log_level_error_creation() {
+        let invalid_value = "INVALID".to_string();
+        let error = ParseLogLevelError {
+            invalid_value: invalid_value.clone(),
+        };
+        assert_eq!(error.invalid_value, invalid_value);
+    }
+
+    /// Tests the `Display` implementation for `ParseLogLevelError`.
+    #[test]
+    fn test_parse_log_level_error_display() {
+        let error = ParseLogLevelError::new("INVALID");
+        assert_eq!(format!("{}", error), "Invalid log level: INVALID");
+    }
+
+    /// Tests that `ParseLogLevelError` implements the `Error` trait and the `Display` trait is correctly used.
+    #[test]
+    fn test_parse_log_level_error_trait() {
+        let error = ParseLogLevelError::new("INVALID");
+        let error_trait_obj: &dyn Error = &error; // Check if it can be cast to the Error trait
+
+        // Verify the Display implementation through the Error trait
+        assert_eq!(
+            error_trait_obj.to_string(),
+            "Invalid log level: INVALID"
+        );
+    }
+
+    /// Tests the `Debug` trait implementation for `ParseLogLevelError`.
+    #[test]
+    fn test_parse_log_level_error_debug() {
+        let error = ParseLogLevelError::new("INVALID");
+        assert_eq!(
+            format!("{:?}", error),
+            "ParseLogLevelError { invalid_value: \"INVALID\" }"
+        );
+    }
+
+    /// Tests the `Clone` trait implementation for `ParseLogLevelError`.
+    #[test]
+    fn test_parse_log_level_error_clone() {
+        let error = ParseLogLevelError::new("INVALID");
+        let cloned_error = error.clone();
+        assert_eq!(error.invalid_value, cloned_error.invalid_value);
+    }
+
+    /// Tests the default case when creating a new `ParseLogLevelError`.
+    #[test]
+    fn test_parse_log_level_error_new() {
+        let error = ParseLogLevelError::new("INVALID");
+        assert_eq!(error.invalid_value, "INVALID".to_string());
+    }
+
+    /// Tests that each `LogLevel` variant has unique discriminants.
+    #[test]
+    fn test_log_level_discriminants() {
+        let all = LogLevel::ALL as u8;
+        let none = LogLevel::NONE as u8;
+        let disabled = LogLevel::DISABLED as u8;
+        let debug = LogLevel::DEBUG as u8;
+        let trace = LogLevel::TRACE as u8;
+        let verbose = LogLevel::VERBOSE as u8;
+        let info = LogLevel::INFO as u8;
+        let warn = LogLevel::WARN as u8;
+        let error = LogLevel::ERROR as u8;
+        let fatal = LogLevel::FATAL as u8;
+        let critical = LogLevel::CRITICAL as u8;
+
+        let discriminants = [
+            all, none, disabled, debug, trace, verbose, info, warn,
+            error, fatal, critical,
+        ];
+
+        // Ensure all discriminants are unique
+        let unique_discriminants: HashSet<_> =
+            discriminants.iter().collect();
+        assert_eq!(discriminants.len(), unique_discriminants.len());
+    }
+
+    /// Tests each valid numeric value to ensure it correctly converts to the appropriate LogLevel variant. Also tests that invalid values return `None`.
+    #[test]
+    fn test_log_level_from_numeric_exhaustive() {
+        // Valid conversions
+        assert_eq!(LogLevel::from_numeric(0), Some(LogLevel::ALL));
+        assert_eq!(LogLevel::from_numeric(1), Some(LogLevel::NONE));
+        assert_eq!(LogLevel::from_numeric(2), Some(LogLevel::DISABLED));
+        assert_eq!(LogLevel::from_numeric(3), Some(LogLevel::DEBUG));
+        assert_eq!(LogLevel::from_numeric(4), Some(LogLevel::TRACE));
+        assert_eq!(LogLevel::from_numeric(5), Some(LogLevel::VERBOSE));
+        assert_eq!(LogLevel::from_numeric(6), Some(LogLevel::INFO));
+        assert_eq!(LogLevel::from_numeric(7), Some(LogLevel::WARN));
+        assert_eq!(LogLevel::from_numeric(8), Some(LogLevel::ERROR));
+        assert_eq!(LogLevel::from_numeric(9), Some(LogLevel::FATAL));
+        assert_eq!(
+            LogLevel::from_numeric(10),
+            Some(LogLevel::CRITICAL)
+        );
+
+        // Invalid conversions
+        assert_eq!(LogLevel::from_numeric(11), None);
+        assert_eq!(LogLevel::from_numeric(255), None); // Test with a higher out-of-bounds value
+        assert_eq!(LogLevel::from_numeric(u8::MAX), None);
     }
 }

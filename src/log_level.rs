@@ -9,7 +9,8 @@ use std::{convert::TryFrom, error::Error, fmt, str::FromStr};
 /// Custom error type for LogLevel parsing with context.
 #[derive(Debug, Clone)]
 pub struct ParseLogLevelError {
-    invalid_value: String,
+    /// The invalid log level value.
+    pub invalid_value: String,
 }
 
 impl ParseLogLevelError {
