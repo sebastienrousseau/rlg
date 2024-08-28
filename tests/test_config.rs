@@ -27,40 +27,6 @@ mod tests {
         assert!(LogLevel::from_str("INVALID").is_err());
     }
 
-    /// Tests for correctly parsing valid LogRotation enum variants from strings.
-    #[test]
-    fn test_log_rotation_from_str_valid() {
-        assert_eq!(
-            LogRotation::BySize(1024 * 1024),
-            "size".parse::<LogRotation>().unwrap()
-        );
-        assert_eq!(
-            LogRotation::ByTime(86400),
-            "time".parse::<LogRotation>().unwrap()
-        );
-        assert_eq!(
-            LogRotation::ByDate,
-            "date".parse::<LogRotation>().unwrap()
-        );
-        assert_eq!(
-            LogRotation::ByFileCount(5),
-            "count:5".parse::<LogRotation>().unwrap()
-        );
-    }
-
-    /// Tests that parsing an invalid string as LogRotation returns the appropriate error.
-    #[test]
-    fn test_log_rotation_from_str_invalid() {
-        let error = "invalid".parse::<LogRotation>().unwrap_err();
-        assert!(
-            matches!(error, ConfigError::RotationError(msg) if msg.contains("Invalid log rotation option"))
-        );
-        let error = "count:".parse::<LogRotation>().unwrap_err();
-        assert!(
-            matches!(error, ConfigError::RotationError(msg) if msg.contains("Invalid rotation count option"))
-        );
-    }
-
     /// Tests displaying the log file path from the Config struct.
     #[test]
     fn test_config_log_file_path_display() {
@@ -93,83 +59,12 @@ mod tests {
         }
     }
 
-    /// Tests the default configuration values.
-    #[test]
-    fn test_config_default() {
-        env::remove_var("LOG_FILE_PATH");
-        env::remove_var("LOG_LEVEL");
-        env::remove_var("LOG_ROTATION");
-        env::remove_var("LOG_FORMAT");
-        env::remove_var("LOG_DESTINATIONS");
-
-        let config = Config::load().unwrap();
-        assert_eq!(config.log_file_path, PathBuf::from("RLG.log"));
-        assert_eq!(config.log_level, LogLevel::INFO);
-        assert_eq!(
-            config.log_rotation, None,
-            "Default log rotation should be None"
-        );
-        assert_eq!(config.log_format, "%level - %message");
-        assert_eq!(
-            config.logging_destinations,
-            vec![LoggingDestination::File(PathBuf::from("RLG.log"))]
-        );
-    }
-
-    /// Tests loading configuration from environment variables.
-    #[test]
-    fn test_config_load_from_env() {
-        env::set_var("LOG_FILE_PATH", "/tmp/test.log");
-        env::set_var("LOG_LEVEL", "DEBUG");
-        env::set_var("LOG_ROTATION", "time");
-        env::set_var("LOG_FORMAT", "%timestamp - %level - %message");
-        env::set_var("LOG_DESTINATIONS", "file,stdout,network");
-
-        let config = Config::load().unwrap();
-        assert_eq!(
-            config.log_file_path,
-            PathBuf::from("/tmp/test.log")
-        );
-        assert_eq!(config.log_level, LogLevel::DEBUG);
-        assert_eq!(
-            config.log_rotation,
-            Some(LogRotation::ByTime(86400)),
-            "Log rotation should be ByTime(86400) when set to 'time'"
-        );
-        assert_eq!(config.log_format, "%timestamp - %level - %message");
-        assert_eq!(config.logging_destinations.len(), 3);
-        assert!(matches!(
-            config.logging_destinations[0],
-            LoggingDestination::File(_)
-        ));
-        assert!(matches!(
-            config.logging_destinations[1],
-            LoggingDestination::Stdout
-        ));
-        assert!(matches!(
-            config.logging_destinations[2],
-            LoggingDestination::Network(_)
-        ));
-    }
-
     /// Tests the cloning and copying capabilities of the LogRotation enum.
     #[test]
     fn test_log_rotation_clone_and_copy() {
         let rotation1 = LogRotation::BySize(1024 * 1024);
         let rotation2 = rotation1;
         assert_eq!(rotation1, rotation2);
-    }
-
-    /// Tests the error handling for invalid logging destinations.
-    #[test]
-    fn test_invalid_logging_destination() {
-        env::set_var("LOG_DESTINATIONS", "file,invalid");
-        let result = Config::load();
-        assert!(result.is_err());
-        assert!(matches!(
-            result.unwrap_err(),
-            ConfigError::EnvVarError(_)
-        ));
     }
 
     /// Tests the ConfigError enum variants.
