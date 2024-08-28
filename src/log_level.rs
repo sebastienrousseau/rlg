@@ -13,7 +13,16 @@ pub struct ParseLogLevelError {
 }
 
 impl ParseLogLevelError {
-    fn new(invalid_value: &str) -> Self {
+    /// Creates a new instance of `ParseLogLevelError` with the given invalid log level value.
+    ///
+    /// # Arguments
+    ///
+    /// * `invalid_value` - A reference to a string representing the invalid log level value.
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `ParseLogLevelError` containing the provided invalid log level value.
+    pub fn new(invalid_value: &str) -> Self {
         ParseLogLevelError {
             invalid_value: invalid_value.to_string(),
         }
@@ -77,13 +86,13 @@ impl LogLevel {
     ///
     /// ```
     /// use rlg::log_level::LogLevel;
-/// assert!(LogLevel::ERROR.includes(LogLevel::DEBUG)); // ERROR includes DEBUG
-/// assert!(!LogLevel::DEBUG.includes(LogLevel::WARN)); // DEBUG does not include WARN
-/// assert!(LogLevel::WARN.includes(LogLevel::DEBUG)); // WARN includes DEBUG
+    /// assert!(LogLevel::ERROR.includes(LogLevel::DEBUG)); // ERROR includes DEBUG
+    /// assert!(!LogLevel::DEBUG.includes(LogLevel::WARN)); // DEBUG does not include WARN
+    /// assert!(LogLevel::WARN.includes(LogLevel::DEBUG)); // WARN includes DEBUG
     /// ```
     pub fn includes(self, other: LogLevel) -> bool {
-    self.to_numeric() >= other.to_numeric()
-}
+        self.to_numeric() >= other.to_numeric()
+    }
 
     /// Converts the log level to its corresponding numeric value, similar to syslog severity levels.
     ///
