@@ -104,8 +104,8 @@ mod tests {
         let log_level = ERROR;
         assert_eq!(log_level.to_string(), "ERROR");
 
-        let log_level = WARNING;
-        assert_eq!(log_level.to_string(), "WARNING");
+        let log_level = WARN;
+        assert_eq!(log_level.to_string(), "WARN");
     }
 
     #[tokio::test]
@@ -204,8 +204,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_level_warning_display() {
-        let log_level = WARNING;
-        assert_eq!(log_level.to_string(), "WARNING");
+        let log_level = WARN;
+        assert_eq!(log_level.to_string(), "WARN");
     }
     #[tokio::test]
     async fn test_log_common_log_format() {
@@ -335,8 +335,8 @@ mod tests {
         let log7 = Log::new("", "", &VERBOSE, "", "", &CLF);
         assert_eq!(log7.level, VERBOSE);
 
-        let log8 = Log::new("", "", &WARNING, "", "", &CLF);
-        assert_eq!(log8.level, WARNING);
+        let log8 = Log::new("", "", &WARN, "", "", &CLF);
+        assert_eq!(log8.level, WARN);
     }
 
     #[tokio::test]
@@ -369,7 +369,7 @@ mod tests {
     // Test the Log::write_log_entry method
     #[tokio::test]
     async fn test_write_log_entry_combinations() {
-        let log_levels = [INFO, WARNING, ERROR, DEBUG];
+        let log_levels = [INFO, WARN, ERROR, DEBUG];
         let processes = ["process1", "process2", "process3"];
         let messages = ["message1", "message2", "message3"];
         let log_formats = [CLF, JSON, GELF];

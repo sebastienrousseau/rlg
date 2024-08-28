@@ -73,7 +73,7 @@ macro_rules! macro_warn_log {
                 .int(0, 1_000_000_000)
                 .to_string(),
             $time,
-            &LogLevel::WARNING,
+            &LogLevel::WARN,
             $component,
             $description,
             &LogFormat::CLF

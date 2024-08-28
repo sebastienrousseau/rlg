@@ -23,7 +23,7 @@ RustLogs (RLG) is a Rust library that provides application-level logging with a 
 
 ## Features
 
-- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`
+- Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`
 - Provides structured log formats that are easy to parse and filter
 - Compatible with multiple output formats including:
   - Common Event Format (CEF)

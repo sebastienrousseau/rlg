@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_macro_warn_log() {
         let log = macro_warn_log!("2022-01-01", "app", "message");
-        assert_eq!(log.level, LogLevel::WARNING);
+        assert_eq!(log.level, LogLevel::WARN);
     }
 
     #[test]
