@@ -61,9 +61,9 @@ dependencies = [
 
 [[package]]
 name = "bitflags"
-version = "2.5.0"
+version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
+checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
 name = "bumpalo"
@@ -631,6 +631,21 @@ dependencies = [
  "serde_json",
  "tokio",
  "version_check",
+ "vrd 0.0.8",
+]
+
+[[package]]
+name = "rlg"
+version = "0.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa9550dfcf50ac8601b165168e8825d66e45db390f7740a3d45c640946c4a971"
+dependencies = [
+ "dtt 0.0.6",
+ "hostname 0.4.0",
+ "serde",
+ "serde_json",
+ "tokio",
+ "version_check",
  "vrd 0.0.7",
 ]
 
@@ -804,9 +819,9 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 
 [[package]]
 name = "uuid"
-version = "1.8.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a183cf7feeba97b4dd1c0d46788634f6221d87fa961b305bed08c851829efcc0"
+checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
 dependencies = [
  "getrandom",
 ]
@@ -842,6 +857,24 @@ dependencies = [
  "serde_json",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "vrd"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46865c0eccde4965b89ced6849abf44ffe603dd838a3666dfff3cc2d9437549d"
+dependencies = [
+ "bitflags",
+ "dtt 0.0.6",
+ "rand",
+ "rlg 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde-big-array",
+ "serde_json",
+ "tokio",
+ "uuid",
+ "version_check",
 ]
 
 [[package]]
