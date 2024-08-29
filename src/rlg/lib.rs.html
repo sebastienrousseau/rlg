@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-2c208a72533b4dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.79.0-nightly (1cec373f6 2024-04-16)" data-channel="nightly" data-search-js="search-ffac13a0df2b1870.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-e32f0c247825364d.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-79b348b11ac95225.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-09095024cf37855e.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../rlg/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Type ‘S’ or ‘/’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings">Settings</a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-492a78a4a87dcc01.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.82.0-nightly (100fde524 2024-08-28)" data-channel="nightly" data-search-js="search-acd2e111c9cb27e3.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-cb0df477c2d67d00.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -157,19 +157,15 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-</pre></div><pre class="rust"><code><span class="comment">// Copyright © 2024 RustLogs (RLG). All rights reserved.
+</pre></div><pre class="rust"><code><span class="comment">// lib.rs
+// Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
+
 </span><span class="doccomment">//!
 //! # RustLogs (RLG)
 //!
-//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format. 
+//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format.
 //! The library provides logging APIs and various helper macros that simplify many common logging tasks.
 //!
 //! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
@@ -184,7 +180,7 @@
 //! ## Features
 //!
 //! - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`.
+//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`.
 //! - Provides structured log formats that are easy to parse and filter.
 //! - Compatible with multiple output formats including:
 //!    - Common Event Format (CEF)
@@ -206,7 +202,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rlg = "0.0.3"
+//! rlg = "0.0.5"
 //! ```
 //!
 //! ## Configuration
@@ -250,7 +246,7 @@
 //! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
 //!
 //! // Load custom configuration
-//! let config = Config::load();
+//! let config = Config::load(None);
 //!
 //! // Create a new log entry with custom configuration
 //! let log_entry = Log::new(
@@ -294,13 +290,7 @@
 //!     }
 //! });
 //! ```
-</span><span class="attr">#![cfg_attr(feature = <span class="string">"bench"</span>, feature(test))]
-#![deny(dead_code)]
-#![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
-#![forbid(unsafe_code)]
-#![warn(unreachable_pub)]
-#![doc(
+</span><span class="attr">#![doc(
     html_favicon_url = <span class="string">"https://kura.pro/rlg/images/favicon.ico"</span>,
     html_logo_url = <span class="string">"https://kura.pro/rlg/images/logos/rlg.svg"</span>,
     html_root_url = <span class="string">"https://docs.rs/rlg"
@@ -308,10 +298,9 @@
 #![crate_name = <span class="string">"rlg"</span>]
 #![crate_type = <span class="string">"lib"</span>]
 
-</span><span class="kw">use </span><span class="kw">crate</span>::log_format::LogFormat;
-<span class="kw">use </span><span class="kw">crate</span>::config::Config;
+</span><span class="kw">use </span><span class="kw">crate</span>::config::Config;
+<span class="kw">use </span><span class="kw">crate</span>::log_format::LogFormat;
 <span class="kw">use </span><span class="kw">crate</span>::log_level::LogLevel;
-
 
 <span class="doccomment">/// The `config` module contains the configuration struct for the logging system.
 </span><span class="kw">pub mod </span>config;
@@ -327,5 +316,4 @@
 
 <span class="doccomment">/// The `macros` module contains functions for generating macros.
 </span><span class="kw">pub mod </span>macros;
-
 </code></pre></div></section></main></body></html>
