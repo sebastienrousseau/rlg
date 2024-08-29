@@ -1,3 +1,4 @@
+// lib.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -86,7 +87,7 @@
 //! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
 //!
 //! // Load custom configuration
-//! let config = Config::load();
+//! let config = Config::load(None);
 //!
 //! // Create a new log entry with custom configuration
 //! let log_entry = Log::new(

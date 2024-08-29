@@ -1,3 +1,4 @@
+// log.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -149,7 +150,7 @@ impl Log {
         })?;
 
         // Attempt to write the log message to a file
-        let config = Config::load()
+        let config = Config::load(None)
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let log_file_path_display = config.log_file_path_display();
         let mut file = tokio::fs::File::create(&config.log_file_path)
@@ -233,12 +234,8 @@ impl Log {
         log_format: LogFormat,
     ) -> io::Result<()> {
         // Load configuration
-        let config = Config::load().map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Failed to load config: {}", e),
-            )
-        })?;
+        let config = Config::load(None)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
         // Open or create the log file
         let log_file_path = config.log_file_path.clone();

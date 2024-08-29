@@ -1,10 +1,11 @@
+// log.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
 use crate::LogLevel;
 use serde::{Deserialize, Serialize};
-use std::{env, path::PathBuf, str::FromStr};
+use std::{env, fs, path::Path, path::PathBuf, str::FromStr};
 use thiserror::Error;
 
 /// Errors that can occur while constructing a configuration.
@@ -33,6 +34,12 @@ pub enum ConfigError {
     #[error("file rotation error: {0}")]
     /// Error message for file rotation errors.
     RotationError(String),
+    #[error("file read error: {0}")]
+    /// Error message for file read errors.
+    FileReadError(String),
+    #[error("file parse error: {0}")]
+    /// Error message for file parsing errors.
+    FileParseError(String),
 }
 
 /// Enum representing different log rotation options.
@@ -124,8 +131,75 @@ impl Config {
         self.log_file_path.display().to_string()
     }
 
+    /// Loads configuration from a TOML or YAML file, or from environment variables if the file is not found.
+    ///
+    /// # Parameters
+    ///
+    /// - `config_path`: An optional path to the configuration file. If `None`, the method will try to load from environment variables.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result<Config, ConfigError>` containing the loaded configuration or an error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rlg::config::Config;
+    /// let config = Config::load(Some("config.toml")).expect("Failed to load config");
+    /// ```
+    pub fn load(
+        config_path: Option<&str>,
+    ) -> Result<Self, ConfigError> {
+        if let Some(path) = config_path {
+            if Path::new(path).exists() {
+                let extension = Path::new(path)
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default()
+                    .to_lowercase();
+
+                let config_str =
+                    fs::read_to_string(path).map_err(|e| {
+                        ConfigError::FileReadError(format!(
+                        "Failed to read configuration file '{}': {}",
+                        path, e
+                    ))
+                    })?;
+
+                let config = match extension.as_str() {
+                    "toml" => {
+                        toml::from_str(&config_str).map_err(|e| {
+                            ConfigError::FileParseError(format!(
+                            "Failed to parse TOML configuration: {}",
+                            e
+                        ))
+                        })?
+                    }
+                    "yaml" | "yml" => serde_yml::from_str(&config_str)
+                        .map_err(|e| {
+                            ConfigError::FileParseError(format!(
+                            "Failed to parse YAML configuration: {}",
+                            e
+                        ))
+                        })?,
+                    _ => {
+                        return Err(ConfigError::FileParseError(
+                            "Unsupported configuration file format"
+                                .to_string(),
+                        ))
+                    }
+                };
+
+                return Ok(config);
+            }
+        }
+
+        // Fallback to environment variables if no config file is provided or it fails to load
+        Self::from_env()
+    }
+
     /// Loads configuration from environment variables or applies default values if variables are not set.
-    pub fn load() -> Result<Self, ConfigError> {
+    pub fn from_env() -> Result<Self, ConfigError> {
         let log_file_path = env::var("LOG_FILE_PATH")
             .map(PathBuf::from)
             .unwrap_or_else(|_| Self::default().log_file_path);

@@ -46,16 +46,23 @@ mod tests {
         env::set_var("LOG_LEVEL", "INVALID");
         env::set_var("LOG_ROTATION", "INVALID");
 
-        let result = Config::load();
+        let result = Config::load(None);
+
+        // Check if result is an error
         assert!(result.is_err(), "Config::load() should fail on invalid environment variables");
-        match result {
-            Err(ConfigError::ParseError(msg)) => {
-                assert!(
-                    msg.contains("Invalid log level"),
-                    "Error should mention invalid log level"
-                );
+
+        if let Err(e) = result {
+            match e {
+                ConfigError::ParseError(msg) => {
+                    assert!(
+                        msg.contains("Invalid log level"),
+                        "Error should mention invalid log level"
+                    );
+                }
+                _ => {
+                    panic!("Expected ParseError for invalid log level")
+                }
             }
-            _ => panic!("Expected ParseError for invalid log level"),
         }
     }
 
