@@ -3,7 +3,9 @@
 // SPDX-License-Identifier: MIT
 
 #![allow(missing_docs)]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{
+    black_box, criterion_group, criterion_main, Criterion,
+};
 
 // Import Log struct for benchmarking
 use rlg::log::Log;
@@ -55,7 +57,9 @@ fn format_benchmark(c: &mut Criterion) {
     );
 
     c.bench_function("clf_format", |b| b.iter(|| format!("{clf_log}")));
-    c.bench_function("json_format", |b| b.iter(|| format!("{json_log}")));
+    c.bench_function("json_format", |b| {
+        b.iter(|| format!("{json_log}"))
+    });
 }
 
 // Benchmark async writing logs to files
@@ -75,13 +79,21 @@ fn write_benchmark(c: &mut Criterion) {
             // Runtime for async block to write to file
             tokio::runtime::Runtime::new().unwrap().block_on(async {
                 // Open file and write log
-                let mut file = tokio::fs::File::create("log.txt").await.unwrap();
-                let _ = file.write_all(format!("{clf_log}").as_bytes()).await;
+                let mut file =
+                    tokio::fs::File::create("log.txt").await.unwrap();
+                let _ = file
+                    .write_all(format!("{clf_log}").as_bytes())
+                    .await;
             })
         })
     });
 }
 
 // Group benchmarks together
-criterion_group!(benches, new_benchmark, format_benchmark, write_benchmark);
+criterion_group!(
+    benches,
+    new_benchmark,
+    format_benchmark,
+    write_benchmark
+);
 criterion_main!(benches);

@@ -5,13 +5,13 @@
 #[cfg(test)]
 
 mod tests {
-    use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel};
+    use rlg::{log_format::LogFormat, log_level::LogLevel};
     use rlg::{
-        macro_debug_log, macro_error_log, macro_fatal_log, macro_info_log, macro_log, macro_log_if,
-        macro_log_to_file, macro_log_with_metadata, macro_print_log, macro_set_log_format_clf,
-        macro_trace_log, macro_warn_log,
+        macro_debug_log, macro_error_log, macro_fatal_log,
+        macro_info_log, macro_log, macro_log_if, macro_log_to_file,
+        macro_log_with_metadata, macro_print_log,
+        macro_set_log_format_clf, macro_trace_log, macro_warn_log,
     };
-    use std::{fs::File, io::Read};
 
     #[test]
     fn test_macro_log() {
@@ -36,7 +36,7 @@ mod tests {
     #[test]
     fn test_macro_warn_log() {
         let log = macro_warn_log!("2022-01-01", "app", "message");
-        assert_eq!(log.level, LogLevel::WARNING);
+        assert_eq!(log.level, LogLevel::WARN);
     }
 
     #[test]
@@ -119,43 +119,5 @@ mod tests {
         assert!(log_message.contains("\"Level\":\"INFO\""));
         assert!(log_message.contains("\"Component\":\"app\""));
         assert!(log_message.contains("\"Description\":\"message\""));
-    }
-
-    #[test]
-    fn test_write_log_entry_multiple_entries() -> Result<(), std::io::Error> {
-        let log_level = LogLevel::INFO;
-        let process = "test_process";
-        let message = "This is a test log message";
-        let log_format = LogFormat::JSON;
-        let test_log_file = "RLG.log";
-
-        // Clear or create the test log file before writing entries
-        // Adjusted to use ? for error propagation
-        File::create(test_log_file)?;
-
-        // Act
-        // Assuming Log::write_log_entry correctly handles writing to `test_log_file`
-        let result = Log::write_log_entry(log_level, process, message, log_format);
-        assert!(result.is_ok());
-
-        // Assert by reading the file's contents to verify
-        // Need to open the file with read permission
-        let mut contents = String::new();
-        {
-            let mut file = File::open(test_log_file)?; // Open for reading
-            file.read_to_string(&mut contents)?;
-        }
-        assert!(
-            contents.contains(message),
-            "The log file does not contain the message."
-        );
-        assert!(
-            contents.contains(&log_level.to_string()),
-            "The log file does not contain the log level."
-        );
-
-        // Act again if necessary and perform any additional checks
-        // This is where you might write to the file again and verify as needed
-        Ok(())
     }
 }

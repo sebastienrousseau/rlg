@@ -1,3 +1,4 @@
+// log.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -5,17 +6,26 @@
 use crate::{Config, LogFormat, LogLevel};
 use dtt::DateTime;
 use hostname;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Write as FmtWrite},
-    fs::OpenOptions,
     io::{self, stdout, Write},
 };
-use tokio::io::AsyncWriteExt;
+use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use vrd::random::Random;
 
 /// The `Log` struct provides an easy way to log a message to the console.
 /// It contains a set of defined fields to create a simple log message with a readable output format.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize,
+    Eq,
+    Hash,
+)]
 pub struct Log {
     /// A string that holds a session ID. The session ID is a unique
     /// identifier for the current session. A random GUID (Globally
@@ -98,7 +108,7 @@ impl Log {
             LogFormat::ApacheAccessLog => write!(
                 log_message,
                 "{} - - [{}] \"{}\" {} {}",
-                hostname::get().unwrap().to_string_lossy(),
+                hostname::get()?.to_string_lossy(),
                 self.time,
                 self.description,
                 self.level,
@@ -133,18 +143,25 @@ impl Log {
 
         // Handle potential formatting errors
         write_result.map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, format!("Formatting error: {}", e))
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("Formatting error: {}", e),
+            )
         })?;
 
         // Attempt to write the log message to a file
-        let config = Config::load().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let config = Config::load(None)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let log_file_path_display = config.log_file_path_display();
         let mut file = tokio::fs::File::create(&config.log_file_path)
             .await
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
-                    format!("Failed to open log file '{}': {}", log_file_path_display, e),
+                    format!(
+                        "Failed to open log file '{}': {}",
+                        log_file_path_display, e
+                    ),
                 )
             })?;
 
@@ -195,7 +212,7 @@ impl Log {
             level: *level,
             component: component.to_string(),
             description: description.to_string(),
-            format: format.clone(),
+            format: *format,
         }
     }
     /// Writes a log entry to the log file using the provided details.
@@ -210,28 +227,35 @@ impl Log {
     /// # Returns
     ///
     /// A `std::io::Result<()>` indicating the success or failure of writing the log entry.
-    pub fn write_log_entry(
+    pub async fn write_log_entry(
         log_level: LogLevel,
         process: &str,
         message: &str,
         log_format: LogFormat,
     ) -> io::Result<()> {
-        let config = Config::load();
-        let log_file = OpenOptions::new()
+        // Load configuration
+        let config = Config::load(None)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        // Open or create the log file
+        let log_file_path = config.log_file_path.clone();
+        let mut log_file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(config.clone().unwrap().log_file_path)
+            .open(&log_file_path)
+            .await
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
                     format!(
                         "Failed to open or create log file '{}': {}",
-                        config.unwrap().log_file_path_display(),
+                        log_file_path.display(),
                         e
                     ),
                 )
-            });
+            })?;
 
+        // Create the log entry
         let log_entry = Log::new(
             &Random::default().int(0, 1_000_000_000).to_string(),
             &DateTime::new().iso_8601,
@@ -241,10 +265,32 @@ impl Log {
             &log_format,
         );
 
-        writeln!(log_file?, "{}", log_entry).map_err(|e| {
+        // Format the log entry according to the specified log format
+        let formatted_entry = log_format
+            .format_log(&log_entry.to_string())
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to format log entry: {}", e),
+                )
+            })?;
+
+        // Write the formatted log entry to the file asynchronously
+        log_file
+            .write_all(formatted_entry.as_bytes())
+            .await
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to write log entry: {}", e),
+                )
+            })?;
+
+        // Optionally, you can flush the file to ensure all data is written
+        log_file.flush().await.map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("Failed to write log entry: {}", e),
+                format!("Failed to flush log file: {}", e),
             )
         })?;
 
@@ -261,44 +307,50 @@ impl fmt::Display for Log {
                     f,
                     "SessionID={} Timestamp={} Description={} Level={} Component={}",
                     self.session_id, self.time, self.description, self.level, self.component
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::JSON => {
                 write!(
                 f,
                 "{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\",\"Format\":\"JSON\"}}",
-                self.session_id, self.time, self.level, self.component, self.description)
-                .expect("Unable to write log message");
+                self.session_id, self.time, self.level, self.component, self.description)?;
                 Ok(())
             }
             LogFormat::CEF => {
                 write!(
                     f,
                     "CEF:0|{}|{}|{}|{}|{}|CEF",
-                    self.session_id, self.time, self.level, self.component, self.description
-                )
-                .expect("Unable to write log message");
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )?;
                 Ok(())
             }
             LogFormat::ELF => {
                 write!(
                     f,
                     "ELF:0|{}|{}|{}|{}|{}|ELF",
-                    self.session_id, self.time, self.level, self.component, self.description
-                )
-                .expect("Unable to write log message");
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )?;
                 Ok(())
             }
             LogFormat::W3C => {
                 write!(
                     f,
                     "W3C:0|{}|{}|{}|{}|{}|W3C",
-                    self.session_id, self.time, self.level, self.component, self.description
-                )
-                // self.session_id, self.time, self.level, self.component, self.description)
-                .expect("Unable to write log message");
+                    self.session_id,
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )?;
                 Ok(())
             }
             LogFormat::GELF => {
@@ -319,21 +371,21 @@ impl fmt::Display for Log {
                     self.time,
                     self.component,
                     self.session_id
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::ApacheAccessLog => {
                 write!(
                     f,
                     "{} - - [{}] \"{}\" {} {}",
-                    hostname::get().unwrap().to_string_lossy(),
+                    hostname::get()
+                        .map_err(|_| fmt::Error)?
+                        .to_string_lossy(),
                     self.time,
                     self.description,
                     self.level,
                     self.component
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::Logstash => {
@@ -345,9 +397,11 @@ impl fmt::Display for Log {
                             "component": "{}",
                             "message": "{}"
                         }}"#,
-                    self.time, self.level, self.component, self.description
-                )
-                .expect("Unable to write log message");
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )?;
                 Ok(())
             }
             LogFormat::Log4jXML => {
@@ -359,8 +413,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.session_id,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::NDJSON => {
@@ -372,9 +425,11 @@ impl fmt::Display for Log {
                             "component": "{}",
                             "message": "{}"
                         }}"#,
-                    self.time, self.level, self.component, self.description
-                )
-                .expect("Unable to write log message");
+                    self.time,
+                    self.level,
+                    self.component,
+                    self.description
+                )?;
                 Ok(())
             }
         }

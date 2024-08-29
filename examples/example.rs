@@ -1,3 +1,4 @@
+// example.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -11,7 +12,6 @@ use rlg::log_level::LogLevel;
 use rlg::{
     // Importing macros for logging
     macro_fatal_log,
-    macro_log,
     macro_log_if,
     macro_log_with_metadata,
     macro_print_log,
@@ -57,12 +57,14 @@ fn main() {
     }
 
     // Example usage of macro_trace_log
-    let trace_log = macro_trace_log!(&iso, "TraceComponent", "This is a trace log");
+    let trace_log =
+        macro_trace_log!(&iso, "TraceComponent", "This is a trace log");
     // Printing success message for trace log creation
     println!("🦀 macro_trace_log: ✅ {}", trace_log);
 
     // Example usage of macro_fatal_log
-    let fatal_log = macro_fatal_log!(&iso, "FatalComponent", "This is a fatal log");
+    let fatal_log =
+        macro_fatal_log!(&iso, "FatalComponent", "This is a fatal log");
     // Printing success message for fatal log creation
     println!("🦀 macro_fatal_log: ✅ {}", fatal_log);
 

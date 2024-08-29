@@ -1,3 +1,4 @@
+// lib.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -20,7 +21,7 @@
 //! ## Features
 //!
 //! - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARNING`.
+//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`.
 //! - Provides structured log formats that are easy to parse and filter.
 //! - Compatible with multiple output formats including:
 //!    - Common Event Format (CEF)
@@ -42,7 +43,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rlg = "0.0.4"
+//! rlg = "0.0.5"
 //! ```
 //!
 //! ## Configuration
@@ -86,7 +87,7 @@
 //! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
 //!
 //! // Load custom configuration
-//! let config = Config::load();
+//! let config = Config::load(None);
 //!
 //! // Create a new log entry with custom configuration
 //! let log_entry = Log::new(

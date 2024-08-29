@@ -6,10 +6,14 @@
 
 mod tests {
     use crate::tests::LogFormat::{
-        ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON, NDJSON, W3C,
+        ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON,
+        NDJSON, W3C,
     };
     use dtt::DateTime;
-    use rlg::{log::Log, log_format::LogFormat, log_level::LogLevel::*};
+    use rlg::{
+        log::Log, log_format::LogFormat, log_level::LogLevel::*,
+    };
+    use rlg::{macro_debug_log, macro_info_log};
 
     #[tokio::test]
     async fn test_log_common_format() {
@@ -100,8 +104,8 @@ mod tests {
         let log_level = ERROR;
         assert_eq!(log_level.to_string(), "ERROR");
 
-        let log_level = WARNING;
-        assert_eq!(log_level.to_string(), "WARNING");
+        let log_level = WARN;
+        assert_eq!(log_level.to_string(), "WARN");
     }
 
     #[tokio::test]
@@ -200,8 +204,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_level_warning_display() {
-        let log_level = WARNING;
-        assert_eq!(log_level.to_string(), "WARNING");
+        let log_level = WARN;
+        assert_eq!(log_level.to_string(), "WARN");
     }
     #[tokio::test]
     async fn test_log_common_log_format() {
@@ -331,8 +335,8 @@ mod tests {
         let log7 = Log::new("", "", &VERBOSE, "", "", &CLF);
         assert_eq!(log7.level, VERBOSE);
 
-        let log8 = Log::new("", "", &WARNING, "", "", &CLF);
-        assert_eq!(log8.level, WARNING);
+        let log8 = Log::new("", "", &WARN, "", "", &CLF);
+        assert_eq!(log8.level, WARN);
     }
 
     #[tokio::test]
@@ -365,7 +369,7 @@ mod tests {
     // Test the Log::write_log_entry method
     #[tokio::test]
     async fn test_write_log_entry_combinations() {
-        let log_levels = [INFO, WARNING, ERROR, DEBUG];
+        let log_levels = [INFO, WARN, ERROR, DEBUG];
         let processes = ["process1", "process2", "process3"];
         let messages = ["message1", "message2", "message3"];
         let log_formats = [CLF, JSON, GELF];
@@ -394,12 +398,13 @@ mod tests {
     #[test]
     #[cfg(feature = "debug_enabled")]
     fn test_macro_debug_log_enabled() {
+        use rlg::macro_print_log;
         let log = macro_info_log!("2022-01-01", "app", "message");
         macro_debug_log!(log);
         assert_eq!(log.format, CLF);
-        assert_eq!(log.timestamp, "2022-01-01");
-        assert_eq!(log.application, "app");
-        assert_eq!(log.message, "message");
+        assert_eq!(log.time, "2022-01-01");
+        assert_eq!(log.component, "app");
+        assert_eq!(log.description, "message");
     }
 
     #[test]
@@ -477,7 +482,8 @@ mod tests {
         // Print the actual output for debugging
         let log_string = log.to_string();
         let log_json: serde_json::Value =
-            serde_json::from_str(&log_string).expect("Failed to parse JSON");
+            serde_json::from_str(&log_string)
+                .expect("Failed to parse JSON");
         assert_eq!(log_json["@timestamp"], "2022-01-01T00:00:00Z");
     }
     // Test for Log4j XML Format

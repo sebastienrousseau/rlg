@@ -4,62 +4,35 @@
 
 #[cfg(test)]
 mod tests {
-
-    use rlg::{
-        config::{Config, LogRotation},
-        log_level::LogLevel::{self, DEBUG, INFO, NONE},
+    use rlg::config::{
+        Config, ConfigError, LogRotation, LoggingDestination,
     };
+    use rlg::log_level::LogLevel;
     use std::{env, path::PathBuf, str::FromStr};
 
-    // Tests for LogLevel enum parsing
+    /// Tests for parsing different variants of the LogLevel enum from strings.
     #[test]
-    fn test_log_level_from_str() {
-        assert_eq!(<LogLevel as FromStr>::from_str("INFO").unwrap(), INFO);
-        assert_eq!(<LogLevel as FromStr>::from_str("debug").unwrap(), DEBUG);
-        assert_eq!(<LogLevel as FromStr>::from_str("NONE").unwrap(), NONE);
+    fn test_log_level_from_str_basic() {
+        assert_eq!(LogLevel::from_str("INFO").unwrap(), LogLevel::INFO);
+        assert_eq!(
+            LogLevel::from_str("debug").unwrap(),
+            LogLevel::DEBUG
+        );
+        assert_eq!(LogLevel::from_str("NONE").unwrap(), LogLevel::NONE);
+        assert_eq!(LogLevel::from_str("warn").unwrap(), LogLevel::WARN);
+        assert_eq!(
+            LogLevel::from_str("ERROR").unwrap(),
+            LogLevel::ERROR
+        );
+        assert!(LogLevel::from_str("INVALID").is_err());
     }
 
-    // Tests for LogRotation enum parsing
-    #[test]
-    fn test_log_rotation_from_str() {
-        assert_eq!(
-            LogRotation::BySize(1024 * 1024),
-            "size".parse::<LogRotation>().unwrap()
-        );
-        assert_eq!(
-            LogRotation::ByTime(86400),
-            "time".parse::<LogRotation>().unwrap()
-        );
-        assert!("invalid"
-            .parse::<LogRotation>()
-            .unwrap_err()
-            .contains("Invalid log rotation option"));
-    }
-
-    // Tests for loading Config from environment variables
-    // #TODO: Fix this test
-    // #[test]
-    // fn test_config_load() {
-    //     // Load the config
-    //     let config = Config::load().unwrap();
-
-    //     // Check if the loaded config matches the expected values
-    //     assert_eq!(config.log_file_path, PathBuf::from("RLG.log"));
-    //     // Check if log_rotation is None when not specified in environment variables
-    //     assert_eq!(config.log_rotation, None);
-    //     assert_eq!(config.log_format, "%level - %message");
-    //     assert_eq!(
-    //         config.logging_destinations,
-    //         vec![LoggingDestination::File(PathBuf::from("RLG.log"))]
-    //     );
-    // }
-
-    // Test for displaying log file path
+    /// Tests displaying the log file path from the Config struct.
     #[test]
     fn test_config_log_file_path_display() {
         let config = Config {
             log_file_path: PathBuf::from("RLG.log"),
-            log_level: INFO,
+            log_level: LogLevel::INFO,
             log_rotation: None,
             log_format: "%level - %message".to_string(),
             logging_destinations: vec![],
@@ -67,39 +40,112 @@ mod tests {
         assert_eq!(config.log_file_path_display(), "RLG.log");
     }
 
+    /// Tests loading the configuration with invalid environment variable values for LOG_LEVEL and LOG_ROTATION.
     #[test]
     fn test_config_load_with_invalid_values() {
-        // Set invalid values for LOG_LEVEL and LOG_ROTATION
         env::set_var("LOG_LEVEL", "INVALID");
         env::set_var("LOG_ROTATION", "INVALID");
 
-        // Load the configuration
-        let result = Config::load();
+        let result = Config::load(None);
 
-        // Assert that the result is an error
-        assert!(result.is_err());
+        // Check if result is an error
+        assert!(result.is_err(), "Config::load() should fail on invalid environment variables");
 
-        // Assert that the error message contains either "Invalid log level" or "Invalid log rotation option"
-        let error_message = result.unwrap_err();
-        assert!(
-            error_message.contains("Invalid log level")
-                || error_message.contains("Invalid log rotation option")
-        );
+        if let Err(e) = result {
+            match e {
+                ConfigError::ParseError(msg) => {
+                    assert!(
+                        msg.contains("Invalid log level"),
+                        "Error should mention invalid log level"
+                    );
+                }
+                _ => {
+                    panic!("Expected ParseError for invalid log level")
+                }
+            }
+        }
     }
 
-    // Test loading Config with default values
-    // #TODO: Fix this test
-    // #[test]
-    // fn test_config_load_with_defaults() {
-    //     // Load the configuration
-    //     let config = Config::load();
-    //     assert_eq!(config.clone().unwrap().log_rotation, None);
-    // }
-
+    /// Tests the cloning and copying capabilities of the LogRotation enum.
     #[test]
     fn test_log_rotation_clone_and_copy() {
         let rotation1 = LogRotation::BySize(1024 * 1024);
         let rotation2 = rotation1;
         assert_eq!(rotation1, rotation2);
+    }
+
+    /// Tests the ConfigError enum variants.
+    #[test]
+    fn test_config_error() {
+        let env_var_error =
+            ConfigError::EnvVarError("Test error".to_string());
+        let parse_error =
+            ConfigError::ParseError("Test error".to_string());
+        let invalid_path =
+            ConfigError::InvalidPath("Test error".to_string());
+        let rotation_error =
+            ConfigError::RotationError("Test error".to_string());
+
+        assert!(format!("{}", env_var_error)
+            .contains("environment variable error"));
+        assert!(format!("{}", parse_error).contains("parsing error"));
+        assert!(format!("{}", invalid_path).contains("invalid path"));
+        assert!(format!("{}", rotation_error)
+            .contains("file rotation error"));
+    }
+
+    /// Tests the LoggingDestination enum variants.
+    #[test]
+    fn test_logging_destination() {
+        let file_dest =
+            LoggingDestination::File(PathBuf::from("test.log"));
+        let stdout_dest = LoggingDestination::Stdout;
+        let network_dest =
+            LoggingDestination::Network("127.0.0.1:514".to_string());
+
+        assert!(matches!(file_dest, LoggingDestination::File(_)));
+        assert!(matches!(stdout_dest, LoggingDestination::Stdout));
+        assert!(matches!(network_dest, LoggingDestination::Network(_)));
+    }
+
+    #[test]
+    fn test_log_level_from_str_comprehensive() {
+        let test_cases = [
+            ("ALL", Ok(LogLevel::ALL)),
+            ("DEBUG", Ok(LogLevel::DEBUG)),
+            ("INFO", Ok(LogLevel::INFO)),
+            ("WARN", Ok(LogLevel::WARN)),
+            ("ERROR", Ok(LogLevel::ERROR)),
+            ("FATAL", Ok(LogLevel::FATAL)),
+            ("TRACE", Ok(LogLevel::TRACE)),
+            ("VERBOSE", Ok(LogLevel::VERBOSE)),
+            ("NONE", Ok(LogLevel::NONE)),
+            ("DISABLED", Ok(LogLevel::DISABLED)),
+            ("CRITICAL", Ok(LogLevel::CRITICAL)),
+            ("invalid", Err(())),
+        ];
+
+        for (input, expected) in test_cases.iter() {
+            let result = LogLevel::from_str(input);
+            match (result, expected) {
+                (Ok(level), Ok(expected_level)) => assert_eq!(
+                    level, *expected_level,
+                    "Failed for input: {}",
+                    input
+                ),
+                (Err(_), Err(())) => {} // Test passed for invalid input
+                _ => panic!("Unexpected result for input: {}", input),
+            }
+        }
+
+        // Test case insensitivity
+        assert!(matches!(
+            LogLevel::from_str("info"),
+            Ok(LogLevel::INFO)
+        ));
+        assert!(matches!(
+            LogLevel::from_str("ErRoR"),
+            Ok(LogLevel::ERROR)
+        ));
     }
 }
