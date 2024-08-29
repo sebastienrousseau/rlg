@@ -5,6 +5,7 @@
 use crate::{Config, LogFormat, LogLevel};
 use dtt::DateTime;
 use hostname;
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Write as FmtWrite},
     io::{self, stdout, Write},
@@ -14,7 +15,16 @@ use vrd::random::Random;
 
 /// The `Log` struct provides an easy way to log a message to the console.
 /// It contains a set of defined fields to create a simple log message with a readable output format.
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    PartialOrd,
+    Serialize,
+    Deserialize,
+    Eq,
+    Hash,
+)]
 pub struct Log {
     /// A string that holds a session ID. The session ID is a unique
     /// identifier for the current session. A random GUID (Globally
