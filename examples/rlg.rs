@@ -11,7 +11,6 @@ use rlg::log_level::LogLevel;
 use rlg::{
     // Importing macros for logging
     macro_fatal_log,
-    macro_log,
     macro_log_if,
     macro_log_with_metadata,
     macro_print_log,

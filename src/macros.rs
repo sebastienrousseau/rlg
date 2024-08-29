@@ -121,15 +121,15 @@ macro_rules! macro_log_to_file {
 #[doc = "Macro for warn log with default session id and format"]
 macro_rules! macro_warn_log {
     ($time:expr, $component:expr, $description:expr) => {
-        macro_log!(
+        $crate::macro_log!(
             &vrd::random::Random::default()
                 .int(0, 1_000_000_000)
                 .to_string(),
             $time,
-            &LogLevel::WARN,
+            &$crate::log_level::LogLevel::WARN,
             $component,
             $description,
-            &LogFormat::CLF
+            &$crate::log_format::LogFormat::CLF
         )
     };
 }
@@ -155,15 +155,15 @@ macro_rules! macro_warn_log {
 #[doc = "Macro for error log with default session id and format"]
 macro_rules! macro_error_log {
     ($time:expr, $component:expr, $description:expr) => {
-        macro_log!(
+        $crate::macro_log!(
             &vrd::random::Random::default()
                 .int(0, 1_000_000_000)
                 .to_string(),
             $time,
-            &LogLevel::ERROR,
+            &$crate::log_level::LogLevel::ERROR,
             $component,
             $description,
-            &LogFormat::CLF
+            &$crate::log_format::LogFormat::CLF
         )
     };
 }
@@ -189,15 +189,15 @@ macro_rules! macro_error_log {
 #[doc = "Macro for trace log with default session id and format"]
 macro_rules! macro_trace_log {
     ($time:expr, $component:expr, $description:expr) => {
-        macro_log!(
+        $crate::macro_log!(
             &vrd::random::Random::default()
                 .int(0, 1_000_000_000)
                 .to_string(),
             $time,
-            &LogLevel::TRACE,
+            &$crate::log_level::LogLevel::TRACE,
             $component,
             $description,
-            &LogFormat::CLF
+            &$crate::log_format::LogFormat::CLF
         )
     };
 }
@@ -223,15 +223,15 @@ macro_rules! macro_trace_log {
 #[doc = "Macro for fatal log with default session id and format"]
 macro_rules! macro_fatal_log {
     ($time:expr, $component:expr, $description:expr) => {
-        macro_log!(
+        $crate::macro_log!(
             &vrd::random::Random::default()
                 .int(0, 1_000_000_000)
                 .to_string(),
             $time,
-            &LogLevel::FATAL,
+            &$crate::log_level::LogLevel::FATAL,
             $component,
             $description,
-            &LogFormat::CLF
+            &$crate::log_format::LogFormat::CLF
         )
     };
 }
