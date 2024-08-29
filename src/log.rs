@@ -107,7 +107,7 @@ impl Log {
             LogFormat::ApacheAccessLog => write!(
                 log_message,
                 "{} - - [{}] \"{}\" {} {}",
-                hostname::get().unwrap().to_string_lossy(),
+                hostname::get()?.to_string_lossy(),
                 self.time,
                 self.description,
                 self.level,
@@ -310,16 +310,14 @@ impl fmt::Display for Log {
                     f,
                     "SessionID={} Timestamp={} Description={} Level={} Component={}",
                     self.session_id, self.time, self.description, self.level, self.component
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::JSON => {
                 write!(
                 f,
                 "{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\",\"Format\":\"JSON\"}}",
-                self.session_id, self.time, self.level, self.component, self.description)
-                .expect("Unable to write log message");
+                self.session_id, self.time, self.level, self.component, self.description)?;
                 Ok(())
             }
             LogFormat::CEF => {
@@ -331,8 +329,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.component,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::ELF => {
@@ -344,8 +341,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.component,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::W3C => {
@@ -357,9 +353,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.component,
                     self.description
-                )
-                // self.session_id, self.time, self.level, self.component, self.description)
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::GELF => {
@@ -380,21 +374,21 @@ impl fmt::Display for Log {
                     self.time,
                     self.component,
                     self.session_id
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::ApacheAccessLog => {
                 write!(
                     f,
                     "{} - - [{}] \"{}\" {} {}",
-                    hostname::get().unwrap().to_string_lossy(),
+                    hostname::get()
+                        .map_err(|_| fmt::Error)?
+                        .to_string_lossy(),
                     self.time,
                     self.description,
                     self.level,
                     self.component
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::Logstash => {
@@ -410,8 +404,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.component,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::Log4jXML => {
@@ -423,8 +416,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.session_id,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
             LogFormat::NDJSON => {
@@ -440,8 +432,7 @@ impl fmt::Display for Log {
                     self.level,
                     self.component,
                     self.description
-                )
-                .expect("Unable to write log message");
+                )?;
                 Ok(())
             }
         }
