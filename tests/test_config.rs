@@ -12,7 +12,7 @@ mod tests {
 
     /// Tests for parsing different variants of the LogLevel enum from strings.
     #[test]
-    fn test_log_level_from_str() {
+    fn test_log_level_from_str_basic() {
         assert_eq!(LogLevel::from_str("INFO").unwrap(), LogLevel::INFO);
         assert_eq!(
             LogLevel::from_str("debug").unwrap(),
@@ -106,5 +106,46 @@ mod tests {
         assert!(matches!(file_dest, LoggingDestination::File(_)));
         assert!(matches!(stdout_dest, LoggingDestination::Stdout));
         assert!(matches!(network_dest, LoggingDestination::Network(_)));
+    }
+
+    #[test]
+    fn test_log_level_from_str_comprehensive() {
+        let test_cases = [
+            ("ALL", Ok(LogLevel::ALL)),
+            ("DEBUG", Ok(LogLevel::DEBUG)),
+            ("INFO", Ok(LogLevel::INFO)),
+            ("WARN", Ok(LogLevel::WARN)),
+            ("ERROR", Ok(LogLevel::ERROR)),
+            ("FATAL", Ok(LogLevel::FATAL)),
+            ("TRACE", Ok(LogLevel::TRACE)),
+            ("VERBOSE", Ok(LogLevel::VERBOSE)),
+            ("NONE", Ok(LogLevel::NONE)),
+            ("DISABLED", Ok(LogLevel::DISABLED)),
+            ("CRITICAL", Ok(LogLevel::CRITICAL)),
+            ("invalid", Err(())),
+        ];
+
+        for (input, expected) in test_cases.iter() {
+            let result = LogLevel::from_str(input);
+            match (result, expected) {
+                (Ok(level), Ok(expected_level)) => assert_eq!(
+                    level, *expected_level,
+                    "Failed for input: {}",
+                    input
+                ),
+                (Err(_), Err(())) => {} // Test passed for invalid input
+                _ => panic!("Unexpected result for input: {}", input),
+            }
+        }
+
+        // Test case insensitivity
+        assert!(matches!(
+            LogLevel::from_str("info"),
+            Ok(LogLevel::INFO)
+        ));
+        assert!(matches!(
+            LogLevel::from_str("ErRoR"),
+            Ok(LogLevel::ERROR)
+        ));
     }
 }
