@@ -340,6 +340,7 @@ macro_rules! macro_log_if {
 ///
 /// # Example
 /// ```
+/// use rlg::macro_info_log;
 /// use rlg::macro_debug_log;
 /// let log = macro_info_log!("2022-01-01", "app", "message");
 /// macro_debug_log!(log);
@@ -377,6 +378,7 @@ macro_rules! macro_debug_log {
 /// # Example
 /// ```
 /// use rlg::{macro_print_log,macro_info_log};
+/// use rlg::macro_print_log;
 /// let log = macro_info_log!("2022-01-01", "app", "message");
 /// macro_print_log!(log);
 /// ```
