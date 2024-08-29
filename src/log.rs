@@ -7,10 +7,9 @@ use dtt::DateTime;
 use hostname;
 use std::{
     fmt::{self, Write as FmtWrite},
-    fs::OpenOptions,
     io::{self, stdout, Write},
 };
-use tokio::io::AsyncWriteExt;
+use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use vrd::random::Random;
 
 /// The `Log` struct provides an easy way to log a message to the console.
@@ -217,7 +216,7 @@ impl Log {
     /// # Returns
     ///
     /// A `std::io::Result<()>` indicating the success or failure of writing the log entry.
-    pub fn write_log_entry(
+    pub async fn write_log_entry(
         log_level: LogLevel,
         process: &str,
         message: &str,
@@ -237,6 +236,7 @@ impl Log {
             .append(true)
             .create(true)
             .open(&log_file_path)
+            .await
             .map_err(|e| {
                 io::Error::new(
                     io::ErrorKind::Other,
@@ -268,11 +268,22 @@ impl Log {
                 )
             })?;
 
-        // Write the formatted log entry to the file
-        writeln!(log_file, "{}", formatted_entry).map_err(|e| {
+        // Write the formatted log entry to the file asynchronously
+        log_file
+            .write_all(formatted_entry.as_bytes())
+            .await
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to write log entry: {}", e),
+                )
+            })?;
+
+        // Optionally, you can flush the file to ensure all data is written
+        log_file.flush().await.map_err(|e| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("Failed to write log entry: {}", e),
+                format!("Failed to flush log file: {}", e),
             )
         })?;
 
