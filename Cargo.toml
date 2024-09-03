@@ -46,7 +46,7 @@ debug = true
 
 [dependencies]
 # Dependencies are only used for building.
-dtt = "0.0.6"
+dtt = "0.0.8"
 hostname = "0.4.0"
 once_cell = "1.19.0"
 regex = "1.10.6"
