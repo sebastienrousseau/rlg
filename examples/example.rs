@@ -5,7 +5,7 @@
 
 #![allow(missing_docs)]
 /// Importing necessary items from external crates
-use dtt::DateTime;
+use dtt::datetime::DateTime;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
@@ -23,7 +23,7 @@ fn main() {
     // Creating a new DateTime instance
     let date = DateTime::new();
     // Extracting ISO 8601 format from DateTime
-    let iso = date.iso_8601;
+    let iso = date.to_string();
 
     // Defining log formats to iterate over
     let log_formats = vec![

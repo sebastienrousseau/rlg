@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{Config, LogFormat, LogLevel};
-use dtt::DateTime;
+use dtt::datetime::DateTime;
 use hostname;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -258,7 +258,7 @@ impl Log {
         // Create the log entry
         let log_entry = Log::new(
             &Random::default().int(0, 1_000_000_000).to_string(),
-            &DateTime::new().iso_8601,
+            &DateTime::new().to_string(),
             &log_level,
             process,
             message,

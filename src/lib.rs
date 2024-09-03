@@ -43,7 +43,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rlg = "0.0.5"
+//! rlg = "0.0.6"
 //! ```
 //!
 //! ## Configuration

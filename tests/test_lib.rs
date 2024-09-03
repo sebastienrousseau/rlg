@@ -9,7 +9,7 @@ mod tests {
         ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON,
         NDJSON, W3C,
     };
-    use dtt::DateTime;
+    use dtt::datetime::DateTime;
     use rlg::{
         log::Log, log_format::LogFormat, log_level::LogLevel::*,
     };
@@ -34,7 +34,7 @@ mod tests {
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
-            &date.now,
+            &date.to_string(),
             &INFO,
             "SystemTrayEvent",
             "Showing main window",
@@ -48,7 +48,7 @@ mod tests {
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
-            &date.now,
+            &date.to_string(),
             &INFO,
             "SystemTrayEvent",
             "Showing main window",
@@ -62,7 +62,7 @@ mod tests {
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
-            &date.now,
+            &date.to_string(),
             &INFO,
             "SystemTrayEvent",
             "Showing main window",
@@ -76,7 +76,7 @@ mod tests {
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
-            &date.now,
+            &date.to_string(),
             &INFO,
             "SystemTrayEvent",
             "Showing main window",
@@ -90,7 +90,7 @@ mod tests {
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
-            &date.now,
+            &date.to_string(),
             &INFO,
             "SystemTrayEvent",
             "Showing main window",
