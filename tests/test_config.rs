@@ -11,8 +11,12 @@ mod tests {
         log_level::LogLevel,
     };
     use std::collections::HashMap;
+    use std::fs::File;
+    use std::io::Write;
     use std::num::NonZeroU64;
     use std::{env, path::PathBuf, str::FromStr};
+    use tempfile::tempdir;
+    use tokio::fs;
 
     /// Tests for parsing different variants of the LogLevel enum from strings.
     #[test]
@@ -73,12 +77,21 @@ mod tests {
     }
 
     /// Tests loading the configuration with invalid environment variable values for LOG_LEVEL and LOG_ROTATION.
-    /// Tests loading the configuration with invalid environment variable values for LOG_LEVEL and LOG_ROTATION.
-    /// Tests loading the configuration with invalid environment variable values for LOG_LEVEL and LOG_ROTATION.
     #[tokio::test]
     async fn test_config_load_with_invalid_values() {
+        // Create a temporary directory to store the log file
+        let temp_dir =
+            tempdir().expect("Failed to create temp directory");
+        let log_file_path = temp_dir.path().join("RLG.log");
+
+        // Create the log file so that it exists and is writable
+        let mut log_file = File::create(&log_file_path)
+            .expect("Failed to create log file");
+        writeln!(log_file, "This is a test log file")
+            .expect("Failed to write to log file");
+
         // Set valid values for all required fields except LOG_LEVEL and LOG_ROTATION
-        env::set_var("LOG_FILE_PATH", "RLG.log");
+        env::set_var("LOG_FILE_PATH", log_file_path.to_str().unwrap());
         env::set_var("LOG_FORMAT", "%level - %message");
         env::set_var("LOG_LEVEL", "INVALID_LOG_LEVEL"); // Invalid log level
         env::set_var("LOG_ROTATION", "INVALID_LOG_ROTATION"); // Invalid log rotation
@@ -107,6 +120,11 @@ mod tests {
         env::remove_var("LOG_FORMAT");
         env::remove_var("LOG_LEVEL");
         env::remove_var("LOG_ROTATION");
+
+        // Clean up the temporary directory and log file
+        fs::remove_file(log_file_path)
+            .await
+            .expect("Failed to remove log file");
     }
 
     /// Tests the cloning and copying capabilities of the LogRotation enum.
