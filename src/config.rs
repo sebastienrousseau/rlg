@@ -250,11 +250,27 @@ impl Config {
     ///
     /// # Arguments
     ///
-    /// * `config_path` - An optional path to the configuration file.
+    /// * `config_path` - An optional path to the configuration file. If `None`, it loads the default configuration.
     ///
     /// # Returns
     ///
-    /// A `Result<Arc<RwLock<Config>>, ConfigError>` containing the loaded configuration or an error.
+    /// A `Result<Arc<RwLock<Config>>, ConfigError>` containing the loaded configuration wrapped in an `Arc<RwLock>` or an error if loading fails.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rlg::config::Config;
+    /// use std::sync::Arc;
+    /// use parking_lot::RwLock;
+    /// use std::path::Path;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let config = Config::load_async::<&Path>(None).await.unwrap();
+    ///     let config = config.read();
+    ///     println!("Config version: {}", config.version);
+    /// }
+    /// ```
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Config>>, ConfigError> {
