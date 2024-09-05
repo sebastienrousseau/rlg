@@ -51,67 +51,6 @@
 //! rlg = "0.0.6"
 //! ```
 //!
-//! ### Basic Logging
-//!
-//! ```rust
-//! use rlg::log::Log;
-//! use rlg::log_format::LogFormat;
-//! use rlg::log_level::LogLevel;
-//! use std::error::Error;
-//! use std::env;
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn Error>> {
-//!     // Set environment variables for configuration
-//!     env::set_var("LOG_FILE_PATH", "RLG.log");
-//!     env::set_var("LOG_LEVEL", "DEBUG");
-//!     env::set_var("LOG_ROTATION", "size:10485760"); // 10 MB
-//!     env::set_var("LOG_FORMAT", "%time - %level - %message");
-//!     env::set_var("LOG_DESTINATIONS", "file,stdout");
-//!
-//!     // Write a log entry
-//!     Log::write_log_entry(
-//!         LogLevel::INFO,
-//!         "MyComponent",
-//!         "This is a sample log message",
-//!         LogFormat::JSON
-//!     ).await?;
-//!
-//!     Ok(())
-//! }
-//! ```
-//!
-//! ### Custom Log Configuration
-//!
-//! ```rust
-//! use rlg::config::{Config, LogRotation, LoggingDestination};
-//! use rlg::log::Log;
-//! use rlg::log_format::LogFormat;
-//! use rlg::log_level::LogLevel;
-//! use std::error::Error;
-//! use std::env;
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn Error>> {
-//!     // Set environment variables for configuration
-//!     env::set_var("LOG_FILE_PATH", "RLG.log");
-//!     env::set_var("LOG_LEVEL", "DEBUG");
-//!     env::set_var("LOG_ROTATION", "size:10485760"); // 10 MB
-//!     env::set_var("LOG_FORMAT", "%time - %level - %message");
-//!     env::set_var("LOG_DESTINATIONS", "file,stdout");
-//!
-//!     // Write a log entry
-//!     Log::write_log_entry(
-//!         LogLevel::INFO,
-//!         "MyComponent",
-//!         "This is a sample log message with custom configuration",
-//!         LogFormat::JSON
-//!     ).await?;
-//!
-//!     Ok(())
-//! }
-//! ```
-//!
 //! For more detailed information about each module and its functionalities,
 //! please refer to the respective module documentation.
 
