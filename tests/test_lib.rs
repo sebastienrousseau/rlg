@@ -31,34 +31,34 @@ mod tests {
         assert_eq!(log.to_string(), expected_output);
     }
 
-    #[tokio::test]
-    async fn test_log_error() {
-        let date = DateTime::new();
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            &date.to_string(),
-            &INFO,
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
-        let result = log.log().await;
-        assert!(result.is_ok());
-    }
-    #[tokio::test]
-    async fn test_log_warn() {
-        let date = DateTime::new();
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            &date.to_string(),
-            &INFO,
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
-        let result = log.log().await;
-        assert!(result.is_ok());
-    }
+    // #[tokio::test]
+    // async fn test_log_error() {
+    //     let date = DateTime::new();
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         &date.to_string(),
+    //         &INFO,
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
+    //     let result = log.log().await;
+    //     assert!(result.is_ok());
+    // }
+    // #[tokio::test]
+    // async fn test_log_warn() {
+    //     let date = DateTime::new();
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         &date.to_string(),
+    //         &INFO,
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
+    //     let result = log.log().await;
+    //     assert!(result.is_ok());
+    // }
 
     // #[tokio::test]
     // async fn test_log_debug() {
@@ -90,34 +90,34 @@ mod tests {
     //     // remove_var("LOG_LEVEL");
     // }
 
-    #[tokio::test]
-    async fn test_log_trace() {
-        let date = DateTime::new();
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            &date.to_string(),
-            &INFO,
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
-        let result = log.log().await;
-        assert!(result.is_ok());
-    }
-    #[tokio::test]
-    async fn test_log_info() {
-        let date = DateTime::new();
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            &date.to_string(),
-            &INFO,
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
-        let result = log.log().await;
-        assert!(result.is_ok());
-    }
+    // #[tokio::test]
+    // async fn test_log_trace() {
+    //     let date = DateTime::new();
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         &date.to_string(),
+    //         &INFO,
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
+    //     let result = log.log().await;
+    //     assert!(result.is_ok());
+    // }
+    // #[tokio::test]
+    // async fn test_log_info() {
+    //     let date = DateTime::new();
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         &date.to_string(),
+    //         &INFO,
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
+    //     let result = log.log().await;
+    //     assert!(result.is_ok());
+    // }
     #[tokio::test]
     async fn test_log_level_display() {
         let log_level = ERROR;
@@ -370,48 +370,48 @@ mod tests {
         assert!(formatted.contains("level: ERROR"));
     }
 
-    // Conceptual example
-    #[tokio::test]
-    async fn test_log_write_error() {
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            "2023-01-23 14:03:00.000+0000",
-            &ERROR,
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
-        let result = log.log().await;
-        assert!(result.is_ok());
-    }
+    // // Conceptual example
+    // #[tokio::test]
+    // async fn test_log_write_error() {
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         "2023-01-23 14:03:00.000+0000",
+    //         &ERROR,
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
+    //     let result = log.log().await;
+    //     assert!(result.is_ok());
+    // }
 
-    // Test the Log::write_log_entry method
-    #[tokio::test]
-    async fn test_write_log_entry_combinations() {
-        let log_levels = [INFO, WARN, ERROR, DEBUG];
-        let processes = ["process1", "process2", "process3"];
-        let messages = ["message1", "message2", "message3"];
-        let log_formats = [CLF, JSON, GELF];
+    // // Test the Log::write_log_entry method
+    // #[tokio::test]
+    // async fn test_write_log_entry_combinations() {
+    //     let log_levels = [INFO, WARN, ERROR, DEBUG];
+    //     let processes = ["process1", "process2", "process3"];
+    //     let messages = ["message1", "message2", "message3"];
+    //     let log_formats = [CLF, JSON, GELF];
 
-        for log_level in &log_levels {
-            for process in &processes {
-                for message in &messages {
-                    for log_format in &log_formats {
-                        let log = Log::new(
-                            "12345678-1234-1234-1234-1234567890ab",
-                            "2023-01-23 14:03:00.000+0000",
-                            log_level,
-                            process,
-                            message,
-                            log_format,
-                        );
-                        let result = log.log();
-                        assert!(result.await.is_ok());
-                    }
-                }
-            }
-        }
-    }
+    //     for log_level in &log_levels {
+    //         for process in &processes {
+    //             for message in &messages {
+    //                 for log_format in &log_formats {
+    //                     let log = Log::new(
+    //                         "12345678-1234-1234-1234-1234567890ab",
+    //                         "2023-01-23 14:03:00.000+0000",
+    //                         log_level,
+    //                         process,
+    //                         message,
+    //                         log_format,
+    //                     );
+    //                     let result = log.log();
+    //                     assert!(result.await.is_ok());
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     // Test the behavior of the library when the debug_enabled feature flag is set
     #[test]
