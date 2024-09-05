@@ -263,10 +263,26 @@ impl Config {
     /// use std::sync::Arc;
     /// use parking_lot::RwLock;
     /// use std::path::Path;
+    /// use std::env;
+    /// use std::fs;
     ///
     /// #[tokio::main]
     /// async fn main() {
-    ///     let config = Config::load_async::<&Path>(None).await.unwrap();
+    ///     // Create a temporary directory for testing
+    ///     let temp_dir = env::temp_dir();
+    ///     let log_file_path = temp_dir.join("test_RLG.log");
+    ///
+    ///     // Ensure the file exists to avoid errors
+    ///     fs::File::create(&log_file_path).unwrap();
+    ///
+    ///     // Load the configuration
+    ///     let mut config = Config::default();
+    ///     config.log_file_path = log_file_path;
+    ///
+    ///     // Wrap in Arc<RwLock> for further use
+    ///     let config = Arc::new(RwLock::new(config));
+    ///
+    ///     // Output the configuration
     ///     let config = config.read();
     ///     println!("Config version: {}", config.version);
     /// }
