@@ -12,6 +12,7 @@ mod tests {
         macro_log_with_metadata, macro_print_log,
         macro_set_log_format_clf, macro_trace_log, macro_warn_log,
     };
+    use std::env::set_var;
 
     #[test]
     fn test_macro_log() {
@@ -54,6 +55,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_macro_log_to_file() {
+        // Set the necessary environment variables for the log file path and log level
+        set_var("LOG_FILE_PATH", "RLG.log");
+        set_var("LOG_LEVEL", "DEBUG");
+
         let log = macro_info_log!("2022-01-01", "app", "message");
         let result = macro_log_to_file!(log);
         // Asserting that the macro doesn't panic

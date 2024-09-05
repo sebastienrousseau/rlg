@@ -3,39 +3,44 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//!
 //! # RustLogs (RLG)
 //!
-//! RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format.
-//! The library provides logging APIs and various helper macros that simplify many common logging tasks.
-//!
-//! [![Rust](https://kura.pro/rlg/images/titles/title-rlg.svg)](https://rustlogs.com/)
-//!
-//! ## Overview
-//!
-//! RustLogs (RLG) is a library that implements application-level
-//! logging in a simple, readable output format. The library provides
-//! logging APIs and various helper macros that simplify many common
-//! logging tasks.
+//! RustLogs (RLG) is a robust and flexible logging library for Rust applications.
+//! It provides a simple, readable output format and offers various features to
+//! enhance your application's logging capabilities.
 //!
 //! ## Features
 //!
-//! - Supports many log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`,
-//!   `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`.
-//! - Provides structured log formats that are easy to parse and filter.
-//! - Compatible with multiple output formats including:
-//!    - Common Event Format (CEF)
-//!    - Extended Log Format (ELF)
-//!    - Graylog Extended Log Format (GELF)
-//!    - JavaScript Object Notation (JSON)
-//!    - NCSA Common Log Format (CLF)
-//!    - W3C Extended Log File Format (W3C)
-//!    - Syslog Format
-//!    - Apache Access Log Format
-//!    - Logstash Format
-//!    - Log4j XML Format
-//!    - NDJSON (Newline Delimited JSON)
-//!    - and many more.
+//! - Multiple log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`.
+//! - Structured log formats for easy parsing and filtering.
+//! - Support for multiple output formats including:
+//!   - Common Event Format (CEF)
+//!   - Extended Log Format (ELF)
+//!   - Graylog Extended Log Format (GELF)
+//!   - JavaScript Object Notation (JSON)
+//!   - NCSA Common Log Format (CLF)
+//!   - W3C Extended Log File Format (W3C)
+//!   - Syslog Format
+//!   - Apache Access Log Format
+//!   - Logstash Format
+//!   - Log4j XML Format
+//!   - NDJSON (Newline Delimited JSON)
+//! - Configurable logging destinations (file, stdout, network).
+//! - Log rotation support.
+//! - Asynchronous logging for improved performance.
+//!
+//! ## Optional Features
+//!
+//! The following optional features can be enabled via feature flags in your `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! rlg = { version = "0.0.6", features = ["syslog", "logstash", "log4j"] }
+//! ```
+//!
+//! - `syslog`: Enables support for Syslog format.
+//! - `logstash`: Enables support for Logstash format.
+//! - `log4j`: Enables support for Log4j XML format.
 //!
 //! ## Usage
 //!
@@ -46,114 +51,98 @@
 //! rlg = "0.0.6"
 //! ```
 //!
-//! ## Configuration
-//!
-//! By default, RustLogs (RLG) logs to a file named "RLG.log" in the current directory. You can customize the log file path by setting the `LOG_FILE_PATH` environment variable.
-//!
-//! ## Examples
-//!
 //! ### Basic Logging
 //!
 //! ```rust
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //! use rlg::log_level::LogLevel;
+//! use std::error::Error;
+//! use std::env;
 //!
-//! // Create a new log entry
-//! let log_entry = Log::new(
-//!     "12345",
-//!     "2023-01-01T12:00:00Z",
-//!     &LogLevel::INFO,
-//!     "MyComponent",
-//!     "This is a sample log message",
-//!     &LogFormat::JSON, // Choose from various formats like JSON, Syslog, NDJSON, etc.
-//! );
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn Error>> {
+//!     // Set environment variables for configuration
+//!     env::set_var("LOG_FILE_PATH", "RLG.log");
+//!     env::set_var("LOG_LEVEL", "DEBUG");
+//!     env::set_var("LOG_ROTATION", "size:10485760"); // 10 MB
+//!     env::set_var("LOG_FORMAT", "%time - %level - %message");
+//!     env::set_var("LOG_DESTINATIONS", "file,stdout");
 //!
-//! // Log the entry asynchronously
-//! tokio::runtime::Runtime::new().unwrap().block_on(async {
-//!     log_entry.log().await.unwrap();
-//! });
+//!     // Write a log entry
+//!     Log::write_log_entry(
+//!         LogLevel::INFO,
+//!         "MyComponent",
+//!         "This is a sample log message",
+//!         LogFormat::JSON
+//!     ).await?;
+//!
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ### Custom Log Configuration
 //!
-//! ```rust,no_run
-//! use rlg::config::Config;
+//! ```rust
+//! use rlg::config::{Config, LogRotation, LoggingDestination};
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //! use rlg::log_level::LogLevel;
+//! use std::error::Error;
+//! use std::env;
 //!
-//! // Customize log file path
-//! std::env::set_var("LOG_FILE_PATH", "/path/to/log/file.log");
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn Error>> {
+//!     // Set environment variables for configuration
+//!     env::set_var("LOG_FILE_PATH", "RLG.log");
+//!     env::set_var("LOG_LEVEL", "DEBUG");
+//!     env::set_var("LOG_ROTATION", "size:10485760"); // 10 MB
+//!     env::set_var("LOG_FORMAT", "%time - %level - %message");
+//!     env::set_var("LOG_DESTINATIONS", "file,stdout");
 //!
-//! // Load custom configuration
-//! let config = Config::load(None);
+//!     // Write a log entry
+//!     Log::write_log_entry(
+//!         LogLevel::INFO,
+//!         "MyComponent",
+//!         "This is a sample log message with custom configuration",
+//!         LogFormat::JSON
+//!     ).await?;
 //!
-//! // Create a new log entry with custom configuration
-//! let log_entry = Log::new(
-//!     "12345",
-//!     "2023-01-01T12:00:00Z",
-//!     &LogLevel::INFO,
-//!     "MyComponent",
-//!     "This is a sample log message",
-//!     &LogFormat::ApacheAccessLog
-//! );
-//!
-//! // Log the entry asynchronously
-//! tokio::runtime::Runtime::new().unwrap().block_on(async {
-//!     log_entry.log().await.unwrap();
-//! });
+//!     Ok(())
+//! }
 //! ```
-//! ## Error Handling
 //!
-//! Errors can occur during logging operations, such as file I/O errors or formatting errors. The `log()` method returns a `Result<(), io::Error>` that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.
-//!
-//! ```rust,no_run
-//! use rlg::log::Log;
-//! use rlg::log_format::LogFormat;
-//! use rlg::log_level::LogLevel;
-//!
-//! // Create a new log entry
-//! let log_entry = Log::new(
-//!     "12345",
-//!     "2023-01-01T12:00:00Z",
-//!     &LogLevel::INFO,
-//!     "MyComponent",
-//!     "This is a sample log message",
-//!     &LogFormat::NDJSON, // Using NDJSON format for this example
-//! );
-//!
-//! // Log the entry asynchronously and handle potential errors
-//! tokio::runtime::Runtime::new().unwrap().block_on(async {
-//!     match log_entry.log().await {
-//!         Ok(_) => println!("Log entry successfully written"),
-//!         Err(err) => eprintln!("Error logging entry: {}", err),
-//!     }
-//! });
-//! ```
+//! For more detailed information about each module and its functionalities,
+//! please refer to the respective module documentation.
+
+#![warn(missing_docs)]
 #![doc(
     html_favicon_url = "https://kura.pro/rlg/images/favicon.ico",
     html_logo_url = "https://kura.pro/rlg/images/logos/rlg.svg",
     html_root_url = "https://docs.rs/rlg"
 )]
-#![crate_name = "rlg"]
-#![crate_type = "lib"]
 
-use crate::config::Config;
-use crate::log_format::LogFormat;
-use crate::log_level::LogLevel;
+/// The current version of the RustLogs crate.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-/// The `config` module contains the configuration struct for the logging system.
+pub use config::Config;
+pub use log_format::LogFormat;
+pub use log_level::LogLevel;
+
+/// Configuration module for RustLogs.
 pub mod config;
 
-/// The `log` module contains the log struct and its implementation.
+/// Core logging functionality.
 pub mod log;
 
-/// The `log_format` module contains the log format enumeration and its implementation.
+/// Log format definitions and implementations.
 pub mod log_format;
 
-/// The `log_level` module contains the log level enumeration and its implementation.
+/// Log level definitions and implementations.
 pub mod log_level;
 
-/// The `macros` module contains functions for generating macros.
+/// Macros for convenient logging.
 pub mod macros;
+
+// Re-export commonly used items
+pub use config::{LogRotation, LoggingDestination};

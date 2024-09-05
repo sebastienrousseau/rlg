@@ -14,6 +14,8 @@ mod tests {
         log::Log, log_format::LogFormat, log_level::LogLevel::*,
     };
     use rlg::{macro_debug_log, macro_info_log};
+    use std::env::set_var;
+    // use std::env::remove_var;
 
     #[tokio::test]
     async fn test_log_common_format() {
@@ -57,20 +59,37 @@ mod tests {
         let result = log.log().await;
         assert!(result.is_ok());
     }
+
     #[tokio::test]
     async fn test_log_debug() {
+        // Set the necessary environment variables for the log file path and log level
+        set_var("LOG_FILE_PATH", "RLG.log");
+        set_var("LOG_LEVEL", "DEBUG");
+
         let date = DateTime::new();
         let log = Log::new(
             "12345678-1234-1234-1234-1234567890ab",
             &date.to_string(),
-            &INFO,
+            &INFO, // Assuming INFO is a valid log level
             "SystemTrayEvent",
             "Showing main window",
             &CLF,
         );
+
         let result = log.log().await;
-        assert!(result.is_ok());
+
+        // Assert that the result is Ok, and if not, provide detailed error information
+        assert!(
+            result.is_ok(),
+            "Expected log() to succeed, but it failed with: {:?}",
+            result
+        );
+
+        // Clean up: remove the environment variables if needed
+        // remove_var("LOG_FILE_PATH");
+        // remove_var("LOG_LEVEL");
     }
+
     #[tokio::test]
     async fn test_log_trace() {
         let date = DateTime::new();
@@ -288,7 +307,7 @@ mod tests {
             &GELF,
         );
         let expected_output =
-            "{\n                            \"version\": \"1.1\",\n                            \"host\": \"test\",\n                            \"short_message\": \"test log message\",\n                            \"level\": \"INFO\",\n                            \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                            \"component\": \"test\",\n                            \"session_id\": \"123\"\n                        }";
+            "{\n                    \"version\": \"1.1\",\n                    \"host\": \"test\",\n                    \"short_message\": \"test log message\",\n                    \"level\": \"INFO\",\n                    \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                    \"component\": \"test\",\n                    \"session_id\": \"123\"\n                }";
         assert_eq!(expected_output, format!("{log}"));
     }
     #[tokio::test]
@@ -513,7 +532,7 @@ mod tests {
             &NDJSON,
         );
         // Expected NDJSON format
-        let expected_output = "{\n                            \"timestamp\": \"2022-01-01T00:00:00Z\",\n                            \"level\": \"INFO\",\n                            \"component\": \"component_a\",\n                            \"message\": \"description_a\"\n                        }";
+        let expected_output = "{\n                    \"timestamp\": \"2022-01-01T00:00:00Z\",\n                    \"level\": \"INFO\",\n                    \"component\": \"component_a\",\n                    \"message\": \"description_a\"\n                }";
         assert_eq!(log.to_string(), expected_output);
     }
 }
