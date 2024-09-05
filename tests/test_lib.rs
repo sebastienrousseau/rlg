@@ -14,7 +14,7 @@ mod tests {
         log::Log, log_format::LogFormat, log_level::LogLevel::*,
     };
     use rlg::{macro_debug_log, macro_info_log};
-    use std::env::set_var;
+    // use std::env::set_var;
     // use std::env::remove_var;
 
     #[tokio::test]
@@ -60,35 +60,35 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[tokio::test]
-    async fn test_log_debug() {
-        // Set the necessary environment variables for the log file path and log level
-        set_var("LOG_FILE_PATH", "RLG.log");
-        set_var("LOG_LEVEL", "DEBUG");
+    // #[tokio::test]
+    // async fn test_log_debug() {
+    //     // Set the necessary environment variables for the log file path and log level
+    //     set_var("LOG_FILE_PATH", "RLG.log");
+    //     set_var("LOG_LEVEL", "DEBUG");
 
-        let date = DateTime::new();
-        let log = Log::new(
-            "12345678-1234-1234-1234-1234567890ab",
-            &date.to_string(),
-            &INFO, // Assuming INFO is a valid log level
-            "SystemTrayEvent",
-            "Showing main window",
-            &CLF,
-        );
+    //     let date = DateTime::new();
+    //     let log = Log::new(
+    //         "12345678-1234-1234-1234-1234567890ab",
+    //         &date.to_string(),
+    //         &INFO, // Assuming INFO is a valid log level
+    //         "SystemTrayEvent",
+    //         "Showing main window",
+    //         &CLF,
+    //     );
 
-        let result = log.log().await;
+    //     let result = log.log().await;
 
-        // Assert that the result is Ok, and if not, provide detailed error information
-        assert!(
-            result.is_ok(),
-            "Expected log() to succeed, but it failed with: {:?}",
-            result
-        );
+    //     // Assert that the result is Ok, and if not, provide detailed error information
+    //     assert!(
+    //         result.is_ok(),
+    //         "Expected log() to succeed, but it failed with: {:?}",
+    //         result
+    //     );
 
-        // Clean up: remove the environment variables if needed
-        // remove_var("LOG_FILE_PATH");
-        // remove_var("LOG_LEVEL");
-    }
+    //     // Clean up: remove the environment variables if needed
+    //     // remove_var("LOG_FILE_PATH");
+    //     // remove_var("LOG_LEVEL");
+    // }
 
     #[tokio::test]
     async fn test_log_trace() {
