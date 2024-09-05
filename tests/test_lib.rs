@@ -9,7 +9,7 @@ mod tests {
         ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON,
         NDJSON, W3C,
     };
-    use dtt::datetime::DateTime;
+    // use dtt::datetime::DateTime;
     use rlg::{
         log::Log, log_format::LogFormat, log_level::LogLevel::*,
     };
