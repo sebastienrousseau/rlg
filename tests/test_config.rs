@@ -11,12 +11,12 @@ mod tests {
         log_level::LogLevel,
     };
     use std::collections::HashMap;
-    use std::fs::File;
-    use std::io::Write;
+    // use std::fs::File;
+    // use std::io::Write;
     use std::num::NonZeroU64;
-    use std::{env, path::PathBuf, str::FromStr};
-    use tempfile::tempdir;
-    use tokio::fs;
+    use std::{path::PathBuf, str::FromStr};
+    // use tempfile::tempdir;
+    // use tokio::fs;
 
     /// Tests for parsing different variants of the LogLevel enum from strings.
     #[test]
