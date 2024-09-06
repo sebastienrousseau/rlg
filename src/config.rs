@@ -509,10 +509,16 @@ impl Config {
     /// use rlg::config::Config;
     /// use std::fs::{self, OpenOptions};
     /// use std::env;
+    /// use std::path::PathBuf;
     ///
     /// // Create a temporary directory for the log file
     /// let temp_dir = env::temp_dir();
     /// let log_file_path = temp_dir.join("test_RLG.log");
+    ///
+    /// // Ensure the parent directory exists (should already exist in most cases)
+    /// if let Some(parent_dir) = log_file_path.parent() {
+    ///     fs::create_dir_all(parent_dir).unwrap();
+    /// }
     ///
     /// // Ensure the log file exists and is writable
     /// OpenOptions::new().write(true).create(true).open(&log_file_path).unwrap();
@@ -595,7 +601,10 @@ impl Config {
                 ));
             }
             if value.trim().is_empty() {
-                return Err(ConfigError::ValidationError(format!("Value for environment variable '{}' cannot be empty", key)));
+                return Err(ConfigError::ValidationError(format!(
+                "Value for environment variable '{}' cannot be empty",
+                key
+            )));
             }
         }
 
@@ -603,8 +612,19 @@ impl Config {
         if let LoggingDestination::File(path) =
             &self.logging_destinations[0]
         {
+            // Ensure that the directory exists
+            if let Some(parent_dir) = path.parent() {
+                fs::create_dir_all(parent_dir).map_err(|e| {
+                    ConfigError::ValidationError(format!(
+                        "Failed to create directory for log file: {}",
+                        e
+                    ))
+                })?;
+            }
+
             OpenOptions::new()
                 .write(true)
+                .create(true)
                 .truncate(true)
                 .open(path)
                 .map_err(|e| {
