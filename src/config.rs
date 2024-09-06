@@ -507,15 +507,15 @@ impl Config {
     ///
     /// ```rust
     /// use rlg::config::Config;
-    /// use std::fs;
+    /// use std::fs::{self, OpenOptions};
     /// use std::env;
     ///
     /// // Create a temporary directory for the log file
     /// let temp_dir = env::temp_dir();
     /// let log_file_path = temp_dir.join("test_RLG.log");
     ///
-    /// // Ensure the log file exists to avoid validation errors
-    /// fs::File::create(&log_file_path).unwrap();
+    /// // Ensure the log file exists and is writable
+    /// OpenOptions::new().write(true).create(true).open(&log_file_path).unwrap();
     ///
     /// // Load default configuration and set the log file path
     /// let mut config = Config::default();
