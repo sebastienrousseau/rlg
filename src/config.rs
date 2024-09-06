@@ -248,44 +248,32 @@ impl Default for Config {
 impl Config {
     /// Loads configuration from a file or environment variables.
     ///
-    /// # Arguments
-    ///
-    /// * `config_path` - An optional path to the configuration file. If `None`, it loads the default configuration.
-    ///
-    /// # Returns
-    ///
-    /// A `Result<Arc<RwLock<Config>>, ConfigError>` containing the loaded configuration wrapped in an `Arc<RwLock>` or an error if loading fails.
-    ///
     /// # Example
     ///
     /// ```rust
     /// use rlg::config::Config;
     /// use std::sync::Arc;
     /// use parking_lot::RwLock;
-    /// use std::path::Path;
     /// use std::env;
     /// use std::fs;
     ///
-    /// #[tokio::main]
-    /// async fn main() {
-    ///     // Create a temporary directory for testing
-    ///     let temp_dir = env::temp_dir();
-    ///     let log_file_path = temp_dir.join("test_RLG.log");
+    /// // Create a temporary directory for testing
+    /// let temp_dir = env::temp_dir();
+    /// let log_file_path = temp_dir.join("test_RLG.log");
     ///
-    ///     // Ensure the file exists to avoid errors
-    ///     fs::File::create(&log_file_path).unwrap();
+    /// // Ensure the file exists to avoid errors
+    /// fs::File::create(&log_file_path).unwrap();
     ///
-    ///     // Load the configuration
-    ///     let mut config = Config::default();
-    ///     config.log_file_path = log_file_path;
+    /// // Load the configuration
+    /// let mut config = Config::default();
+    /// config.log_file_path = log_file_path;
     ///
-    ///     // Wrap in Arc<RwLock> for further use
-    ///     let config = Arc::new(RwLock::new(config));
+    /// // Wrap in Arc<RwLock> for further use
+    /// let config = Arc::new(RwLock::new(config));
     ///
-    ///     // Output the configuration
-    ///     let config = config.read();
-    ///     println!("Config version: {}", config.version);
-    /// }
+    /// // Output the configuration
+    /// let config = config.read();
+    /// println!("Config version: {}", config.version);
     /// ```
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
@@ -325,13 +313,17 @@ impl Config {
 
     /// Retrieves a value from the configuration based on the specified key.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `key` - The key of the value to retrieve.
+    /// ```rust
+    /// use rlg::config::Config;
     ///
-    /// # Returns
-    ///
-    /// An `Option<T>` containing the value if found, or `None` if the key does not exist.
+    /// let config = Config::default();
+    /// let log_level: Option<String> = config.get("log_level");
+    /// if let Some(level) = log_level {
+    ///     println!("Log level: {}", level);
+    /// }
+    /// ```
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
         T: serde::de::DeserializeOwned,
@@ -360,13 +352,14 @@ impl Config {
 
     /// Saves the current configuration to a file.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `path` - The path where the configuration file should be saved.
+    /// ```rust
+    /// use rlg::config::Config;
     ///
-    /// # Returns
-    ///
-    /// A `Result<(), ConfigError>` indicating success or failure of the save operation.
+    /// let config = Config::default();
+    /// config.save_to_file("config.json").unwrap();
+    /// ```
     pub fn save_to_file<P: AsRef<Path>>(
         &self,
         path: P,
@@ -389,7 +382,17 @@ impl Config {
         Ok(())
     }
 
-    /// Set a value in the configuration based on the specified key.
+    /// Sets a value in the configuration based on the specified key.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rlg::config::Config;
+    ///
+    /// let mut config = Config::default();
+    /// config.set("log_format", "%level - %message").unwrap();
+    /// println!("New log format: {}", config.log_format);
+    /// ```
     pub fn set<T: Serialize>(
         &mut self,
         key: &str,
@@ -499,6 +502,16 @@ impl Config {
     }
 
     /// Validates the configuration settings.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rlg::config::Config;
+    ///
+    /// let config = Config::default();
+    /// config.validate().unwrap();
+    /// println!("Configuration is valid!");
+    /// ```
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.version.trim().is_empty() {
             return Err(ConfigError::ValidationError(
@@ -629,9 +642,15 @@ impl Config {
 
     /// Expands environment variables in the configuration values.
     ///
-    /// # Returns
+    /// # Example
     ///
-    /// A new `Config` instance with expanded environment variables.
+    /// ```rust
+    /// use rlg::config::Config;
+    ///
+    /// let config = Config::default();
+    /// let expanded_config = config.expand_env_vars();
+    /// println!("Expanded env vars: {:?}", expanded_config.env_vars);
+    /// ```
     pub fn expand_env_vars(&self) -> Config {
         let mut new_config = self.clone();
         for (key, value) in &mut new_config.env_vars {
@@ -644,14 +663,33 @@ impl Config {
 
     /// Hot-reloads configuration on file change.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `config_path` - The path to the configuration file.
-    /// * `config` - A shared `Arc<RwLock<Config>>` instance that will be updated when the configuration file changes.
+    /// ```rust
+    /// use rlg::config::Config;
+    /// use std::sync::Arc;
+    /// use parking_lot::RwLock;
+    /// use std::fs;
+    /// use std::env;
     ///
-    /// # Returns
+    /// # tokio_test::block_on(async {
+    /// let temp_dir = env::temp_dir();
+    /// let config_file_path = temp_dir.join("test_config.toml");
     ///
-    /// A `Result<mpsc::Sender<()>, ConfigError>` containing a channel to stop the hot reload process or an error.
+    /// // Create a simple config file to be watched
+    /// let config_content = r#"
+    /// version = "1.0"
+    /// profile = "default"
+    /// "#;
+    /// fs::write(&config_file_path, config_content).unwrap();
+    ///
+    /// // Load default configuration and start watching the config file
+    /// let config = Arc::new(RwLock::new(Config::default()));
+    ///
+    /// // Start hot reload with the temporary config file
+    /// let _ = Config::hot_reload_async(config_file_path.to_str().unwrap(), config.clone()).await.unwrap();
+    /// # });
+    /// ```
     #[allow(clippy::incompatible_msrv)]
     pub async fn hot_reload_async(
         config_path: &str,
@@ -708,14 +746,20 @@ impl Config {
 
     /// Compares two configurations and returns the differences.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `config1` - The first configuration to compare.
-    /// * `config2` - The second configuration to compare.
+    /// ```rust
+    /// use rlg::config::Config;
+    /// use std::collections::HashMap;
     ///
-    /// # Returns
-    ///
-    /// A `HashMap<String, String>` containing the differences between the two configurations.
+    /// let config1 = Config::default();
+    /// let config2 = Config {
+    ///     profile: "test".to_string(),
+    ///     ..Config::default()
+    /// };
+    /// let differences = Config::diff(&config1, &config2);
+    /// println!("Differences: {:?}", differences);
+    /// ```
     pub fn diff(
         config1: &Config,
         config2: &Config,
@@ -797,13 +841,19 @@ impl Config {
 
     /// Merges another configuration into the current configuration.
     ///
-    /// # Arguments
+    /// # Example
     ///
-    /// * `other` - The other configuration to merge into this one.
+    /// ```rust
+    /// use rlg::config::Config;
     ///
-    /// # Returns
-    ///
-    /// A new `Config` instance with the merged configuration.
+    /// let config1 = Config::default();
+    /// let config2 = Config {
+    ///     profile: "test".to_string(),
+    ///     ..Config::default()
+    /// };
+    /// let merged_config = config1.merge(&config2);
+    /// println!("Merged config profile: {}", merged_config.profile);
+    /// ```
     pub fn merge(&self, other: &Config) -> Config {
         Config {
             version: other.version.clone(),

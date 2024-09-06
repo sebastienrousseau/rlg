@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "profile": "default",
+  "log_file_path": "RLG.log",
+  "log_level": "INFO",
+  "log_rotation": {
+    "Size": 10485760
+  },
+  "log_format": "%level - %message",
+  "logging_destinations": [
+    {
+      "type": "File",
+      "value": "RLG.log"
+    }
+  ],
+  "env_vars": {}
+}
