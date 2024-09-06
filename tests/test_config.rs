@@ -10,10 +10,12 @@ mod tests {
         },
         log_level::LogLevel,
     };
+    use serde::Deserialize;
     use std::{
         collections::HashMap, env, num::NonZeroU64, path::PathBuf,
         str::FromStr,
     };
+    use tokio::fs;
 
     /// Tests for parsing different variants of the LogLevel enum from strings.
     #[test]
@@ -223,5 +225,171 @@ mod tests {
             LogLevel::from_str("ErRoR"),
             Ok(LogLevel::ERROR)
         ));
+    }
+
+    /// Tests the Config::validate method with a valid configuration.
+    #[test]
+    fn test_config_validate() {
+        use std::env;
+        use std::fs::OpenOptions;
+
+        let temp_dir = env::temp_dir();
+        let log_file_path = temp_dir.join("test_validate_RLG.log");
+
+        // Ensure the log file exists
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&log_file_path)
+            .unwrap();
+
+        // Set up a valid configuration
+        let mut config = Config {
+            log_file_path,
+            ..Default::default()
+        };
+
+        // Validate the configuration
+        assert!(
+            config.validate().is_ok(),
+            "Validation should pass with valid config"
+        );
+
+        // Set an invalid log file path and validate
+        config.log_file_path = "".into();
+        assert!(
+            config.validate().is_err(),
+            "Validation should fail with empty log file path"
+        );
+    }
+
+    #[test]
+    fn test_config_expand_env_vars() {
+        use std::env;
+
+        // Set an environment variable
+        env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log");
+
+        // Create config with env var reference
+        let mut config = Config::default();
+        config.env_vars.insert(
+            "RLG_LOG_PATH".to_string(),
+            "${RLG_LOG_PATH}".to_string(),
+        );
+
+        // Expand environment variables
+        let expanded_config = config.expand_env_vars();
+
+        // Check that the variable has been expanded
+        assert_eq!(
+            expanded_config.env_vars.get("RLG_LOG_PATH").unwrap(),
+            "/tmp/env_test_RLG.log"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_hot_reload_async() {
+        use parking_lot::RwLock;
+        use std::sync::Arc;
+
+        let temp_dir = env::temp_dir();
+        let config_file_path =
+            temp_dir.join("test_hot_reload_RLG.toml");
+
+        // Create a simple config file
+        let config_content = r#"
+    version = "1.0"
+    profile = "default"
+    "#;
+        fs::write(&config_file_path, config_content).await.unwrap();
+
+        // Load default configuration and start watching the config file
+        let config = Arc::new(RwLock::new(Config::default()));
+
+        // Start hot reload and check for no errors
+        let result = Config::hot_reload_async(
+            config_file_path.to_str().unwrap(),
+            config.clone(),
+        )
+        .await;
+        assert!(result.is_ok(), "Hot reload setup should succeed");
+    }
+
+    #[test]
+    fn test_config_diff() {
+        // Create two different configurations
+        let config1 = Config::default();
+
+        let config2 = Config {
+            profile: "test_profile".to_string(),
+            ..Default::default()
+        };
+
+        // Get the differences
+        let differences = Config::diff(&config1, &config2);
+
+        // Check the differences are as expected
+        assert_eq!(
+            differences.get("profile").unwrap(),
+            "default -> test_profile"
+        );
+    }
+    #[test]
+    fn test_config_merge() {
+        // Create two configurations
+        let config1 = Config::default();
+        let config2 = Config {
+            profile: "test_profile".to_string(),
+            log_format: "%level - %message".to_string(),
+            ..Default::default()
+        };
+
+        // Merge the configurations
+        let merged_config = config1.merge(&config2);
+
+        // Check the merged configuration
+        assert_eq!(merged_config.profile, "test_profile");
+        assert_eq!(merged_config.log_format, "%level - %message");
+    }
+
+    #[test]
+    fn test_config_error_enum() {
+        // Define a struct that expects a specific environment variable
+        #[allow(dead_code)] // Ignore unused field warning
+        #[derive(Deserialize, Debug)]
+        struct EnvConfig {
+            required_field: String,
+        }
+
+        // Simulate an envy error by trying to deserialize missing environment variables
+        let env_var_error = ConfigError::EnvVarParseError(
+            envy::from_env::<EnvConfig>().unwrap_err(),
+        );
+
+        // Create a custom config parse error
+        let config_parse_error = ConfigError::ConfigParseError(
+            config::ConfigError::Message("test error".to_string()),
+        );
+
+        // Create an invalid file path error
+        let invalid_file_path_error =
+            ConfigError::InvalidFilePath("invalid path".to_string());
+
+        // Output the actual error message for debugging
+        let env_var_error_message = format!("{}", env_var_error);
+        println!("Env var error message: {}", env_var_error_message);
+
+        // Assertions for expected error messages
+        assert!(env_var_error_message.contains("field") || env_var_error_message.contains("parse"),
+            "Env var error should contain 'field' or 'parse' but was: {}", env_var_error_message);
+        assert_eq!(
+            format!("{}", config_parse_error),
+            "Configuration parsing error: test error"
+        );
+        assert_eq!(
+            format!("{}", invalid_file_path_error),
+            "Invalid file path: invalid path"
+        );
     }
 }
