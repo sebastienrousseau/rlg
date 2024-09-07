@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/log_format.rs`."><title>log_format.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-492a78a4a87dcc01.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (94885bc69 2024-09-01)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/log_format.rs`."><title>log_format.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers">
+<a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -235,37 +236,36 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
-</pre></div><pre class="rust"><code><span class="comment">// log_format.rs
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a></pre></div><pre class="rust"><code><span class="comment">// log_format.rs
 // Copyright © 2024 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-</span><span class="kw">use </span>once_cell::sync::Lazy;
+</span><span class="kw">use </span><span class="kw">crate</span>::error::{RlgError, RlgResult};
+<span class="kw">use </span><span class="kw">crate</span>::utils::sanitize_log_message;
+<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>std::fmt;
 <span class="kw">use </span>std::str::FromStr;
-
-<span class="doccomment">/// Custom error type for parsing LogFormat.
-</span><span class="attr">#[derive(Debug, Clone)]
-</span><span class="kw">pub struct </span>ParseLogFormatError {
-    details: String,
-}
-
-<span class="kw">impl </span>ParseLogFormatError {
-    <span class="doccomment">/// Creates a new `ParseLogFormatError` with a specified message.
-    </span><span class="kw">fn </span>new(msg: <span class="kw-2">&amp;</span>str) -&gt; ParseLogFormatError {
-        ParseLogFormatError {
-            details: msg.to_string(),
-        }
-    }
-}
-
-<span class="kw">impl </span>fmt::Display <span class="kw">for </span>ParseLogFormatError {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.details)
-    }
-}
 
 <span class="doccomment">/// Compiled regular expressions for log format validation.
 </span><span class="kw">static </span>CLF_REGEX: Lazy&lt;Regex&gt; = Lazy::new(|| {
@@ -346,7 +346,7 @@
 }
 
 <span class="kw">impl </span>FromStr <span class="kw">for </span>LogFormat {
-    <span class="kw">type </span><span class="prelude-val">Err </span>= ParseLogFormatError;
+    <span class="kw">type </span><span class="prelude-val">Err </span>= RlgError;
 
     <span class="kw">fn </span>from_str(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Err&gt; {
         <span class="kw">match </span>s.to_lowercase().as_str() {
@@ -360,7 +360,10 @@
             <span class="string">"logstash" </span>=&gt; <span class="prelude-val">Ok</span>(LogFormat::Logstash),
             <span class="string">"log4jxml" </span>=&gt; <span class="prelude-val">Ok</span>(LogFormat::Log4jXML),
             <span class="string">"ndjson" </span>=&gt; <span class="prelude-val">Ok</span>(LogFormat::NDJSON),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(ParseLogFormatError::new(<span class="string">"Unknown log format"</span>)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(RlgError::FormatParseError(<span class="macro">format!</span>(
+                <span class="string">"Unknown log format: {}"</span>,
+                s
+            ))),
         }
     }
 }
@@ -414,7 +417,7 @@
     ///
     /// # Returns
     ///
-    /// A `Result&lt;String, serde_json::Error&gt;` containing the formatted log entry or an error if the formatting fails.
+    /// A `RlgResult&lt;String&gt;` containing the formatted log entry or an error if the formatting fails.
     ///
     /// # Example
     ///
@@ -422,31 +425,31 @@
     /// use rlg::log_format::LogFormat;
     /// let formatted_log = LogFormat::CLF.format_log("127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326").unwrap();
     /// ```
-    </span><span class="kw">pub fn </span>format_log(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        entry: <span class="kw-2">&amp;</span>str,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;String, ParseLogFormatError&gt; {
+    </span><span class="kw">pub fn </span>format_log(<span class="kw-2">&amp;</span><span class="self">self</span>, entry: <span class="kw-2">&amp;</span>str) -&gt; RlgResult&lt;String&gt; {
+        <span class="kw">let </span>sanitized_entry = sanitize_log_message(entry);
         <span class="kw">match </span><span class="self">self </span>{
             LogFormat::CLF
             | LogFormat::ApacheAccessLog
             | LogFormat::CEF
             | LogFormat::ELF
             | LogFormat::W3C
-            | LogFormat::Log4jXML =&gt; <span class="prelude-val">Ok</span>(entry.to_string()),
+            | LogFormat::Log4jXML =&gt; <span class="prelude-val">Ok</span>(sanitized_entry),
             LogFormat::JSON
             | LogFormat::Logstash
             | LogFormat::NDJSON
             | LogFormat::GELF =&gt; serde_json::to_string_pretty(
-                <span class="kw-2">&amp;</span>serde_json::from_str::&lt;serde_json::Value&gt;(entry)
-                    .map_err(|e| {
-                        ParseLogFormatError::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                            <span class="string">"Invalid JSON: {}"</span>,
-                            e
-                        ))
-                    })<span class="question-mark">?</span>,
+                <span class="kw-2">&amp;</span>serde_json::from_str::&lt;serde_json::Value&gt;(
+                    <span class="kw-2">&amp;</span>sanitized_entry,
+                )
+                .map_err(|e| {
+                    RlgError::FormattingError(<span class="macro">format!</span>(
+                        <span class="string">"Invalid JSON: {}"</span>,
+                        e
+                    ))
+                })<span class="question-mark">?</span>,
             )
             .map_err(|e| {
-                ParseLogFormatError::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+                RlgError::FormattingError(<span class="macro">format!</span>(
                     <span class="string">"JSON formatting error: {}"</span>,
                     e
                 ))
@@ -471,5 +474,40 @@
         };
         <span class="macro">write!</span>(f, <span class="string">"{}"</span>, s)
     }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>tests {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_log_format_from_str() {
+        <span class="macro">assert_eq!</span>(LogFormat::from_str(<span class="string">"clf"</span>).unwrap(), LogFormat::CLF);
+        <span class="macro">assert_eq!</span>(
+            LogFormat::from_str(<span class="string">"JSON"</span>).unwrap(),
+            LogFormat::JSON
+        );
+        <span class="macro">assert!</span>(LogFormat::from_str(<span class="string">"invalid"</span>).is_err());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_log_format_validate() {
+        <span class="kw">let </span>clf_log = <span class="string">r#"127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#</span>;
+        <span class="macro">assert!</span>(LogFormat::CLF.validate(clf_log));
+
+        <span class="kw">let </span>json_log = <span class="string">r#"{"level":"info","message":"Test log","timestamp":"2023-05-17T12:34:56Z"}"#</span>;
+        <span class="macro">assert!</span>(LogFormat::JSON.validate(json_log));
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_log_format_format_log() {
+        <span class="kw">let </span>json_log = <span class="string">r#"{"level":"info","message":"Test log","timestamp":"2023-05-17T12:34:56Z"}"#</span>;
+        <span class="kw">let </span>formatted = LogFormat::JSON.format_log(json_log).unwrap();
+        <span class="macro">assert!</span>(formatted.contains(<span class="string">"{\n"</span>)); <span class="comment">// Check if it's pretty-printed
+
+        </span><span class="kw">let </span>clf_log = <span class="string">r#"127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#</span>;
+        <span class="kw">let </span>formatted = LogFormat::CLF.format_log(clf_log).unwrap();
+        <span class="macro">assert_eq!</span>(formatted, clf_log); <span class="comment">// CLF should remain unchanged
+    </span>}
 }
 </code></pre></div></section></main></body></html>

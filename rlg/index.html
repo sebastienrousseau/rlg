@@ -1,18 +1,12 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="RustLogs (RLG)"><title>rlg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-492a78a4a87dcc01.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (94885bc69 2024-09-01)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-921df33f47b8780c.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-3b12f09e550e0385.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../rlg/index.html"><img src="https://kura.pro/rlg/images/logos/rlg.svg" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../rlg/index.html"><img src="https://kura.pro/rlg/images/logos/rlg.svg" alt="logo"></a><h2><a href="../rlg/index.html">rlg</a><span class="version">0.0.5</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section><ul class="block"><li><a href="#modules">Modules</a></li><li><a href="#macros">Macros</a></li></ul></section></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">rlg</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../src/rlg/lib.rs.html#6-159">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="rustlogs-rlg"><a class="doc-anchor" href="#rustlogs-rlg">§</a>RustLogs (RLG)</h2>
-<p>RustLogs (RLG) is a library that implements application-level logging in a simple, readable output format.
-The library provides logging APIs and various helper macros that simplify many common logging tasks.</p>
-<p><a href="https://rustlogs.com/"><img src="https://kura.pro/rlg/images/titles/title-rlg.svg" alt="Rust" /></a></p>
-<h3 id="overview"><a class="doc-anchor" href="#overview">§</a>Overview</h3>
-<p>RustLogs (RLG) is a library that implements application-level
-logging in a simple, readable output format. The library provides
-logging APIs and various helper macros that simplify many common
-logging tasks.</p>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="RustLogs (RLG)"><title>rlg - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../static.files/rustdoc-405f8b29f52305f8.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="rlg" data-themes="" data-resource-suffix="" data-rustdoc-version="1.83.0-nightly (26b5599e4 2024-09-06)" data-channel="nightly" data-search-js="search-a99f1315e7cc5121.js" data-settings-js="settings-7e3bb6c46e92e77c.js" ><script src="../static.files/storage-29b1d5a9048d38fe.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-14659ec02b58af51.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-40f72c9259523cb3.css"></noscript><link rel="icon" href="https://kura.pro/rlg/images/favicon.ico"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button><a class="logo-container" href="../rlg/index.html"><img src="https://kura.pro/rlg/images/logos/rlg.svg" alt=""></a></nav><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../rlg/index.html"><img src="https://kura.pro/rlg/images/logos/rlg.svg" alt="logo"></a><h2><a href="../rlg/index.html">rlg</a><span class="version">0.0.6</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#rustlogs-rlg" title="RustLogs (RLG)">RustLogs (RLG)</a><ul><li><a href="#features" title="Features">Features</a></li></ul></li></ul><h3><a href="#reexports">Crate Items</a></h3><ul class="block"><li><a href="#reexports" title="Re-exports">Re-exports</a></li><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#macros" title="Macros">Macros</a></li><li><a href="#constants" title="Constants">Constants</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1>Crate <a class="mod" href="#">rlg</a><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><span class="out-of-band"><a class="src" href="../src/rlg/lib.rs.html#6-72">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="rustlogs-rlg"><a class="doc-anchor" href="#rustlogs-rlg">§</a>RustLogs (RLG)</h2>
+<p>RustLogs (RLG) is a robust and flexible logging library for Rust applications.
+It provides a simple, readable output format and offers various features to
+enhance your application’s logging capabilities.</p>
 <h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3>
 <ul>
-<li>Supports many log levels: <code>ALL</code>, <code>DEBUG</code>, <code>DISABLED</code>, <code>ERROR</code>,
-<code>FATAL</code>, <code>INFO</code>, <code>NONE</code>, <code>TRACE</code>, <code>VERBOSE</code>, and <code>WARN</code>.</li>
-<li>Provides structured log formats that are easy to parse and filter.</li>
-<li>Compatible with multiple output formats including:
+<li>Multiple log levels: <code>ALL</code>, <code>DEBUG</code>, <code>DISABLED</code>, <code>ERROR</code>, <code>FATAL</code>, <code>INFO</code>, <code>NONE</code>, <code>TRACE</code>, <code>VERBOSE</code>, and <code>WARN</code>.</li>
+<li>Structured log formats for easy parsing and filtering.</li>
+<li>Support for multiple output formats including:
 <ul>
 <li>Common Event Format (CEF)</li>
 <li>Extended Log Format (ELF)</li>
@@ -25,86 +19,14 @@ logging tasks.</p>
 <li>Logstash Format</li>
 <li>Log4j XML Format</li>
 <li>NDJSON (Newline Delimited JSON)</li>
-<li>and many more.</li>
 </ul>
 </li>
+<li>Configurable logging destinations (file, stdout, network).</li>
+<li>Log rotation support.</li>
+<li>Asynchronous logging for improved performance.</li>
 </ul>
-<h3 id="usage"><a class="doc-anchor" href="#usage">§</a>Usage</h3>
-<p>Add this to your <code>Cargo.toml</code>:</p>
-<div class="example-wrap"><pre class="language-toml"><code>[dependencies]
-rlg = &quot;0.0.5&quot;
-</code></pre></div><h3 id="configuration"><a class="doc-anchor" href="#configuration">§</a>Configuration</h3>
-<p>By default, RustLogs (RLG) logs to a file named “RLG.log” in the current directory. You can customize the log file path by setting the <code>LOG_FILE_PATH</code> environment variable.</p>
-<h3 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h3><h4 id="basic-logging"><a class="doc-anchor" href="#basic-logging">§</a>Basic Logging</h4>
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>rlg::log::Log;
-<span class="kw">use </span>rlg::log_format::LogFormat;
-<span class="kw">use </span>rlg::log_level::LogLevel;
-
-<span class="comment">// Create a new log entry
-</span><span class="kw">let </span>log_entry = Log::new(
-    <span class="string">"12345"</span>,
-    <span class="string">"2023-01-01T12:00:00Z"</span>,
-    <span class="kw-2">&amp;</span>LogLevel::INFO,
-    <span class="string">"MyComponent"</span>,
-    <span class="string">"This is a sample log message"</span>,
-    <span class="kw-2">&amp;</span>LogFormat::JSON, <span class="comment">// Choose from various formats like JSON, Syslog, NDJSON, etc.
-</span>);
-
-<span class="comment">// Log the entry asynchronously
-</span>tokio::runtime::Runtime::new().unwrap().block_on(<span class="kw">async </span>{
-    log_entry.log().<span class="kw">await</span>.unwrap();
-});</code></pre></div>
-<h4 id="custom-log-configuration"><a class="doc-anchor" href="#custom-log-configuration">§</a>Custom Log Configuration</h4>
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>rlg::config::Config;
-<span class="kw">use </span>rlg::log::Log;
-<span class="kw">use </span>rlg::log_format::LogFormat;
-<span class="kw">use </span>rlg::log_level::LogLevel;
-
-<span class="comment">// Customize log file path
-</span>std::env::set_var(<span class="string">"LOG_FILE_PATH"</span>, <span class="string">"/path/to/log/file.log"</span>);
-
-<span class="comment">// Load custom configuration
-</span><span class="kw">let </span>config = Config::load(<span class="prelude-val">None</span>);
-
-<span class="comment">// Create a new log entry with custom configuration
-</span><span class="kw">let </span>log_entry = Log::new(
-    <span class="string">"12345"</span>,
-    <span class="string">"2023-01-01T12:00:00Z"</span>,
-    <span class="kw-2">&amp;</span>LogLevel::INFO,
-    <span class="string">"MyComponent"</span>,
-    <span class="string">"This is a sample log message"</span>,
-    <span class="kw-2">&amp;</span>LogFormat::ApacheAccessLog
-);
-
-<span class="comment">// Log the entry asynchronously
-</span>tokio::runtime::Runtime::new().unwrap().block_on(<span class="kw">async </span>{
-    log_entry.log().<span class="kw">await</span>.unwrap();
-});</code></pre></div>
-<h3 id="error-handling"><a class="doc-anchor" href="#error-handling">§</a>Error Handling</h3>
-<p>Errors can occur during logging operations, such as file I/O errors or formatting errors. The <code>log()</code> method returns a <code>Result&lt;(), io::Error&gt;</code> that indicates the outcome of the logging operation. You should handle potential errors appropriately in your code.</p>
-
-<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>rlg::log::Log;
-<span class="kw">use </span>rlg::log_format::LogFormat;
-<span class="kw">use </span>rlg::log_level::LogLevel;
-
-<span class="comment">// Create a new log entry
-</span><span class="kw">let </span>log_entry = Log::new(
-    <span class="string">"12345"</span>,
-    <span class="string">"2023-01-01T12:00:00Z"</span>,
-    <span class="kw-2">&amp;</span>LogLevel::INFO,
-    <span class="string">"MyComponent"</span>,
-    <span class="string">"This is a sample log message"</span>,
-    <span class="kw-2">&amp;</span>LogFormat::NDJSON, <span class="comment">// Using NDJSON format for this example
-</span>);
-
-<span class="comment">// Log the entry asynchronously and handle potential errors
-</span>tokio::runtime::Runtime::new().unwrap().block_on(<span class="kw">async </span>{
-    <span class="kw">match </span>log_entry.log().<span class="kw">await </span>{
-        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="macro">println!</span>(<span class="string">"Log entry successfully written"</span>),
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">eprintln!</span>(<span class="string">"Error logging entry: {}"</span>, err),
-    }
-});</code></pre></div>
-</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="config/index.html" title="mod rlg::config">config</a></div><div class="desc docblock-short">The <code>config</code> module contains the configuration struct for the logging system.</div></li><li><div class="item-name"><a class="mod" href="log/index.html" title="mod rlg::log">log</a></div><div class="desc docblock-short">The <code>log</code> module contains the log struct and its implementation.</div></li><li><div class="item-name"><a class="mod" href="log_format/index.html" title="mod rlg::log_format">log_<wbr>format</a></div><div class="desc docblock-short">The <code>log_format</code> module contains the log format enumeration and its implementation.</div></li><li><div class="item-name"><a class="mod" href="log_level/index.html" title="mod rlg::log_level">log_<wbr>level</a></div><div class="desc docblock-short">The <code>log_level</code> module contains the log level enumeration and its implementation.</div></li><li><div class="item-name"><a class="mod" href="macros/index.html" title="mod rlg::macros">macros</a></div><div class="desc docblock-short">The <code>macros</code> module contains functions for generating macros.</div></li></ul><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.macro_debug_log.html" title="macro rlg::macro_debug_log">macro_<wbr>debug_<wbr>log</a></div><div class="desc docblock-short">This macro conditionally logs a debug message if the <code>debug_enabled</code> feature flag is set.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_error_log.html" title="macro rlg::macro_error_log">macro_<wbr>error_<wbr>log</a></div><div class="desc docblock-short">This macro creates an <code>ERROR</code> level log entry with a default session ID and format.
+</div></details><h2 id="reexports" class="section-header">Re-exports<a href="#reexports" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name" id="reexport.Config"><code>pub use config::<a class="struct" href="config/struct.Config.html" title="struct rlg::config::Config">Config</a>;</code></div></li><li><div class="item-name" id="reexport.LogRotation"><code>pub use config::<a class="enum" href="config/enum.LogRotation.html" title="enum rlg::config::LogRotation">LogRotation</a>;</code></div></li><li><div class="item-name" id="reexport.LoggingDestination"><code>pub use config::<a class="enum" href="config/enum.LoggingDestination.html" title="enum rlg::config::LoggingDestination">LoggingDestination</a>;</code></div></li><li><div class="item-name" id="reexport.Log"><code>pub use log::<a class="struct" href="log/struct.Log.html" title="struct rlg::log::Log">Log</a>;</code></div></li><li><div class="item-name" id="reexport.LogFormat"><code>pub use log_format::<a class="enum" href="log_format/enum.LogFormat.html" title="enum rlg::log_format::LogFormat">LogFormat</a>;</code></div></li><li><div class="item-name" id="reexport.LogLevel"><code>pub use log_level::<a class="enum" href="log_level/enum.LogLevel.html" title="enum rlg::log_level::LogLevel">LogLevel</a>;</code></div></li><li><div class="item-name" id="reexport.RlgError"><code>pub use error::<a class="enum" href="error/enum.RlgError.html" title="enum rlg::error::RlgError">RlgError</a>;</code></div></li><li><div class="item-name" id="reexport.RlgResult"><code>pub use error::<a class="type" href="error/type.RlgResult.html" title="type rlg::error::RlgResult">RlgResult</a>;</code></div></li><li><div class="item-name" id="reexport.generate_timestamp"><code>pub use utils::<a class="fn" href="utils/fn.generate_timestamp.html" title="fn rlg::utils::generate_timestamp">generate_timestamp</a>;</code></div></li><li><div class="item-name" id="reexport.sanitize_log_message"><code>pub use utils::<a class="fn" href="utils/fn.sanitize_log_message.html" title="fn rlg::utils::sanitize_log_message">sanitize_log_message</a>;</code></div></li></ul><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="mod" href="config/index.html" title="mod rlg::config">config</a></div><div class="desc docblock-short">Configuration module for RustLogs.
+Configuration module for RustLogs (RLG).</div></li><li><div class="item-name"><a class="mod" href="error/index.html" title="mod rlg::error">error</a></div><div class="desc docblock-short">Error handling module</div></li><li><div class="item-name"><a class="mod" href="log/index.html" title="mod rlg::log">log</a></div><div class="desc docblock-short">Core logging functionality.</div></li><li><div class="item-name"><a class="mod" href="log_format/index.html" title="mod rlg::log_format">log_<wbr>format</a></div><div class="desc docblock-short">Log format definitions and implementations.</div></li><li><div class="item-name"><a class="mod" href="log_level/index.html" title="mod rlg::log_level">log_<wbr>level</a></div><div class="desc docblock-short">Log level definitions and implementations.</div></li><li><div class="item-name"><a class="mod" href="macros/index.html" title="mod rlg::macros">macros</a></div><div class="desc docblock-short">Macros for convenient logging.</div></li><li><div class="item-name"><a class="mod" href="utils/index.html" title="mod rlg::utils">utils</a></div><div class="desc docblock-short">Utility functions module</div></li></ul><h2 id="macros" class="section-header">Macros<a href="#macros" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="macro" href="macro.macro_debug_log.html" title="macro rlg::macro_debug_log">macro_<wbr>debug_<wbr>log</a></div><div class="desc docblock-short">This macro conditionally logs a debug message if the <code>debug_enabled</code> feature flag is set.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_error_log.html" title="macro rlg::macro_error_log">macro_<wbr>error_<wbr>log</a></div><div class="desc docblock-short">This macro creates an <code>ERROR</code> level log entry with a default session ID and format.
 The session ID is generated randomly and the log format defaults to CLF.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_fatal_log.html" title="macro rlg::macro_fatal_log">macro_<wbr>fatal_<wbr>log</a></div><div class="desc docblock-short">This macro creates a <code>FATAL</code> level log entry with a default session ID and format.
 The session ID is generated randomly and the log format defaults to CLF.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_info_log.html" title="macro rlg::macro_info_log">macro_<wbr>info_<wbr>log</a></div><div class="desc docblock-short">This macro creates an <code>INFO</code> level log entry with a default session ID and format.
 The session ID is generated randomly and the log format defaults to CLF.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_log.html" title="macro rlg::macro_log">macro_<wbr>log</a></div><div class="desc docblock-short">This macro simplifies the creation of log entries with specific parameters.
@@ -115,4 +37,4 @@ used to check the success or failure of the logging action.</div></li><li><div c
 It replaces specific keys in the log message with consistent ones.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_print_log.html" title="macro rlg::macro_print_log">macro_<wbr>print_<wbr>log</a></div><div class="desc docblock-short">This macro prints a log entry to the standard output (stdout).
 It is useful for debugging or simple logging to the console.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_set_log_format_clf.html" title="macro rlg::macro_set_log_format_clf">macro_<wbr>set_<wbr>log_<wbr>format_<wbr>clf</a></div><div class="desc docblock-short">This macro sets the log format to CLF if it is not already defined.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_trace_log.html" title="macro rlg::macro_trace_log">macro_<wbr>trace_<wbr>log</a></div><div class="desc docblock-short">This macro creates a <code>TRACE</code> level log entry with a default session ID and format.
 The session ID is generated randomly and the log format defaults to CLF.</div></li><li><div class="item-name"><a class="macro" href="macro.macro_warn_log.html" title="macro rlg::macro_warn_log">macro_<wbr>warn_<wbr>log</a></div><div class="desc docblock-short">This macro creates a <code>WARN</code> level log entry with a default session ID and format.
-The session ID is generated randomly and the log format defaults to CLF.</div></li></ul></section></div></main></body></html>
+The session ID is generated randomly and the log format defaults to CLF.</div></li></ul><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><ul class="item-table"><li><div class="item-name"><a class="constant" href="constant.VERSION.html" title="constant rlg::VERSION">VERSION</a></div><div class="desc docblock-short">The current version of the RustLogs crate.</div></li></ul></section></div></main></body></html>

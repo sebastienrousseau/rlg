@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["LogFormat"],"struct":["ParseLogFormatError"]};
+window.SIDEBAR_ITEMS = {"enum":["LogFormat"]};
