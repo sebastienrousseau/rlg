@@ -93,7 +93,11 @@ impl LogLevel {
     /// assert!(LogLevel::WARN.includes(LogLevel::DEBUG)); // WARN includes DEBUG
     /// ```
     pub fn includes(self, other: LogLevel) -> bool {
-        self.to_numeric() >= other.to_numeric()
+        match self {
+            LogLevel::ALL => true,   // ALL includes everything
+            LogLevel::NONE => false, // NONE includes nothing
+            _ => self.to_numeric() >= other.to_numeric(), // Default behavior for other levels
+        }
     }
 
     /// Converts the log level to its corresponding numeric value, similar to syslog severity levels.
