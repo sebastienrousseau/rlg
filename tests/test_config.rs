@@ -18,10 +18,7 @@ mod tests {
     };
     use serde::Deserialize;
     use std::{
-        collections::HashMap,
-        env,
-        num::NonZeroU64,
-        path::PathBuf,
+        collections::HashMap, env, num::NonZeroU64, path::PathBuf,
         str::FromStr,
     };
     use tempfile::tempdir;
