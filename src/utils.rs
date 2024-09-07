@@ -127,6 +127,7 @@ pub async fn truncate_file(path: &Path, size: u64) -> std::io::Result<()> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(true)
         .open(path)
         .await?;
 
