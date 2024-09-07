@@ -3,32 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use crate::error::{RlgError, RlgResult};
+use crate::utils::sanitize_log_message;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
-
-/// Custom error type for parsing LogFormat.
-#[derive(Debug, Clone)]
-pub struct ParseLogFormatError {
-    details: String,
-}
-
-impl ParseLogFormatError {
-    /// Creates a new `ParseLogFormatError` with a specified message.
-    fn new(msg: &str) -> ParseLogFormatError {
-        ParseLogFormatError {
-            details: msg.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for ParseLogFormatError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.details)
-    }
-}
 
 /// Compiled regular expressions for log format validation.
 static CLF_REGEX: Lazy<Regex> = Lazy::new(|| {
@@ -109,7 +90,7 @@ pub enum LogFormat {
 }
 
 impl FromStr for LogFormat {
-    type Err = ParseLogFormatError;
+    type Err = RlgError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
@@ -123,7 +104,10 @@ impl FromStr for LogFormat {
             "logstash" => Ok(LogFormat::Logstash),
             "log4jxml" => Ok(LogFormat::Log4jXML),
             "ndjson" => Ok(LogFormat::NDJSON),
-            _ => Err(ParseLogFormatError::new("Unknown log format")),
+            _ => Err(RlgError::FormatParseError(format!(
+                "Unknown log format: {}",
+                s
+            ))),
         }
     }
 }
@@ -177,7 +161,7 @@ impl LogFormat {
     ///
     /// # Returns
     ///
-    /// A `Result<String, serde_json::Error>` containing the formatted log entry or an error if the formatting fails.
+    /// A `RlgResult<String>` containing the formatted log entry or an error if the formatting fails.
     ///
     /// # Example
     ///
@@ -185,31 +169,31 @@ impl LogFormat {
     /// use rlg::log_format::LogFormat;
     /// let formatted_log = LogFormat::CLF.format_log("127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] \"GET /apache_pb.gif HTTP/1.0\" 200 2326").unwrap();
     /// ```
-    pub fn format_log(
-        &self,
-        entry: &str,
-    ) -> Result<String, ParseLogFormatError> {
+    pub fn format_log(&self, entry: &str) -> RlgResult<String> {
+        let sanitized_entry = sanitize_log_message(entry);
         match self {
             LogFormat::CLF
             | LogFormat::ApacheAccessLog
             | LogFormat::CEF
             | LogFormat::ELF
             | LogFormat::W3C
-            | LogFormat::Log4jXML => Ok(entry.to_string()),
+            | LogFormat::Log4jXML => Ok(sanitized_entry),
             LogFormat::JSON
             | LogFormat::Logstash
             | LogFormat::NDJSON
             | LogFormat::GELF => serde_json::to_string_pretty(
-                &serde_json::from_str::<serde_json::Value>(entry)
-                    .map_err(|e| {
-                        ParseLogFormatError::new(&format!(
-                            "Invalid JSON: {}",
-                            e
-                        ))
-                    })?,
+                &serde_json::from_str::<serde_json::Value>(
+                    &sanitized_entry,
+                )
+                .map_err(|e| {
+                    RlgError::FormattingError(format!(
+                        "Invalid JSON: {}",
+                        e
+                    ))
+                })?,
             )
             .map_err(|e| {
-                ParseLogFormatError::new(&format!(
+                RlgError::FormattingError(format!(
                     "JSON formatting error: {}",
                     e
                 ))
@@ -233,5 +217,40 @@ impl fmt::Display for LogFormat {
             LogFormat::NDJSON => "NDJSON",
         };
         write!(f, "{}", s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_log_format_from_str() {
+        assert_eq!(LogFormat::from_str("clf").unwrap(), LogFormat::CLF);
+        assert_eq!(
+            LogFormat::from_str("JSON").unwrap(),
+            LogFormat::JSON
+        );
+        assert!(LogFormat::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_log_format_validate() {
+        let clf_log = r#"127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#;
+        assert!(LogFormat::CLF.validate(clf_log));
+
+        let json_log = r#"{"level":"info","message":"Test log","timestamp":"2023-05-17T12:34:56Z"}"#;
+        assert!(LogFormat::JSON.validate(json_log));
+    }
+
+    #[test]
+    fn test_log_format_format_log() {
+        let json_log = r#"{"level":"info","message":"Test log","timestamp":"2023-05-17T12:34:56Z"}"#;
+        let formatted = LogFormat::JSON.format_log(json_log).unwrap();
+        assert!(formatted.contains("{\n")); // Check if it's pretty-printed
+
+        let clf_log = r#"127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#;
+        let formatted = LogFormat::CLF.format_log(clf_log).unwrap();
+        assert_eq!(formatted, clf_log); // CLF should remain unchanged
     }
 }

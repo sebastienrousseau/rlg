@@ -28,31 +28,6 @@
 //! - Configurable logging destinations (file, stdout, network).
 //! - Log rotation support.
 //! - Asynchronous logging for improved performance.
-//!
-//! ## Optional Features
-//!
-//! The following optional features can be enabled via feature flags in your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! rlg = { version = "0.0.6", features = ["syslog", "logstash", "log4j"] }
-//! ```
-//!
-//! - `syslog`: Enables support for Syslog format.
-//! - `logstash`: Enables support for Logstash format.
-//! - `log4j`: Enables support for Log4j XML format.
-//!
-//! ## Usage
-//!
-//! Add this to your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! rlg = "0.0.6"
-//! ```
-//!
-//! For more detailed information about each module and its functionalities,
-//! please refer to the respective module documentation.
 
 #![warn(missing_docs)]
 #![doc(
@@ -61,10 +36,14 @@
     html_root_url = "https://docs.rs/rlg"
 )]
 
+// Version information
 /// The current version of the RustLogs crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+// Re-export commonly used items
 pub use config::Config;
+pub use config::{LogRotation, LoggingDestination};
+pub use log::Log;
 pub use log_format::LogFormat;
 pub use log_level::LogLevel;
 
@@ -81,7 +60,13 @@ pub mod log_format;
 pub mod log_level;
 
 /// Macros for convenient logging.
+#[macro_use]
 pub mod macros;
 
-// Re-export commonly used items
-pub use config::{LogRotation, LoggingDestination};
+/// Error handling module
+pub mod error;
+pub use error::{RlgError, RlgResult};
+
+/// Utility functions module
+pub mod utils;
+pub use utils::{generate_timestamp, sanitize_log_message};

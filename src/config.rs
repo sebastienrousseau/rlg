@@ -113,6 +113,12 @@ impl FromStr for LogRotation {
     /// # Returns
     ///
     /// A `Result<LogRotation, ConfigError>` indicating the log rotation option or an error.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the string format is invalid or if the values
+    /// provided (e.g. size, time, count) are not valid.
+    ///
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<&str> = s.trim().splitn(2, ':').collect();
         match parts[0].to_lowercase().as_str() {
@@ -145,6 +151,20 @@ impl FromStr for LogRotation {
 }
 
 /// Helper function to parse a `NonZeroU64` from a string value.
+///
+/// # Arguments
+///
+/// * `value` - An optional string slice that contains the value to parse.
+/// * `context` - A string slice providing context about what is being parsed.
+///
+/// # Returns
+///
+/// A `Result<NonZeroU64, ConfigError>` representing the parsed value or an error.
+///
+/// # Errors
+///
+/// This function will return an error if the value is not a valid number or is missing.
+///
 fn parse_nonzero_u64(
     value: Option<&str>,
     context: &str,
@@ -184,7 +204,21 @@ pub enum LoggingDestination {
     Network(String), // Expects format like "127.0.0.1:8080" or "example.com:8080"
 }
 
-/// Configuration structure for the logging system.
+// Configuration structure for the logging system.
+///
+/// This structure holds the configuration for logging, including log file paths,
+/// log rotation settings, logging format, and environment variables.
+///
+/// # Fields
+///
+/// - `version`: The version of the configuration.
+/// - `profile`: The profile name for the configuration.
+/// - `log_file_path`: The path to the log file.
+/// - `log_level`: The logging level.
+/// - `log_rotation`: Optional log rotation settings.
+/// - `log_format`: The format for log messages.
+/// - `logging_destinations`: List of destinations where logs will be sent.
+/// - `env_vars`: Environment variables that apply to the logging system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// Version of the configuration.
@@ -247,34 +281,6 @@ impl Default for Config {
 
 impl Config {
     /// Loads configuration from a file or environment variables.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    /// use std::sync::Arc;
-    /// use parking_lot::RwLock;
-    /// use std::env;
-    /// use std::fs;
-    ///
-    /// // Create a temporary directory for testing
-    /// let temp_dir = env::temp_dir();
-    /// let log_file_path = temp_dir.join("test_RLG.log");
-    ///
-    /// // Ensure the file exists to avoid errors
-    /// fs::File::create(&log_file_path).unwrap();
-    ///
-    /// // Load the configuration
-    /// let mut config = Config::default();
-    /// config.log_file_path = log_file_path;
-    ///
-    /// // Wrap in Arc<RwLock> for further use
-    /// let config = Arc::new(RwLock::new(config));
-    ///
-    /// // Output the configuration
-    /// let config = config.read();
-    /// println!("Config version: {}", config.version);
-    /// ```
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Config>>, ConfigError> {
@@ -286,14 +292,12 @@ impl Config {
             file.read_to_string(&mut contents).await.map_err(|e| {
                 ConfigError::FileReadError(e.to_string())
             })?;
-
             let config_source = ConfigSource::builder()
                 .add_source(ConfigFile::from_str(
                     &contents,
                     config::FileFormat::Toml,
                 ))
                 .build()?;
-
             let version: String = config_source.get("version")?;
             if version != CURRENT_CONFIG_VERSION {
                 return Err(ConfigError::VersionError(format!(
@@ -301,29 +305,15 @@ impl Config {
                     version
                 )));
             }
-
             config_source.try_deserialize()?
         } else {
             Config::default()
         };
-
         config.validate()?;
         Ok(Arc::new(RwLock::new(config)))
     }
 
     /// Retrieves a value from the configuration based on the specified key.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    ///
-    /// let config = Config::default();
-    /// let log_level: Option<String> = config.get("log_level");
-    /// if let Some(level) = log_level {
-    ///     println!("Log level: {}", level);
-    /// }
-    /// ```
     pub fn get<T>(&self, key: &str) -> Option<T>
     where
         T: serde::de::DeserializeOwned,
@@ -351,15 +341,6 @@ impl Config {
     }
 
     /// Saves the current configuration to a file.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    ///
-    /// let config = Config::default();
-    /// config.save_to_file("config.json").unwrap();
-    /// ```
     pub fn save_to_file<P: AsRef<Path>>(
         &self,
         path: P,
@@ -371,28 +352,16 @@ impl Config {
                     e
                 ))
             })?;
-
         fs::write(path, config_string).map_err(|e| {
             ConfigError::FileWriteError(format!(
                 "Failed to write config file: {}",
                 e
             ))
         })?;
-
         Ok(())
     }
 
     /// Sets a value in the configuration based on the specified key.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    ///
-    /// let mut config = Config::default();
-    /// config.set("log_format", "%level - %message").unwrap();
-    /// println!("New log format: {}", config.log_format);
-    /// ```
     pub fn set<T: Serialize>(
         &mut self,
         key: &str,
@@ -502,54 +471,22 @@ impl Config {
     }
 
     /// Validates the configuration settings.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    /// use std::fs::{self, OpenOptions};
-    /// use std::env;
-    /// use std::path::PathBuf;
-    ///
-    /// // Create a temporary directory for the log file
-    /// let temp_dir = env::temp_dir();
-    /// let log_file_path = temp_dir.join("test_RLG.log");
-    ///
-    /// // Ensure the parent directory exists (should already exist in most cases)
-    /// if let Some(parent_dir) = log_file_path.parent() {
-    ///     fs::create_dir_all(parent_dir).unwrap();
-    /// }
-    ///
-    /// // Ensure the log file exists and is writable
-    /// OpenOptions::new().write(true).create(true).open(&log_file_path).unwrap();
-    ///
-    /// // Load default configuration and set the log file path
-    /// let mut config = Config::default();
-    /// config.log_file_path = log_file_path;
-    ///
-    /// // Validate the configuration
-    /// config.validate().unwrap();
-    /// println!("Configuration is valid!");
-    /// ```
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.version.trim().is_empty() {
             return Err(ConfigError::ValidationError(
                 "Version cannot be empty".to_string(),
             ));
         }
-
         if self.profile.trim().is_empty() {
             return Err(ConfigError::ValidationError(
                 "Profile cannot be empty".to_string(),
             ));
         }
-
         if self.log_file_path.as_os_str().is_empty() {
             return Err(ConfigError::ValidationError(
                 "Log file path cannot be empty".to_string(),
             ));
         }
-
         if let Some(rotation) = &self.log_rotation {
             match rotation {
                 LogRotation::Size(size) if size.get() == 0 => {
@@ -573,26 +510,22 @@ impl Config {
                 _ => {}
             }
         }
-
         if self.log_format.trim().is_empty() {
             return Err(ConfigError::ValidationError(
                 "Log format cannot be empty".to_string(),
             ));
         }
-
         if self.logging_destinations.is_empty() {
             return Err(ConfigError::ValidationError(
                 "At least one logging destination must be specified"
                     .to_string(),
             ));
         }
-
         for destination in &self.logging_destinations {
             if let LoggingDestination::Network(address) = destination {
                 self.validate_network_address(address)?;
             }
         }
-
         for (key, value) in &self.env_vars {
             if key.trim().is_empty() {
                 return Err(ConfigError::ValidationError(
@@ -601,18 +534,12 @@ impl Config {
                 ));
             }
             if value.trim().is_empty() {
-                return Err(ConfigError::ValidationError(format!(
-                "Value for environment variable '{}' cannot be empty",
-                key
-            )));
+                return Err(ConfigError::ValidationError(format!("Value for environment variable '{}' cannot be empty", key)));
             }
         }
-
-        // Check if log file is writable
         if let LoggingDestination::File(path) =
             &self.logging_destinations[0]
         {
-            // Ensure that the directory exists
             if let Some(parent_dir) = path.parent() {
                 fs::create_dir_all(parent_dir).map_err(|e| {
                     ConfigError::ValidationError(format!(
@@ -621,7 +548,6 @@ impl Config {
                     ))
                 })?;
             }
-
             OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -634,7 +560,6 @@ impl Config {
                     ))
                 })?;
         }
-
         Ok(())
     }
 
@@ -649,11 +574,9 @@ impl Config {
                     .to_string(),
             ));
         }
-
         if address.parse::<SocketAddr>().is_ok() {
             return Ok(());
         }
-
         address
             .to_socket_addrs()
             .map_err(|e| {
@@ -669,21 +592,10 @@ impl Config {
                     address
                 ))
             })?;
-
         Ok(())
     }
 
     /// Expands environment variables in the configuration values.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    ///
-    /// let config = Config::default();
-    /// let expanded_config = config.expand_env_vars();
-    /// println!("Expanded env vars: {:?}", expanded_config.env_vars);
-    /// ```
     pub fn expand_env_vars(&self) -> Config {
         let mut new_config = self.clone();
         for (key, value) in &mut new_config.env_vars {
@@ -695,34 +607,6 @@ impl Config {
     }
 
     /// Hot-reloads configuration on file change.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    /// use std::sync::Arc;
-    /// use parking_lot::RwLock;
-    /// use std::fs;
-    /// use std::env;
-    ///
-    /// # tokio_test::block_on(async {
-    /// let temp_dir = env::temp_dir();
-    /// let config_file_path = temp_dir.join("test_config.toml");
-    ///
-    /// // Create a simple config file to be watched
-    /// let config_content = r#"
-    /// version = "1.0"
-    /// profile = "default"
-    /// "#;
-    /// fs::write(&config_file_path, config_content).unwrap();
-    ///
-    /// // Load default configuration and start watching the config file
-    /// let config = Arc::new(RwLock::new(Config::default()));
-    ///
-    /// // Start hot reload with the temporary config file
-    /// let _ = Config::hot_reload_async(config_file_path.to_str().unwrap(), config.clone()).await.unwrap();
-    /// # });
-    /// ```
     #[allow(clippy::incompatible_msrv)]
     pub async fn hot_reload_async(
         config_path: &str,
@@ -734,14 +618,12 @@ impl Config {
         let mut watcher = notify::recommended_watcher(move |res| {
             let _ = tx.blocking_send(res);
         })?;
-
         watcher.watch(
             Path::new(config_path),
             RecursiveMode::NonRecursive,
         )?;
 
         let config_path = config_path.to_string();
-
         tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -773,32 +655,15 @@ impl Config {
                 }
             }
         });
-
         Ok(stop_tx)
     }
 
     /// Compares two configurations and returns the differences.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    /// use std::collections::HashMap;
-    ///
-    /// let config1 = Config::default();
-    /// let config2 = Config {
-    ///     profile: "test".to_string(),
-    ///     ..Config::default()
-    /// };
-    /// let differences = Config::diff(&config1, &config2);
-    /// println!("Differences: {:?}", differences);
-    /// ```
     pub fn diff(
         config1: &Config,
         config2: &Config,
     ) -> HashMap<String, String> {
         let mut differences = HashMap::new();
-
         if config1.version != config2.version {
             differences.insert(
                 "version".to_string(),
@@ -868,25 +733,10 @@ impl Config {
                 ),
             );
         }
-
         differences
     }
 
     /// Merges another configuration into the current configuration.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rlg::config::Config;
-    ///
-    /// let config1 = Config::default();
-    /// let config2 = Config {
-    ///     profile: "test".to_string(),
-    ///     ..Config::default()
-    /// };
-    /// let merged_config = config1.merge(&config2);
-    /// println!("Merged config profile: {}", merged_config.profile);
-    /// ```
     pub fn merge(&self, other: &Config) -> Config {
         Config {
             version: other.version.clone(),
@@ -906,7 +756,6 @@ impl Config {
     }
 }
 
-/// Implements `TryFrom` for environment variable parsing.
 impl TryFrom<env::Vars> for Config {
     type Error = ConfigError;
 
@@ -916,7 +765,6 @@ impl TryFrom<env::Vars> for Config {
     }
 }
 
-/// Implements `Display` trait for `LogRotation`.
 impl fmt::Display for LogRotation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

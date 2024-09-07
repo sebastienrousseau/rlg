@@ -2,21 +2,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+/// Module containing unit tests for various log formats and log levels.
+/// These tests ensure the proper functionality and formatting of logs
+/// across different formats and log level variants.
 #[cfg(test)]
 
 mod tests {
-    use crate::tests::LogFormat::{
-        ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF, JSON,
-        NDJSON, W3C,
-    };
-    // use dtt::datetime::DateTime;
     use rlg::{
-        log::Log, log_format::LogFormat, log_level::LogLevel::*,
+        log::Log,
+        log_format::LogFormat::{
+            ApacheAccessLog, Log4jXML, Logstash, CEF, CLF, ELF, GELF,
+            JSON, NDJSON, W3C,
+        },
+        log_level::LogLevel::*,
+        macro_debug_log, macro_info_log, VERSION,
     };
-    use rlg::{macro_debug_log, macro_info_log};
-    // use std::env::set_var;
-    // use std::env::remove_var;
 
+    /// Test the common log format (CLF) for a log entry.
     #[tokio::test]
     async fn test_log_common_format() {
         let log = Log::new(
@@ -31,93 +33,13 @@ mod tests {
         assert_eq!(log.to_string(), expected_output);
     }
 
-    // #[tokio::test]
-    // async fn test_log_error() {
-    //     let date = DateTime::new();
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         &date.to_string(),
-    //         &INFO,
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-    //     let result = log.log().await;
-    //     assert!(result.is_ok());
-    // }
-    // #[tokio::test]
-    // async fn test_log_warn() {
-    //     let date = DateTime::new();
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         &date.to_string(),
-    //         &INFO,
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-    //     let result = log.log().await;
-    //     assert!(result.is_ok());
-    // }
+    /// Test the constant `VERSION` to ensure it matches the package version.
+    #[test]
+    fn test_version_constants() {
+        assert_eq!(VERSION, format!("{}", env!("CARGO_PKG_VERSION")));
+    }
 
-    // #[tokio::test]
-    // async fn test_log_debug() {
-    //     // Set the necessary environment variables for the log file path and log level
-    //     set_var("LOG_FILE_PATH", "RLG.log");
-    //     set_var("LOG_LEVEL", "DEBUG");
-
-    //     let date = DateTime::new();
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         &date.to_string(),
-    //         &INFO, // Assuming INFO is a valid log level
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-
-    //     let result = log.log().await;
-
-    //     // Assert that the result is Ok, and if not, provide detailed error information
-    //     assert!(
-    //         result.is_ok(),
-    //         "Expected log() to succeed, but it failed with: {:?}",
-    //         result
-    //     );
-
-    //     // Clean up: remove the environment variables if needed
-    //     // remove_var("LOG_FILE_PATH");
-    //     // remove_var("LOG_LEVEL");
-    // }
-
-    // #[tokio::test]
-    // async fn test_log_trace() {
-    //     let date = DateTime::new();
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         &date.to_string(),
-    //         &INFO,
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-    //     let result = log.log().await;
-    //     assert!(result.is_ok());
-    // }
-    // #[tokio::test]
-    // async fn test_log_info() {
-    //     let date = DateTime::new();
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         &date.to_string(),
-    //         &INFO,
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-    //     let result = log.log().await;
-    //     assert!(result.is_ok());
-    // }
+    /// Test the display of ERROR and WARN log levels.
     #[tokio::test]
     async fn test_log_level_display() {
         let log_level = ERROR;
@@ -127,6 +49,7 @@ mod tests {
         assert_eq!(log_level.to_string(), "WARN");
     }
 
+    /// Test the display formatting for a log entry.
     #[tokio::test]
     async fn test_log_display() {
         let log = Log::new(
@@ -142,6 +65,7 @@ mod tests {
         "SessionID=12345678-1234-1234-1234-1234567890ab Timestamp=2023-01-23 14:03:00.000+0000 Description=This is a test log message Level=ERROR Component=Test");
     }
 
+    /// Test the default values for a log entry.
     #[tokio::test]
     async fn test_log_default() {
         let log = Log::default();
@@ -152,6 +76,7 @@ mod tests {
         assert_eq!(log.description, "");
     }
 
+    /// Test the output for various log formats such as CLF, CEF, ELF, etc.
     #[tokio::test]
     async fn test_log_common() {
         let log = Log::new(
@@ -167,65 +92,76 @@ mod tests {
         assert_eq!(log_string, "SessionID=12345678-1234-1234-1234-1234567890ab Timestamp=2023-01-23 14:03:00.000+0000 Description=This is a test log message Level=ERROR Component=Test");
     }
 
+    /// Test display of all log levels.
     #[tokio::test]
     async fn test_log_level_all_display() {
         let log_level = ALL;
         assert_eq!(log_level.to_string(), "ALL");
     }
 
+    /// Test display of DEBUG log level.
     #[tokio::test]
     async fn test_log_level_debug_display() {
         let log_level = DEBUG;
         assert_eq!(log_level.to_string(), "DEBUG");
     }
 
+    /// Test display of DISABLED log level.
     #[tokio::test]
     async fn test_log_level_disabled_display() {
         let log_level = DISABLED;
         assert_eq!(log_level.to_string(), "DISABLED");
     }
 
+    /// Test display of ERROR log level.
     #[tokio::test]
     async fn test_log_level_error_display() {
         let log_level = ERROR;
         assert_eq!(log_level.to_string(), "ERROR");
     }
 
+    /// Test display of FATAL log level.
     #[tokio::test]
     async fn test_log_level_fatal_display() {
         let log_level = FATAL;
         assert_eq!(log_level.to_string(), "FATAL");
     }
 
+    /// Test display of INFO log level.
     #[tokio::test]
     async fn test_log_level_info_display() {
         let log_level = INFO;
         assert_eq!(log_level.to_string(), "INFO");
     }
 
+    /// Test display of NONE log level.
     #[tokio::test]
     async fn test_log_level_none_display() {
         let log_level = NONE;
         assert_eq!(log_level.to_string(), "NONE");
     }
 
+    /// Test display of TRACE log level.
     #[tokio::test]
     async fn test_log_level_trace_display() {
         let log_level = TRACE;
         assert_eq!(log_level.to_string(), "TRACE");
     }
 
+    /// Test display of VERBOSE log level.
     #[tokio::test]
     async fn test_log_level_verbose_display() {
         let log_level = VERBOSE;
         assert_eq!(log_level.to_string(), "VERBOSE");
     }
 
+    /// Test display of WARN log level.
     #[tokio::test]
     async fn test_log_level_warning_display() {
         let log_level = WARN;
         assert_eq!(log_level.to_string(), "WARN");
     }
+    /// Test log formatting in CLF format.
     #[tokio::test]
     async fn test_log_common_log_format() {
         let log = Log::new(
@@ -240,6 +176,7 @@ mod tests {
         assert_eq!(log.to_string(), expected_output);
     }
 
+    /// Test log formatting in JSON format.
     #[tokio::test]
     async fn test_log_json_log_format() {
         let log = Log::new(
@@ -254,6 +191,7 @@ mod tests {
         assert_eq!(log.to_string(), expected_output);
     }
 
+    /// Test log formatting in CEF format.
     #[tokio::test]
     async fn test_log_cef_log_format() {
         let log = Log::new(
@@ -268,6 +206,7 @@ mod tests {
             "CEF:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|CEF";
         assert_eq!(expected_output, format!("{log}"));
     }
+    /// Test log formatting in ELF format.
     #[tokio::test]
     async fn test_log_elf_log_format() {
         let log = Log::new(
@@ -282,6 +221,7 @@ mod tests {
             "ELF:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|ELF";
         assert_eq!(expected_output, format!("{log}"));
     }
+    /// Test log formatting in W3C format.
     #[tokio::test]
     async fn test_log_w3c_log_format() {
         let log = Log::new(
@@ -296,6 +236,7 @@ mod tests {
             "W3C:0|123|2023-01-23 14:04:09.881393 +00:00:00|INFO|test|test log message|W3C";
         assert_eq!(expected_output, format!("{log}"));
     }
+    /// Test log formatting in GELF format.
     #[tokio::test]
     async fn test_log_gelf_log_format() {
         let log = Log::new(
@@ -310,6 +251,7 @@ mod tests {
             "{\n                    \"version\": \"1.1\",\n                    \"host\": \"test\",\n                    \"short_message\": \"test log message\",\n                    \"level\": \"INFO\",\n                    \"timestamp\": \"2023-01-23 14:04:09.881393 +00:00:00\",\n                    \"component\": \"test\",\n                    \"session_id\": \"123\"\n                }";
         assert_eq!(expected_output, format!("{log}"));
     }
+    /// Test the display for various log formats.
     #[tokio::test]
     async fn test_log_format_display() {
         for (log_format, expected_output) in [
@@ -324,6 +266,7 @@ mod tests {
         }
     }
 
+    /// Test all log level variants.
     #[tokio::test]
     async fn test_log_level_variants() {
         let log = Log::new("", "", &ALL, "", "", &CLF);
@@ -358,6 +301,7 @@ mod tests {
         assert_eq!(log8.level, WARN);
     }
 
+    /// Test fully formatted log display using both default and debug formatting.
     #[tokio::test]
     async fn test_log_display_fully() {
         let log_level = ERROR;
@@ -370,50 +314,7 @@ mod tests {
         assert!(formatted.contains("level: ERROR"));
     }
 
-    // // Conceptual example
-    // #[tokio::test]
-    // async fn test_log_write_error() {
-    //     let log = Log::new(
-    //         "12345678-1234-1234-1234-1234567890ab",
-    //         "2023-01-23 14:03:00.000+0000",
-    //         &ERROR,
-    //         "SystemTrayEvent",
-    //         "Showing main window",
-    //         &CLF,
-    //     );
-    //     let result = log.log().await;
-    //     assert!(result.is_ok());
-    // }
-
-    // // Test the Log::write_log_entry method
-    // #[tokio::test]
-    // async fn test_write_log_entry_combinations() {
-    //     let log_levels = [INFO, WARN, ERROR, DEBUG];
-    //     let processes = ["process1", "process2", "process3"];
-    //     let messages = ["message1", "message2", "message3"];
-    //     let log_formats = [CLF, JSON, GELF];
-
-    //     for log_level in &log_levels {
-    //         for process in &processes {
-    //             for message in &messages {
-    //                 for log_format in &log_formats {
-    //                     let log = Log::new(
-    //                         "12345678-1234-1234-1234-1234567890ab",
-    //                         "2023-01-23 14:03:00.000+0000",
-    //                         log_level,
-    //                         process,
-    //                         message,
-    //                         log_format,
-    //                     );
-    //                     let result = log.log();
-    //                     assert!(result.await.is_ok());
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
-    // Test the behavior of the library when the debug_enabled feature flag is set
+    /// Test the behavior of logging macros when debug is enabled.
     #[test]
     #[cfg(feature = "debug_enabled")]
     fn test_macro_debug_log_enabled() {
@@ -426,6 +327,7 @@ mod tests {
         assert_eq!(log.description, "message");
     }
 
+    /// Test the behavior of logging macros when debug is disabled.
     #[test]
     #[cfg(not(feature = "debug_enabled"))]
     fn test_macro_debug_log_disabled() {
@@ -460,7 +362,8 @@ mod tests {
         // Assert that the log is unchanged
         assert_eq!(log.format, CLF);
     }
-    // Test for Apache Access Log Format
+
+    /// Test log formatting in Apache Access Log format.
     #[tokio::test]
     async fn test_log_apache_access_format() {
         // Dynamically get the hostname
@@ -487,7 +390,7 @@ mod tests {
         assert_eq!(log.to_string(), expected_output);
     }
 
-    // Test for Logstash Format
+    /// Test log formatting in Logstash format.
     #[tokio::test]
     async fn test_log_logstash_format() {
         let log = Log::new(
@@ -505,7 +408,8 @@ mod tests {
                 .expect("Failed to parse JSON");
         assert_eq!(log_json["@timestamp"], "2022-01-01T00:00:00Z");
     }
-    // Test for Log4j XML Format
+
+    /// Test log formatting in Log4j XML format.
     #[tokio::test]
     async fn test_log_log4j_xml_format() {
         let log = Log::new(
@@ -520,7 +424,8 @@ mod tests {
         let expected_output = "<log4j:event logger=\"component_a\" timestamp=\"2022-01-01T00:00:00Z\" level=\"INFO\" thread=\"session_id_123\"><log4j:message>description_a</log4j:message></log4j:event>";
         assert_eq!(log.to_string(), expected_output);
     }
-    // Test for NDJSON Format
+
+    /// Test log formatting in NDJSON format.
     #[tokio::test]
     async fn test_log_ndjson_format() {
         let log = Log::new(

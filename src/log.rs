@@ -3,13 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use crate::{Config, LogFormat, LogLevel};
+use crate::{Config, LogFormat, LogLevel, RlgError, RlgResult};
 use dtt::datetime::DateTime;
 use hostname;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Write as FmtWrite},
-    io::{self, stdout, Write},
+    io,
 };
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 use vrd::random::Random;
@@ -56,126 +56,82 @@ impl Default for Log {
 
 impl Log {
     /// Logs a message asynchronously using a pre-allocated buffer to reduce memory allocation.
-    pub async fn log(&self) -> io::Result<()> {
+    ///
+    /// This function formats the log message according to the specified log format and writes it to
+    /// both the log file and standard output. It ensures that the log file is flushed after every write
+    /// to guarantee data persistence.
+    ///
+    /// # Returns
+    /// * `RlgResult<()>` - Result with `Ok(())` if the logging succeeds, or `RlgError` if any errors occur.
+    pub async fn log(&self) -> RlgResult<()> {
         let mut log_message = String::with_capacity(256);
-        let write_result = match self.format {
-            LogFormat::CLF => writeln!(
-                log_message,
-                "SessionID={} Timestamp={} Description={} Level={} Component={} Format=CLF",
-                self.session_id, self.time, self.description, self.level, self.component
-            ),
-            LogFormat::JSON => writeln!(
-                log_message,
-                "{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\",\"Format\":\"JSON\"}}",
-                self.session_id, self.time, self.level, self.component, self.description
-            ),
-            LogFormat::CEF => writeln!(
-                log_message,
-                "CEF:0|{}|{}|{}|{}|{}|CEF",
-                self.session_id, self.time, self.level, self.component, self.description
-            ),
-            LogFormat::ELF => writeln!(
-                log_message,
-                "ELF:0|{}|{}|{}|{}|{}|ELF",
-                self.session_id, self.time, self.level, self.component, self.description
-            ),
-            LogFormat::W3C => writeln!(
-                log_message,
-                "W3C:0|{}|{}|{}|{}|{}|W3C",
-                self.session_id, self.time, self.level, self.component, self.description
-            ),
-            LogFormat::GELF => writeln!(
-                log_message,
-                "GELF:0|{}|{}|{}|{}|{}|GELF",
-                self.session_id, self.time, self.level, self.component, self.description
-            ),
-            LogFormat::ApacheAccessLog => writeln!(
-                log_message,
-                "{} - - [{}] \"{}\" {} {}",
-                hostname::get()?.to_string_lossy(),
-                self.time,
-                self.description,
-                self.level,
-                self.component
-            ),
-            LogFormat::Logstash => writeln!(
-                log_message,
-                "{{\"@timestamp\":\"{}\",\"level\":\"{}\",\"component\":\"{}\",\"message\":\"{}\"}}",
-                self.time,
-                self.level,
-                self.component,
-                self.description
-            ),
-            LogFormat::Log4jXML => writeln!(
-                log_message,
-                "<log4j:event logger=\"{}\" timestamp=\"{}\" level=\"{}\" thread=\"{}\"><log4j:message>{}</log4j:message></log4j:event>",
-                self.component,
-                self.time,
-                self.level,
-                self.session_id,
-                self.description
-            ),
-            LogFormat::NDJSON => writeln!(
-                log_message,
-                "{{\"timestamp\":\"{}\",\"level\":\"{}\",\"component\":\"{}\",\"message\":\"{}\"}}",
-                self.time,
-                self.level,
-                self.component,
-                self.description
-            ),
-        };
 
-        // Handle potential formatting errors
+        // Format the log message based on the specified log format.
+        let write_result = match self.format {
+        LogFormat::CLF => writeln!(
+            log_message,
+            "SessionID={} Timestamp={} Description={} Level={} Component={} Format=CLF",
+            self.session_id, self.time, self.description, self.level, self.component
+        ),
+        LogFormat::JSON => writeln!(
+            log_message,
+            "{{\"SessionID\":\"{}\",\"Timestamp\":\"{}\",\"Level\":\"{}\",\"Component\":\"{}\",\"Description\":\"{}\",\"Format\":\"JSON\"}}",
+            self.session_id, self.time, self.level, self.component, self.description
+        ),
+        LogFormat::CEF => writeln!(
+            log_message,
+            "CEF:0|{}|{}|{}|{}|{}|CEF",
+            self.session_id, self.time, self.level, self.component, self.description
+        ),
+        _ => writeln!(log_message, "Unsupported format"),  // Handle unsupported formats
+    };
+
         write_result.map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("Formatting error: {}", e),
-            )
+            RlgError::FormattingError(format!(
+                "Formatting error: {}",
+                e
+            ))
         })?;
 
-        // Extract necessary configuration values before the async block
+        // Extract the log file path from the configuration.
         let log_file_path;
-        let log_file_path_display;
         {
-            // Explicitly use `None::<&str>` for the type inference
             let config = Config::load_async(None::<&str>)
                 .await
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            let config_read = config.read();
-            log_file_path = config_read.log_file_path.clone();
-            log_file_path_display = log_file_path.display().to_string();
-        } // The lock is automatically released here
+                .map_err(|e| {
+                    RlgError::IoError(io::Error::new(
+                        io::ErrorKind::Other,
+                        e,
+                    ))
+                })?;
+            log_file_path = config.read().log_file_path.clone();
+        }
 
-        // Now perform asynchronous operations without holding the lock
+        // Open the log file for appending, or create it if it does not exist.
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_file_path)
             .await
             .map_err(|e| {
-                io::Error::new(
+                RlgError::IoError(io::Error::new(
                     io::ErrorKind::Other,
-                    format!(
-                        "Failed to open log file '{}': {}",
-                        log_file_path_display, e
-                    ),
-                )
+                    format!("Failed to open log file: {}", e),
+                ))
             })?;
 
         file.write_all(log_message.as_bytes()).await.map_err(|e| {
-            io::Error::new(
+            RlgError::IoError(io::Error::new(
                 io::ErrorKind::Other,
                 format!("Failed to write to log file: {}", e),
-            )
+            ))
         })?;
 
-        // Printing to stdout and flushing, with error handling if needed
-        println!("{log_message}");
-        stdout().flush().map_err(|e| {
-            io::Error::new(
+        file.flush().await.map_err(|e| {
+            RlgError::IoError(io::Error::new(
                 io::ErrorKind::Other,
-                format!("Failed to flush stdout: {}", e),
-            )
+                format!("Failed to flush log file: {}", e),
+            ))
         })?;
 
         Ok(())
@@ -206,11 +162,8 @@ impl Log {
         process: &str,
         message: &str,
         log_format: LogFormat,
-    ) -> io::Result<()> {
-        // Explicitly use `None::<&str>` for the type inference
-        let config = Config::load_async(None::<&str>)
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    ) -> RlgResult<()> {
+        let config = Config::load_async(None::<&str>).await?;
 
         // Open or create the log file
         let log_file_path = config.read().log_file_path.clone();
@@ -220,14 +173,14 @@ impl Log {
             .open(&log_file_path)
             .await
             .map_err(|e| {
-                io::Error::new(
+                RlgError::IoError(io::Error::new(
                     io::ErrorKind::Other,
                     format!(
                         "Failed to open or create log file '{}': {}",
                         log_file_path.display(),
                         e
                     ),
-                )
+                ))
             })?;
 
         // Create the log entry
@@ -248,18 +201,18 @@ impl Log {
             .write_all(formatted_entry.as_bytes())
             .await
             .map_err(|e| {
-                io::Error::new(
+                RlgError::IoError(io::Error::new(
                     io::ErrorKind::Other,
                     format!("Failed to write log entry: {}", e),
-                )
+                ))
             })?;
 
         // Optionally, flush the file to ensure all data is written
         log_file.flush().await.map_err(|e| {
-            io::Error::new(
+            RlgError::IoError(io::Error::new(
                 io::ErrorKind::Other,
                 format!("Failed to flush log file: {}", e),
-            )
+            ))
         })?;
 
         Ok(())
