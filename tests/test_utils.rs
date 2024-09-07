@@ -46,13 +46,21 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let file_path = temp_dir.path().join("test.log");
 
-        let mut file = File::create(&file_path).await.unwrap();
-        file.write_all(b"Hello, World!").await.unwrap();
+        // Test truncation
+        {
+            let mut file = File::create(&file_path).await.unwrap();
+            file.write_all(b"Hello, World!").await.unwrap();
+            truncate_file(&file_path, 5).await.unwrap();
+            let content = fs::read_to_string(&file_path).await.unwrap();
+            assert_eq!(content, "Hello");
+        }
 
-        truncate_file(&file_path, 5).await.unwrap();
-
-        let content = fs::read_to_string(&file_path).await.unwrap();
-        assert_eq!(content, "Hello");
+        // Test extension
+        {
+            truncate_file(&file_path, 10).await.unwrap();
+            let content = fs::read_to_string(&file_path).await.unwrap();
+            assert_eq!(content, "Hello\0\0\0\0\0");
+        }
     }
 
     #[test]

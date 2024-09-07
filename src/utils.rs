@@ -7,7 +7,7 @@ use crate::error::RlgResult;
 use dtt::datetime::DateTime;
 use std::path::Path;
 use tokio::fs::{self, File, OpenOptions};
-use tokio::io::{AsyncSeekExt, AsyncWriteExt, AsyncReadExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 /// Generates a timestamp string in ISO 8601 format.
 ///
@@ -122,12 +122,15 @@ pub async fn is_file_writable(path: &Path) -> RlgResult<bool> {
 ///     Ok(())
 /// }
 /// ```
-pub async fn truncate_file(path: &Path, size: u64) -> std::io::Result<()> {
+pub async fn truncate_file(
+    path: &Path,
+    size: u64,
+) -> std::io::Result<()> {
     let mut file = OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
-        .truncate(true)
+        .truncate(false)
         .open(path)
         .await?;
 
@@ -135,11 +138,8 @@ pub async fn truncate_file(path: &Path, size: u64) -> std::io::Result<()> {
 
     if size < file_size {
         // Read the content
-        let mut content = Vec::new();
-        file.read_to_end(&mut content).await?;
-
-        // Truncate the content
-        content.truncate(size as usize);
+        let mut content = vec![0; size as usize];
+        file.read_exact(&mut content).await?;
 
         // Seek to the beginning of the file
         file.seek(std::io::SeekFrom::Start(0)).await?;
