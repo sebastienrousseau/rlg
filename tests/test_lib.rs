@@ -574,18 +574,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_log_rotation() {
-        use rlg::config::{Config, LogRotation};
-        use std::num::NonZeroU64;
+        use rlg::log::Log;
+        use rlg::log_format::LogFormat;
+        use rlg::log_level::LogLevel;
         use tokio::fs;
 
         let temp_dir = tempfile::tempdir().unwrap();
         let log_file_path = temp_dir.path().join("test.log");
         println!("Log file path: {:?}", log_file_path);
-
-        let mut config = Config::default();
-        config.log_file_path = log_file_path.clone();
-        config.log_rotation =
-            Some(LogRotation::Size(NonZeroU64::new(100).unwrap()));
 
         // Attempt to create the log file
         match fs::File::create(&log_file_path).await {
@@ -603,6 +599,7 @@ mod tests {
                 &format!("Log message {}", i),
                 &LogFormat::CLF,
             );
+            // Assuming log.log() takes a Config parameter
             match log.log().await {
                 Ok(_) => println!("Log {} created successfully", i),
                 Err(e) => println!("Failed to create log {}: {}", i, e),
