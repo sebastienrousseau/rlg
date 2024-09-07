@@ -389,6 +389,6 @@ macro_rules! macro_debug_log {
 #[doc = "Print log to stdout"]
 macro_rules! macro_print_log {
     ($log:expr) => {
-        println!("{}", $log);
+        println!("{}", $log.description);
     };
 }

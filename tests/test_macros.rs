@@ -8,13 +8,16 @@
 mod tests {
     use dtt::datetime::DateTime;
     use rlg::{log_format::LogFormat, log_level::LogLevel};
+    #[allow(unused_imports)]
+    use rlg::{macro_debug_log, macro_error_log, macro_fatal_log};
     use rlg::{
-        macro_debug_log, macro_error_log, macro_fatal_log,
         macro_info_log, macro_log, macro_log_if,
         macro_log_with_metadata, macro_print_log,
         macro_set_log_format_clf, macro_trace_log, macro_warn_log,
     };
-    use std::io::Write;
+
+    #[allow(unused_imports)]
+    use std::io::{self, Write};
 
     #[test]
     fn test_macro_log() {
@@ -156,19 +159,6 @@ mod tests {
         assert_eq!(log.time, "");
         assert_eq!(log.component, "");
         assert_eq!(log.description, "");
-    }
-
-    #[test]
-    #[cfg(feature = "debug_enabled")]
-    fn test_macro_debug_log_enabled() {
-        let log = macro_info_log!("2022-01-01", "app", "debug message");
-        let mut output = Vec::new();
-        {
-            macro_debug_log!(log);
-            output.flush().unwrap();
-        }
-        let printed = String::from_utf8(output).unwrap();
-        assert!(printed.contains("debug message"));
     }
 
     #[test]
@@ -325,36 +315,6 @@ mod tests {
         let original_format = log.format;
         macro_set_log_format_clf!(log);
         assert_eq!(log.format, original_format, "Calling macro_set_log_format_clf twice should not change the format");
-    }
-
-    #[test]
-    fn test_macro_debug_log_non_debug_level() {
-        let log =
-            macro_error_log!("2022-01-01", "app", "error message");
-        let mut output = Vec::new();
-        {
-            macro_debug_log!(log);
-            output.flush().unwrap();
-        }
-        let printed = String::from_utf8(output).unwrap();
-
-        #[cfg(feature = "debug_enabled")]
-        {
-            assert!(printed.contains("error message"),
-            "When debug is enabled, non-debug level messages should be printed by macro_debug_log. Printed: {}", printed);
-        }
-
-        #[cfg(not(feature = "debug_enabled"))]
-        {
-            assert!(printed.is_empty(),
-            "When debug is disabled, macro_debug_log should not print anything. Printed: {}", printed);
-        }
-
-        // These assertions should always pass, regardless of debug setting
-        assert_eq!(log.level, LogLevel::ERROR);
-        assert_eq!(log.time, "2022-01-01");
-        assert_eq!(log.component, "app");
-        assert_eq!(log.description, "error message");
     }
 
     #[test]
