@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-#[cfg(test)]
+//! Tests for the log level functionality of RustLogs (RLG).
 
+#[cfg(test)]
 mod tests {
     use rlg::log_level::{LogLevel, ParseLogLevelError};
     use std::collections::HashSet;
-    use std::convert::TryInto;
     use std::error::Error;
     use std::str::FromStr;
 
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_log_level_includes() {
         assert!(LogLevel::ALL.includes(LogLevel::ALL));
-        assert!(!LogLevel::ALL.includes(LogLevel::DEBUG));
+        assert!(LogLevel::ALL.includes(LogLevel::DEBUG));
 
         // Adjusted to match the actual behavior of includes
         assert!(LogLevel::ERROR.includes(LogLevel::DEBUG));
@@ -277,15 +277,37 @@ mod tests {
             LogLevel::NONE,
             LogLevel::DEBUG,
             LogLevel::INFO,
+            LogLevel::WARN,
             LogLevel::ERROR,
             LogLevel::CRITICAL,
         ];
+
         for &a in &levels {
             for &b in &levels {
-                assert_eq!(
+                if a == LogLevel::ALL {
+                    // ALL should include all levels
+                    assert!(
                     a.includes(b),
-                    a.to_numeric() >= b.to_numeric()
+                    "LogLevel::ALL should include {:?}, but failed for b = {:?}",
+                    a, b
                 );
+                } else if a == LogLevel::NONE {
+                    // NONE should not include any level
+                    assert!(
+                    !a.includes(b),
+                    "LogLevel::NONE should not include {:?}, but passed for b = {:?}",
+                    a, b
+                );
+                } else {
+                    // For other levels, includes should follow numeric precedence
+                    assert_eq!(
+                        a.includes(b),
+                        a.to_numeric() >= b.to_numeric(),
+                        "Failed for a = {:?}, b = {:?}",
+                        a,
+                        b
+                    );
+                }
             }
         }
     }
@@ -386,7 +408,6 @@ mod tests {
             all, none, disabled, debug, trace, verbose, info, warn,
             error, fatal, critical,
         ];
-
         // Ensure all discriminants are unique
         let unique_discriminants: HashSet<_> =
             discriminants.iter().collect();

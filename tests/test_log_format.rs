@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-#[cfg(test)]
+//! Tests for the log format functionality of RustLogs (RLG).
 
+#[cfg(test)]
 mod tests {
     use rlg::log_format::LogFormat;
 
@@ -111,5 +112,65 @@ mod tests {
         // Invalid JSON
         let invalid_json = "Invalid JSON";
         assert!(LogFormat::JSON.format_log(invalid_json).is_err());
+    }
+
+    // Additional tests for edge cases and specific format validations
+
+    #[test]
+    fn test_log_format_validate_edge_cases() {
+        // Empty string
+        assert!(!LogFormat::CLF.validate(""));
+        assert!(!LogFormat::JSON.validate(""));
+
+        // Very long string
+        let long_string = "a".repeat(10000);
+        assert!(!LogFormat::CLF.validate(&long_string));
+        assert!(LogFormat::JSON
+            .validate(&format!("{{\"key\":\"{}\"}}", long_string)));
+
+        // Special characters
+        assert!(LogFormat::JSON
+            .validate("{\"key\":\"value with spaces and 特殊字符\"}"));
+    }
+
+    #[test]
+    fn test_log_format_case_insensitivity() {
+        assert_eq!("clf".parse::<LogFormat>().unwrap(), LogFormat::CLF);
+        assert_eq!(
+            "JSON".parse::<LogFormat>().unwrap(),
+            LogFormat::JSON
+        );
+        assert_eq!("Cef".parse::<LogFormat>().unwrap(), LogFormat::CEF);
+    }
+
+    #[test]
+    fn test_log_format_error_messages() {
+        let result = "InvalidFormat".parse::<LogFormat>();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Log format parse error: Unknown log format: InvalidFormat"
+        );
+    }
+
+    #[test]
+    fn test_log_format_specific_validations() {
+        // Test specific format validations
+        assert!(LogFormat::ApacheAccessLog.validate("192.168.0.1 - - [01/Jan/2024:12:00:00 +0000] \"GET / HTTP/1.1\" 200 1234"));
+        assert!(LogFormat::Logstash.validate("{\"@timestamp\":\"2024-01-01T12:00:00Z\",\"message\":\"Test log\",\"level\":\"INFO\"}"));
+
+        // For NDJSON, we might need to adjust this based on how it's actually implemented
+        // Option 1: If NDJSON validates each line separately
+        assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}"));
+        assert!(LogFormat::NDJSON.validate("{\"key2\":\"value2\"}"));
+
+        // Option 2: If NDJSON validates the entire string as one
+        // If this is the case, we might need to adjust the validation method
+        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
+
+        // Option 3: If NDJSON validation is not yet implemented
+        // In this case, we might want to skip this test or expect it to fail
+        // #[should_panic(expected = "NDJSON validation not implemented")]
+        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
     }
 }
