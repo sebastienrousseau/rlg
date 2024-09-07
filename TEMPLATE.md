@@ -43,7 +43,7 @@ A robust and flexible Rust library for application-level logging with support fo
 [07]: https://crates.io/crates/rlg
 [08]: https://docs.rs/rlg
 [09]: https://codecov.io/gh/sebastienrousseau/rlg
-[10]: https://github.com/sebastienrousseau/rlg/actions
+[10]: https://github.com/sebastienrousseau/rlg/actions?query=branch%3Amaster
 
 [build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/release.yml?branch=master&style=for-the-badge&logo=github "Build Status"
 [codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&token=Q9KJ6XXL67&logo=codecov "Codecov"
