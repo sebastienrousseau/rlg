@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-#[cfg(test)]
+//! Tests for the log level functionality of RustLogs (RLG).
 
+#[cfg(test)]
 mod tests {
     use rlg::log_level::{LogLevel, ParseLogLevelError};
     use std::collections::HashSet;
-    use std::convert::TryInto;
     use std::error::Error;
     use std::str::FromStr;
 
@@ -386,7 +386,6 @@ mod tests {
             all, none, disabled, debug, trace, verbose, info, warn,
             error, fatal, critical,
         ];
-
         // Ensure all discriminants are unique
         let unique_discriminants: HashSet<_> =
             discriminants.iter().collect();
