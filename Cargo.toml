@@ -46,7 +46,7 @@ debug = true
 
 [dependencies]
 # Dependencies are only used for building.
-config = "0.14"
+config = "0.15"
 dtt = "0.0"
 envy = "0.4"
 hostname = "0.4"
