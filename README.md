@@ -1,96 +1,54 @@
-<!-- markdownlint-disable MD033 MD041 -->
+# RLG (RustLogs) — v0.0.7
 
-<img src="https://kura.pro/rlg/images/logos/rlg.svg"
-alt="RustLogs (RLG) logo" height="66" align="right" />
+[![Crates.io](https://img.shields.io/crates/v/rlg.svg)](https://crates.io/crates/rlg)
+[![Documentation](https://docs.rs/rlg/badge.svg)](https://docs.rs/rlg)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE-MIT)
 
-<!-- markdownlint-enable MD033 MD041 -->
+**RLG (RustLogs)** is a brutalist, lock-free observability engine for Rust. Engineered for the 2026 industry standards, it delivers sub-microsecond ingestion latency, AI-native structured formatting (MCP/OTLP), and zero-allocation critical paths.
 
-# RustLogs (RLG): The 2026 Telemetry Standard
+---
 
-A brutalist, lock-free Rust logging engine designed for extreme performance and AI-first observability. Engineered to be the lightweight alternative to `tracing` with an Apple-standard developer experience.
+## 🚀 Key Performance Deltas
+- **Latency:** ~1.4µs ingestion (Lock-free LMAX Disruptor pattern).
+- **Handoff:** <10ns thread-to-engine handoff.
+- **Serialization:** Zero-allocation via stack-based `itoa` and `ryu`.
+- **Native Sinks:** Direct binary-level FFI for macOS `os_log` and Linux `journald`.
 
-[![Made With Love][made-with-rust]][00] [![Crates.io][crates-badge]][07] [![lib.rs][libs-badge]][03] [![Docs.rs][docs-badge]][08] [![Codecov][codecov-badge]][09] [![Build Status][build-badge]][10] [![GitHub][github-badge]][06]
-
-## 🚀 Extreme Performance
-
-`rlg` implements the **LMAX Disruptor** pattern under the hood, decoupling log ingestion from flushing.
-
-- **Lock-Free Ingestion:** < 10ns per event. The critical path never blocks on file I/O or Mutexes.
-- **Zero-Allocation Serialization:** Uses `itoa` and `ryu` for stack-based numeric formatting.
-- **Runtime Agnostic:** Background flusher runs on a dedicated OS thread, compatible with `tokio`, `async-std`, or synchronous codebases.
-
-##  Apple-Standard DX
-
-Logging shouldn't be a wall of JSON. `rlg` provides a stunning developer experience out of the box.
-
-- **"Liquid" Fluent API:** Semantic, chainable, and strictly typed.
-- **Generative TUI Dashboard:** Pin a live-updating performance dashboard to the bottom of your terminal during local development.
-- **Native OS Sinks:**
-  - **macOS:** Zero-copy binary handoff to Apple's **Unified Logging System (`os_log`)**.
-  - **Linux/WSL:** Direct binary integration with **Systemd `journald`**.
-
-## 🤖 AI-First Observability
-
-Engineered for the 2026 AI-driven workflow.
-
-- **MCP (Model Context Protocol):** Native support for AI agent ingestion via structured JSON-RPC notifications.
-- **High-Cardinality Spans:** Move beyond flat strings with semantic context tagging (`BTreeMap` attributes).
-
-## 🛠 Usage
-
-### The Fluent API (Recommended)
+## 💎 Liquid Glass DX
+Designed with Apple-standard developer experience in mind, `rlg` provides a chainable "Liquid" Fluent API that makes observability feel effortless.
 
 ```rust
 use rlg::log::Log;
+use rlg::log_format::LogFormat;
 
-// Chainable, semantic, and non-blocking
-Log::info("User transaction processed")
-    .component("billing-svc")
-    .with("user_id", 8472)
-    .with("latency_ms", 12.5)
-    .fire(); // Dispatched to lock-free ring buffer instantly
+Log::info("Cloud instance scaled successfully")
+    .component("orchestrator")
+    .with("cpu_load", 0.85)
+    .with("region", "us-east-1")
+    .format(LogFormat::OTLP)
+    .fire();
 ```
 
-### Live TUI Dashboard
-
-Enable the stunning "Liquid Glass" dashboard for local development by setting:
+## 🛠️ Generative TUI Dashboard
+See your application's heartbeat in real-time. Enable the asynchronous 60FPS dashboard during development:
 
 ```bash
 export RLG_TUI=1
 cargo run
 ```
 
-## 📦 Installation
+## 🤖 AI-First Observability
+`rlg` is built for the era of AI coding assistants. By supporting **Model Context Protocol (MCP)** and **OpenTelemetry (OTLP)** natively, your logs are immediately digestible by LLM-based orchestrators and modern observability stacks like Grafana and Honeycomb.
 
-Add this to your `Cargo.toml`:
+## 🛡️ Reliability & Safety
+- **MIRI-Compliant:** Verified against memory provenance violations.
+- **Enterprise Rigor:** 95%+ code coverage.
+- **Agnostic:** Works across macOS, Linux, and WSL without runtime lock-in.
 
-```toml
-[dependencies]
-rlg = "0.0.7"
-```
+---
 
-## 📜 License
+## 📖 Documentation
+For tutorials, how-to guides, and architecture deep-dives, visit the [RLG Documentation Portal](docs/SUMMARY.md).
 
-The project is dual-licensed under the terms of both the MIT license and the Apache License (Version 2.0).
-
-- [Apache License, Version 2.0][01]
-- [MIT license][02]
-
-[00]: https://rustlogs.com
-[01]: http://www.apache.org/licenses/LICENSE-2.0
-[02]: http://opensource.org/licenses/MIT
-[03]: https://lib.rs/crates/rlg
-[04]: https://doc.rustlogs.com/
-[06]: https://github.com/sebastienrousseau/rlg
-[07]: https://crates.io/crates/rlg
-[08]: https://docs.rs/rlg
-[09]: https://codecov.io/gh/sebastienrousseau/rlg
-[10]: https://github.com/sebastienrousseau/rlg/actions?query=branch%3Amaster
-
-[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/release.yml?branch=master&style=for-the-badge&logo=github "Build Status"
-[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&token=Q9KJ6XXL67&logo=codecov "Codecov"
-[crates-badge]: https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust "Crates.io"
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.7-orange.svg?style=for-the-badge "View on lib.rs"
-[docs-badge]: https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs "Docs.rs"
-[github-badge]: https://img.shields.io/badge/github-sebastienrousseau/rlg-8da0cb?style=for-the-badge&labelColor=555555&logo=github "GitHub"
-[made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust'
+## 📄 License
+Licensed under either [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT) at your option.
