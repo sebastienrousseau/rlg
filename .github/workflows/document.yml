@@ -2,59 +2,23 @@ name: 🧪 Document
 
 on:
   push:
-    branches:
-      - main
-      - feat/rlg
-  pull_request:
-    branches:
-      - feat/rlg
-  release:
-    types: [created]
+    branches: [main]
 
 jobs:
-  all:
-    name: Document
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  doc:
+    name: Generate Documentation
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: hecrj/setup-rust-action@v2.0.1
-        with:
-          rust-version: nightly
-
-      - uses: actions/checkout@v4.1.7
-
-      - name: Update libssl
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Generate docs
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl1.1
-
-      - name: Generate documentation for all features and publish it
-        run: |
-          RUSTDOCFLAGS="--cfg docsrs" \
-            cargo doc --no-deps --all-features --workspace
-            # Write index.html with redirect
-            echo '<html><head><meta http-equiv="refresh" content="0; url=/rlg/"></head><body></body></html>' > ./target/doc/index.html
-
-      - name: Deploy
-        uses: actions/upload-artifact@v4.3.6
-        with:
-          name: documentation
-          path: target/doc
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Write CNAME file
-        run: echo 'doc.rustlogs.com' > ./target/doc/CNAME
-
+          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+          echo '<html><head><meta http-equiv="refresh" content="0; url=rlg/index.html"></head><body></body></html>' > target/doc/index.html
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4.0.0
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/doc
-          publish_branch: gh-pages
-          cname: true
-          commit_message: Deploy documentation at ${{ github.sha }}
-          user_name: github-actions
-          user_email: actions@users.noreply.github.com
+          commit_message: "docs: deploy documentation [skip ci]"

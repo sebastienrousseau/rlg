@@ -2,27 +2,24 @@ name: 🧪 Audit
 
 on:
   push:
-    branches:
-      - main
-      - feat/rlg
+    branches: [main, "feat/*"]
   pull_request:
-    branches:
-      - feat/rlg
-  release:
-    types: [created]
+    branches: [main]
+  schedule:
+    - cron: "0 0 * * 1" # Weekly at midnight on Monday
 
 jobs:
-  dependencies:
+  audit:
     name: Audit dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: hecrj/setup-rust-action@v2
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
       - uses: actions/checkout@v4
-      - name: Resolve dependencies
-        run: cargo update
-
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-audit
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit
+          fi
       - name: Audit vulnerabilities
         run: cargo audit
