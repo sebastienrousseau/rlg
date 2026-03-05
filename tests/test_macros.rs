@@ -1,8 +1,9 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
 //! Tests for the macros functionality of RustLogs (RLG).
+#![allow(deprecated)]
 
 #[cfg(test)]
 mod tests {
@@ -12,7 +13,7 @@ mod tests {
     use rlg::{macro_debug_log, macro_error_log, macro_fatal_log};
     use rlg::{
         macro_info_log, macro_log, macro_log_if,
-        macro_log_with_metadata, macro_print_log,
+        macro_log_with_metadata,
         macro_set_log_format_clf, macro_trace_log, macro_warn_log,
     };
 

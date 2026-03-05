@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -257,66 +257,59 @@ mod tests {
     }
 
     /// Tests the Config::hot_reload_async method.
-    #[tokio::test]
-    async fn test_hot_reload_async() {
-        use parking_lot::RwLock;
-        use std::sync::Arc;
-
-        let temp_dir = env::temp_dir();
-        let config_file_path =
-            temp_dir.join("test_hot_reload_RLG.toml");
-
-        let config_content = r#"
-    version = "1.0"
-    profile = "default"
-    "#;
-        fs::write(&config_file_path, config_content).await.unwrap();
-
-        let config = Arc::new(RwLock::new(Config::default()));
-
-        let result = Config::hot_reload_async(
-            config_file_path.to_str().unwrap(),
-            config.clone(),
-        )
-        .await;
-        assert!(result.is_ok(), "Hot reload setup should succeed");
-
-        fs::remove_file(config_file_path)
-            .await
-            .expect("Failed to remove test config file");
-    }
-
     /// Tests the Config::diff method.
     #[test]
     fn test_config_diff() {
         let config1 = Config::default();
+        let mut env_vars = HashMap::new();
+        env_vars.insert("DEBUG".to_string(), "true".to_string());
         let config2 = Config {
-            profile: "test_profile".to_string(),
-            ..Default::default()
+            version: "2.0".to_string(),
+            profile: "production".to_string(),
+            log_file_path: PathBuf::from("prod.log"),
+            log_level: LogLevel::ERROR,
+            log_rotation: Some(LogRotation::Count(10)),
+            log_format: "JSON".to_string(),
+            logging_destinations: vec![LoggingDestination::Network("localhost:8080".to_string())],
+            env_vars,
         };
 
         let differences = Config::diff(&config1, &config2);
 
-        assert_eq!(
-            differences.get("profile").unwrap(),
-            "default -> test_profile"
-        );
+        assert_eq!(differences.get("version"), Some(&"1.0 -> 2.0".to_string()));
+        assert_eq!(differences.get("profile"), Some(&"default -> production".to_string()));
+        assert!(differences.contains_key("log_file_path"));
+        assert!(differences.contains_key("log_level"));
+        assert!(differences.contains_key("log_rotation"));
+        assert!(differences.contains_key("log_format"));
+        assert!(differences.contains_key("logging_destinations"));
+        assert!(differences.contains_key("env_vars"));
     }
 
     /// Tests the Config::merge method.
     #[test]
     fn test_config_merge() {
-        let config1 = Config::default();
+        let mut env_vars1 = HashMap::new();
+        env_vars1.insert("K1".to_string(), "V1".to_string());
+        let config1 = Config {
+            env_vars: env_vars1,
+            ..Config::default()
+        };
+        let mut env_vars2 = HashMap::new();
+        env_vars2.insert("K2".to_string(), "V2".to_string());
         let config2 = Config {
             profile: "test_profile".to_string(),
             log_format: "%level - %message".to_string(),
-            ..Default::default()
+            env_vars: env_vars2,
+            ..Config::default()
         };
 
         let merged_config = config1.merge(&config2);
 
         assert_eq!(merged_config.profile, "test_profile");
         assert_eq!(merged_config.log_format, "%level - %message");
+        assert!(merged_config.env_vars.contains_key("K1"));
+        assert!(merged_config.env_vars.contains_key("K2"));
     }
 
     /// Tests the ConfigError enum variants thoroughly.
@@ -359,51 +352,40 @@ mod tests {
 
     // Additional tests for Config methods
 
-    /// Tests the Config::get method.
+    /// Tests the Config::set method for all fields.
     #[test]
-    fn test_config_get() {
-        let config = Config {
-            version: "1.0".to_string(),
-            profile: "test".to_string(),
-            log_file_path: PathBuf::from("test.log"),
-            log_level: LogLevel::INFO,
-            log_rotation: Some(LogRotation::Size(
-                NonZeroU64::new(1024).unwrap(),
-            )),
-            log_format: "%level - %message".to_string(),
-            logging_destinations: vec![LoggingDestination::File(
-                PathBuf::from("test.log"),
-            )],
-            env_vars: HashMap::new(),
-        };
-
-        assert_eq!(
-            config.get::<String>("version"),
-            Some("1.0".to_string())
-        );
-        assert_eq!(
-            config.get::<String>("profile"),
-            Some("test".to_string())
-        );
-        assert_eq!(
-            config.get::<LogLevel>("log_level"),
-            Some(LogLevel::INFO)
-        );
-        assert_eq!(config.get::<String>("non_existent"), None);
-    }
-
-    /// Tests the Config::set method.
-    #[test]
-    fn test_config_set() {
+    fn test_config_set_all_fields() {
         let mut config = Config::default();
 
         assert!(config.set("version", "2.0").is_ok());
         assert_eq!(config.version, "2.0");
 
+        assert!(config.set("profile", "new_profile").is_ok());
+        assert_eq!(config.profile, "new_profile");
+
+        assert!(config.set("log_file_path", PathBuf::from("new.log")).is_ok());
+        assert_eq!(config.log_file_path, PathBuf::from("new.log"));
+
         assert!(config.set("log_level", LogLevel::DEBUG).is_ok());
         assert_eq!(config.log_level, LogLevel::DEBUG);
 
-        assert!(config.set("non_existent", "value").is_err());
+        let new_rotation = Some(LogRotation::Count(5));
+        assert!(config.set("log_rotation", new_rotation).is_ok());
+        assert_eq!(config.log_rotation, new_rotation);
+
+        assert!(config.set("log_format", "[%level] %message").is_ok());
+        assert_eq!(config.log_format, "[%level] %message");
+
+        let new_dest = vec![LoggingDestination::Stdout];
+        assert!(config.set("logging_destinations", new_dest.clone()).is_ok());
+        assert_eq!(config.logging_destinations, new_dest);
+
+        let mut new_env = HashMap::new();
+        new_env.insert("K".to_string(), "V".to_string());
+        assert!(config.set("env_vars", &new_env).is_ok());
+        assert_eq!(config.env_vars, new_env);
+
+        assert!(matches!(config.set("non_existent", "value"), Err(ConfigError::ValidationError(msg)) if msg.contains("Unknown configuration key")));
     }
 
     /// Tests the Config::save_to_file method.

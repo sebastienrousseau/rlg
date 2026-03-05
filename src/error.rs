@@ -1,5 +1,5 @@
 // error.rs
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -44,7 +44,7 @@ pub enum RlgError {
     NetworkError(String),
 
     #[error("DateTime parse error: {0}")]
-    /// DateTime parse error
+    /// `DateTime` parse error
     DateTimeParseError(String),
 
     #[error("{0}")]
@@ -55,11 +55,11 @@ pub enum RlgError {
 impl RlgError {
     /// Create a new custom error with a given message.
     pub fn custom<T: fmt::Display>(msg: T) -> Self {
-        RlgError::Custom(msg.to_string())
+        Self::Custom(msg.to_string())
     }
 }
 
-/// Type alias for a Result with RlgError as the error type.
+/// Type alias for a Result with `RlgError` as the error type.
 pub type RlgResult<T> = Result<T, RlgError>;
 
 #[cfg(test)]

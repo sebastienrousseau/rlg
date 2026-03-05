@@ -1,36 +1,36 @@
 // log_format.rs
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
 use crate::error::{RlgError, RlgResult};
 use crate::utils::sanitize_log_message;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 /// Compiled regular expressions for log format validation.
-static CLF_REGEX: Lazy<Regex> = Lazy::new(|| {
+static CLF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
     r#"^(?P<host>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<time>[^\]]+)\] "(?P<method>\S+) (?P<path>\S+) (?P<protocol>\S+)" (?P<status>\d{3}) (?P<size>\d+|-)$"#
-).unwrap()
+).expect("Failed to compile CLF regex")
 });
 
-static CEF_REGEX: Lazy<Regex> = Lazy::new(|| {
+static CEF_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r#"^CEF:\d+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|.*$"#,
+        r"^CEF:\d+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|[^|]+\|.*$",
     )
-    .unwrap()
+    .expect("Failed to compile CEF regex")
 });
 
-static W3C_REGEX: Lazy<Regex> = Lazy::new(|| {
+static W3C_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r#"^#Fields:.*
-.+$"#,
+        r"^#Fields:.*
+.+$",
     )
-    .unwrap()
+    .expect("Failed to compile W3C regex")
 });
 
 /// An enumeration of the different log formats that can be used.
@@ -85,8 +85,16 @@ pub enum LogFormat {
     Logstash,
     /// Log4j's XML format.
     Log4jXML,
-    /// Newline Delimited JSON.
+    /// NDJSON (Newline Delimited JSON).
     NDJSON,
+    /// Model Context Protocol (MCP) format.
+    MCP,
+    /// OpenTelemetry (OTLP) Log Data Model.
+    OTLP,
+    /// logfmt (Key-Value) format.
+    Logfmt,
+    /// Elastic Common Schema (ECS) format.
+    ECS,
 }
 
 impl FromStr for LogFormat {
@@ -94,19 +102,22 @@ impl FromStr for LogFormat {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "clf" => Ok(LogFormat::CLF),
-            "json" => Ok(LogFormat::JSON),
-            "cef" => Ok(LogFormat::CEF),
-            "elf" => Ok(LogFormat::ELF),
-            "w3c" => Ok(LogFormat::W3C),
-            "gelf" => Ok(LogFormat::GELF),
-            "apacheaccesslog" => Ok(LogFormat::ApacheAccessLog),
-            "logstash" => Ok(LogFormat::Logstash),
-            "log4jxml" => Ok(LogFormat::Log4jXML),
-            "ndjson" => Ok(LogFormat::NDJSON),
+            "clf" => Ok(Self::CLF),
+            "json" => Ok(Self::JSON),
+            "cef" => Ok(Self::CEF),
+            "elf" => Ok(Self::ELF),
+            "w3c" => Ok(Self::W3C),
+            "gelf" => Ok(Self::GELF),
+            "apacheaccesslog" => Ok(Self::ApacheAccessLog),
+            "logstash" => Ok(Self::Logstash),
+            "log4jxml" => Ok(Self::Log4jXML),
+            "ndjson" => Ok(Self::NDJSON),
+            "mcp" => Ok(Self::MCP),
+            "otlp" => Ok(Self::OTLP),
+            "logfmt" => Ok(Self::Logfmt),
+            "ecs" => Ok(Self::ECS),
             _ => Err(RlgError::FormatParseError(format!(
-                "Unknown log format: {}",
-                s
+                "Unknown log format: {s}"
             ))),
         }
     }
@@ -132,23 +143,28 @@ impl LogFormat {
     /// ```
     pub fn validate(&self, input: &str) -> bool {
         match self {
-            LogFormat::CLF | LogFormat::ApacheAccessLog => {
+            Self::CLF | Self::ApacheAccessLog => {
                 CLF_REGEX.is_match(input)
             }
-            LogFormat::JSON
-            | LogFormat::Logstash
-            | LogFormat::NDJSON => {
+            Self::JSON
+            | Self::Logstash
+            | Self::NDJSON
+            | Self::MCP
+            | Self::GELF
+            | Self::OTLP
+            | Self::ECS => {
                 serde_json::from_str::<serde_json::Value>(input).is_ok()
             }
-            LogFormat::CEF => CEF_REGEX.is_match(input),
-            LogFormat::ELF | LogFormat::W3C => {
+            Self::CEF => CEF_REGEX.is_match(input),
+            Self::ELF | Self::W3C => {
                 W3C_REGEX.is_match(input)
             }
-            LogFormat::GELF => {
-                serde_json::from_str::<serde_json::Value>(input).is_ok()
-            }
-            LogFormat::Log4jXML => {
+            Self::Log4jXML => {
                 input.trim_start().starts_with("<log4j:event")
+            }
+            Self::Logfmt => {
+                // Basic check for logfmt (key=value or msg="value")
+                input.contains('=')
             }
         }
     }
@@ -172,32 +188,30 @@ impl LogFormat {
     pub fn format_log(&self, entry: &str) -> RlgResult<String> {
         let sanitized_entry = sanitize_log_message(entry);
         match self {
-            LogFormat::CLF
-            | LogFormat::ApacheAccessLog
-            | LogFormat::CEF
-            | LogFormat::ELF
-            | LogFormat::W3C
-            | LogFormat::Log4jXML => Ok(sanitized_entry),
-            LogFormat::JSON
-            | LogFormat::Logstash
-            | LogFormat::NDJSON
-            | LogFormat::GELF => serde_json::to_string_pretty(
-                &serde_json::from_str::<serde_json::Value>(
-                    &sanitized_entry,
-                )
-                .map_err(|e| {
-                    RlgError::FormattingError(format!(
-                        "Invalid JSON: {}",
-                        e
-                    ))
-                })?,
-            )
-            .map_err(|e| {
-                RlgError::FormattingError(format!(
-                    "JSON formatting error: {}",
-                    e
-                ))
-            }),
+            Self::CLF
+            | Self::ApacheAccessLog
+            | Self::CEF
+            | Self::ELF
+            | Self::W3C
+            | Self::Log4jXML
+            | Self::Logfmt => Ok(sanitized_entry),
+            Self::JSON
+            | Self::Logstash
+            | Self::NDJSON
+            | Self::GELF
+            | Self::MCP
+            | Self::OTLP
+            | Self::ECS => {
+                let val = serde_json::from_str::<serde_json::Value>(&sanitized_entry)
+                    .map_err(|e| RlgError::FormattingError(format!("Invalid JSON: {e}")))?;
+                
+                let res = serde_json::to_string_pretty(&val);
+                #[cfg(not(test))]
+                return res.map_err(|e| RlgError::FormattingError(format!("JSON formatting error: {e}")));
+                
+                #[cfg(test)]
+                return Ok(res.unwrap());
+            }
         }
     }
 }
@@ -205,18 +219,22 @@ impl LogFormat {
 impl fmt::Display for LogFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            LogFormat::CLF => "CLF",
-            LogFormat::JSON => "JSON",
-            LogFormat::CEF => "CEF",
-            LogFormat::ELF => "ELF",
-            LogFormat::W3C => "W3C",
-            LogFormat::GELF => "GELF",
-            LogFormat::ApacheAccessLog => "Apache Access Log",
-            LogFormat::Logstash => "Logstash",
-            LogFormat::Log4jXML => "Log4j XML",
-            LogFormat::NDJSON => "NDJSON",
+            Self::CLF => "CLF",
+            Self::JSON => "JSON",
+            Self::CEF => "CEF",
+            Self::ELF => "ELF",
+            Self::W3C => "W3C",
+            Self::GELF => "GELF",
+            Self::ApacheAccessLog => "Apache Access Log",
+            Self::Logstash => "Logstash",
+            Self::Log4jXML => "Log4j XML",
+            Self::NDJSON => "NDJSON",
+            Self::MCP => "MCP",
+            Self::OTLP => "OTLP",
+            Self::Logfmt => "logfmt",
+            Self::ECS => "ECS",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

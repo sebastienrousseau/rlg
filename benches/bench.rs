@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -62,7 +62,7 @@ fn format_benchmark(c: &mut Criterion) {
     });
 }
 
-// Benchmark async writing logs to files
+// Benchmark async writing logs to files vs Lock-Free Engine
 fn write_benchmark(c: &mut Criterion) {
     // Create test CLF log
     let clf_log = Log::new(
@@ -74,19 +74,33 @@ fn write_benchmark(c: &mut Criterion) {
         &LogFormat::CLF,
     );
 
-    c.bench_function("clf_write", |b| {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    let mut group = c.benchmark_group("Ingestion Speed");
+
+    group.bench_function("Legacy Tokio File IO", |b| {
         b.iter(|| {
-            // Runtime for async block to write to file
-            tokio::runtime::Runtime::new().unwrap().block_on(async {
-                // Open file and write log
+            rt.block_on(async {
                 let mut file =
-                    tokio::fs::File::create("log.txt").await.unwrap();
+                    tokio::fs::OpenOptions::new().append(true).create(true).open("bench_legacy.log").await.unwrap();
                 let _ = file
                     .write_all(format!("{clf_log}").as_bytes())
                     .await;
             })
         })
     });
+
+    group.bench_function("Brutalist Lock-Free Engine", |b| {
+        b.iter(|| {
+            let event = rlg::engine::LogEvent {
+                level: "INFO".to_string(),
+                payload: format!("{clf_log}").into_bytes(),
+            };
+            rlg::engine::ENGINE.ingest(black_box(event));
+        })
+    });
+
+    group.finish();
 }
 
 // Group benchmarks together

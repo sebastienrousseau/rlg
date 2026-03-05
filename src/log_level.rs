@@ -1,5 +1,5 @@
 // log_level.rs
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::{convert::TryFrom, error::Error, fmt, str::FromStr};
 
-/// Custom error type for LogLevel parsing with context.
+/// Custom error type for `LogLevel` parsing with context.
 #[derive(Debug, Clone)]
 pub struct ParseLogLevelError {
     /// The invalid log level value.
@@ -24,8 +24,9 @@ impl ParseLogLevelError {
     /// # Returns
     ///
     /// A new instance of `ParseLogLevelError` containing the provided invalid log level value.
+    #[must_use] 
     pub fn new(invalid_value: &str) -> Self {
-        ParseLogLevelError {
+        Self {
             invalid_value: invalid_value.to_string(),
         }
     }
@@ -33,7 +34,7 @@ impl ParseLogLevelError {
 
 impl fmt::Display for ParseLogLevelError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Invalid log level: {}", self.invalid_value)
+        write!(f, "Invalid log level: {0}", self.invalid_value)
     }
 }
 
@@ -44,6 +45,7 @@ impl Error for ParseLogLevelError {}
     Clone,
     Copy,
     Debug,
+    Default,
     Deserialize,
     Eq,
     Hash,
@@ -66,6 +68,7 @@ pub enum LogLevel {
     /// `VERBOSE`: Detailed logging, often more detailed than `INFO`.
     VERBOSE,
     /// `INFO`: Informational messages that highlight the progress of the application.
+    #[default]
     INFO,
     /// `WARN`: Potentially harmful situations.
     WARN,
@@ -92,10 +95,11 @@ impl LogLevel {
     /// assert!(!LogLevel::DEBUG.includes(LogLevel::WARN)); // DEBUG does not include WARN
     /// assert!(LogLevel::WARN.includes(LogLevel::DEBUG)); // WARN includes DEBUG
     /// ```
-    pub fn includes(self, other: LogLevel) -> bool {
+    #[must_use] 
+    pub const fn includes(self, other: Self) -> bool {
         match self {
-            LogLevel::ALL => true,   // ALL includes everything
-            LogLevel::NONE => false, // NONE includes nothing
+            Self::ALL => true,   // ALL includes everything
+            Self::NONE => false, // NONE includes nothing
             _ => self.to_numeric() >= other.to_numeric(), // Default behavior for other levels
         }
     }
@@ -109,19 +113,20 @@ impl LogLevel {
     /// assert_eq!(LogLevel::ERROR.to_numeric(), 8);
     /// assert_eq!(LogLevel::DEBUG.to_numeric(), 3);
     /// ```
-    pub fn to_numeric(self) -> u8 {
+    #[must_use] 
+    pub const fn to_numeric(self) -> u8 {
         match self {
-            LogLevel::ALL => 0,
-            LogLevel::NONE => 1,
-            LogLevel::DISABLED => 2,
-            LogLevel::DEBUG => 3,
-            LogLevel::TRACE => 4,
-            LogLevel::VERBOSE => 5,
-            LogLevel::INFO => 6,
-            LogLevel::WARN => 7,
-            LogLevel::ERROR => 8,
-            LogLevel::FATAL => 9,
-            LogLevel::CRITICAL => 10,
+            Self::ALL => 0,
+            Self::NONE => 1,
+            Self::DISABLED => 2,
+            Self::DEBUG => 3,
+            Self::TRACE => 4,
+            Self::VERBOSE => 5,
+            Self::INFO => 6,
+            Self::WARN => 7,
+            Self::ERROR => 8,
+            Self::FATAL => 9,
+            Self::CRITICAL => 10,
         }
     }
 
@@ -138,19 +143,20 @@ impl LogLevel {
     /// assert_eq!(LogLevel::from_numeric(8), Some(LogLevel::ERROR));
     /// assert_eq!(LogLevel::from_numeric(5), Some(LogLevel::VERBOSE));
     /// ```
-    pub fn from_numeric(value: u8) -> Option<Self> {
+    #[must_use] 
+    pub const fn from_numeric(value: u8) -> Option<Self> {
         match value {
-            0 => Some(LogLevel::ALL),
-            1 => Some(LogLevel::NONE),
-            2 => Some(LogLevel::DISABLED),
-            3 => Some(LogLevel::DEBUG),
-            4 => Some(LogLevel::TRACE),
-            5 => Some(LogLevel::VERBOSE),
-            6 => Some(LogLevel::INFO),
-            7 => Some(LogLevel::WARN),
-            8 => Some(LogLevel::ERROR),
-            9 => Some(LogLevel::FATAL),
-            10 => Some(LogLevel::CRITICAL),
+            0 => Some(Self::ALL),
+            1 => Some(Self::NONE),
+            2 => Some(Self::DISABLED),
+            3 => Some(Self::DEBUG),
+            4 => Some(Self::TRACE),
+            5 => Some(Self::VERBOSE),
+            6 => Some(Self::INFO),
+            7 => Some(Self::WARN),
+            8 => Some(Self::ERROR),
+            9 => Some(Self::FATAL),
+            10 => Some(Self::CRITICAL),
             _ => None,
         }
     }
@@ -161,17 +167,17 @@ impl FromStr for LogLevel {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
-            "ALL" => Ok(LogLevel::ALL),
-            "NONE" => Ok(LogLevel::NONE),
-            "DISABLED" => Ok(LogLevel::DISABLED),
-            "DEBUG" => Ok(LogLevel::DEBUG),
-            "TRACE" => Ok(LogLevel::TRACE),
-            "VERBOSE" => Ok(LogLevel::VERBOSE),
-            "INFO" => Ok(LogLevel::INFO),
-            "WARN" => Ok(LogLevel::WARN),
-            "ERROR" => Ok(LogLevel::ERROR),
-            "FATAL" => Ok(LogLevel::FATAL),
-            "CRITICAL" => Ok(LogLevel::CRITICAL),
+            "ALL" => Ok(Self::ALL),
+            "NONE" => Ok(Self::NONE),
+            "DISABLED" => Ok(Self::DISABLED),
+            "DEBUG" => Ok(Self::DEBUG),
+            "TRACE" => Ok(Self::TRACE),
+            "VERBOSE" => Ok(Self::VERBOSE),
+            "INFO" => Ok(Self::INFO),
+            "WARN" => Ok(Self::WARN),
+            "ERROR" => Ok(Self::ERROR),
+            "FATAL" => Ok(Self::FATAL),
+            "CRITICAL" => Ok(Self::CRITICAL),
             _ => Err(ParseLogLevelError::new(s)),
         }
     }
@@ -181,31 +187,25 @@ impl TryFrom<String> for LogLevel {
     type Error = ParseLogLevelError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        LogLevel::from_str(&value)
+        Self::from_str(&value)
     }
 }
 
 impl fmt::Display for LogLevel {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let level_str = match self {
-            LogLevel::ALL => "ALL",
-            LogLevel::NONE => "NONE",
-            LogLevel::DISABLED => "DISABLED",
-            LogLevel::DEBUG => "DEBUG",
-            LogLevel::TRACE => "TRACE",
-            LogLevel::VERBOSE => "VERBOSE",
-            LogLevel::INFO => "INFO",
-            LogLevel::WARN => "WARN",
-            LogLevel::ERROR => "ERROR",
-            LogLevel::FATAL => "FATAL",
-            LogLevel::CRITICAL => "CRITICAL",
+            Self::ALL => "ALL",
+            Self::NONE => "NONE",
+            Self::DISABLED => "DISABLED",
+            Self::DEBUG => "DEBUG",
+            Self::TRACE => "TRACE",
+            Self::VERBOSE => "VERBOSE",
+            Self::INFO => "INFO",
+            Self::WARN => "WARN",
+            Self::ERROR => "ERROR",
+            Self::FATAL => "FATAL",
+            Self::CRITICAL => "CRITICAL",
         };
-        write!(f, "{}", level_str)
-    }
-}
-
-impl Default for LogLevel {
-    fn default() -> Self {
-        LogLevel::INFO
+        write!(f, "{level_str}")
     }
 }

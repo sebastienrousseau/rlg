@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
@@ -9,11 +9,12 @@
 //! including logging at different levels, adding metadata, and log formatting.
 
 #![allow(missing_docs)]
+#![allow(deprecated)]
 
 use rlg::{log_format::LogFormat, log_level::LogLevel};
 use rlg::{
     macro_error_log, macro_fatal_log, macro_info_log, macro_log,
-    macro_log_if, macro_log_with_metadata, macro_print_log,
+    macro_log_if, macro_log_with_metadata,
     macro_set_log_format_clf, macro_trace_log, macro_warn_log,
 };
 

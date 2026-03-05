@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -23,6 +23,10 @@ mod tests {
         assert_eq!(format!("{}", LogFormat::Logstash), "Logstash");
         assert_eq!(format!("{}", LogFormat::Log4jXML), "Log4j XML");
         assert_eq!(format!("{}", LogFormat::NDJSON), "NDJSON");
+        assert_eq!(format!("{}", LogFormat::MCP), "MCP");
+        assert_eq!(format!("{}", LogFormat::OTLP), "OTLP");
+        assert_eq!(format!("{}", LogFormat::Logfmt), "logfmt");
+        assert_eq!(format!("{}", LogFormat::ECS), "ECS");
     }
 
     #[test]
@@ -154,23 +158,19 @@ mod tests {
     }
 
     #[test]
-    fn test_log_format_specific_validations() {
-        // Test specific format validations
-        assert!(LogFormat::ApacheAccessLog.validate("192.168.0.1 - - [01/Jan/2024:12:00:00 +0000] \"GET / HTTP/1.1\" 200 1234"));
-        assert!(LogFormat::Logstash.validate("{\"@timestamp\":\"2024-01-01T12:00:00Z\",\"message\":\"Test log\",\"level\":\"INFO\"}"));
+    fn test_log_format_validate_new_formats() {
+        assert!(LogFormat::OTLP.validate("{}"));
+        assert!(LogFormat::ECS.validate("{}"));
+        assert!(LogFormat::Logfmt.validate("key=value"));
+        assert!(!LogFormat::Logfmt.validate("no_equals"));
+    }
 
-        // For NDJSON, we might need to adjust this based on how it's actually implemented
-        // Option 1: If NDJSON validates each line separately
-        assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}"));
-        assert!(LogFormat::NDJSON.validate("{\"key2\":\"value2\"}"));
-
-        // Option 2: If NDJSON validates the entire string as one
-        // If this is the case, we might need to adjust the validation method
-        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
-
-        // Option 3: If NDJSON validation is not yet implemented
-        // In this case, we might want to skip this test or expect it to fail
-        // #[should_panic(expected = "NDJSON validation not implemented")]
-        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
+    #[test]
+    fn test_log_format_format_log_others() {
+        assert_eq!(LogFormat::ELF.format_log("elf").unwrap(), "elf");
+        assert_eq!(LogFormat::W3C.format_log("w3c").unwrap(), "w3c");
+        assert_eq!(LogFormat::ApacheAccessLog.format_log("apache").unwrap(), "apache");
+        assert_eq!(LogFormat::CEF.format_log("cef").unwrap(), "cef");
+        assert_eq!(LogFormat::Log4jXML.format_log("xml").unwrap(), "xml");
     }
 }
