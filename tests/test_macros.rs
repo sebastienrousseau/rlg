@@ -385,4 +385,30 @@ mod tests {
         let log = macro_info_log!(&formatted_now, "app", "message");
         assert_eq!(log.time, formatted_now);
     }
+
+    #[test]
+    fn test_rlg_span_macro() {
+        let res = rlg::rlg_span!("Compute Task", {
+            let x = 10;
+            let y = 20;
+            x + y
+        });
+        assert_eq!(res, 30);
+    }
+
+    #[test]
+    fn test_rlg_time_it_macro() {
+        let res = rlg::rlg_time_it!("Database Query", {
+            let x = 100;
+            x * 2
+        });
+        assert_eq!(res, 200);
+    }
+
+    #[test]
+    fn test_rlg_mcp_notify_macro() {
+        // This is primarily for side effects (firing a log event),
+        // we test that it compiles and runs without panicking.
+        rlg::rlg_mcp_notify!("user_status", "logged_in");
+    }
 }

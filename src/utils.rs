@@ -232,6 +232,33 @@ pub fn parse_datetime(datetime_str: &str) -> RlgResult<DateTime> {
         .map_err(|e| crate::error::RlgError::custom(e.to_string()))
 }
 
+/// Generates a highly unique, 16-character pseudo-random hex string suitable for OTLP span IDs.
+///
+/// # Returns
+/// A `String` containing the span ID.
+#[must_use]
+#[allow(clippy::cast_sign_loss)]
+pub fn generate_span_id() -> String {
+    let mut rng = vrd::random::Random::default();
+    let upper = (rng.int(0, i32::MAX) as u64) << 32;
+    let lower = rng.int(0, i32::MAX) as u64;
+    let span = upper | lower;
+    format!("{span:016x}")
+}
+
+/// Generates a highly unique, 32-character pseudo-random hex string suitable for OTLP trace IDs.
+///
+/// # Returns
+/// A `String` containing the trace ID.
+#[must_use]
+#[allow(clippy::cast_sign_loss)]
+pub fn generate_trace_id() -> String {
+    let mut rng = vrd::random::Random::default();
+    let r1 = ((rng.int(0, i32::MAX) as u64) << 32) | (rng.int(0, i32::MAX) as u64);
+    let r2 = ((rng.int(0, i32::MAX) as u64) << 32) | (rng.int(0, i32::MAX) as u64);
+    format!("{r1:016x}{r2:016x}")
+}
+
 /// Checks if a directory is writable.
 ///
 /// # Arguments
