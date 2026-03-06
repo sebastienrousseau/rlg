@@ -9,12 +9,12 @@ use std::os::unix::net::UnixDatagram;
 #[cfg(not(unix))]
 #[allow(dead_code)]
 #[derive(Debug)]
-pub(crate) struct UnixDatagram;
+pub struct UnixDatagram;
 
 #[cfg(not(unix))]
 #[allow(dead_code)]
 impl UnixDatagram {
-    pub(crate) fn send(&self, _: &[u8]) -> std::io::Result<usize> {
+    pub fn send(&self, _: &[u8]) -> std::io::Result<usize> {
         Ok(0)
     }
 }
