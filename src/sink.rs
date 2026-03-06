@@ -28,11 +28,16 @@ mod macos_ffi {
     #[repr(transparent)]
     pub(crate) struct os_log_type_t(pub(crate) u8);
 
-    pub(crate) const OS_LOG_TYPE_DEFAULT: os_log_type_t = os_log_type_t(0x00);
-    pub(crate) const OS_LOG_TYPE_INFO: os_log_type_t = os_log_type_t(0x01);
-    pub(crate) const OS_LOG_TYPE_DEBUG: os_log_type_t = os_log_type_t(0x02);
-    pub(crate) const OS_LOG_TYPE_ERROR: os_log_type_t = os_log_type_t(0x10);
-    pub(crate) const OS_LOG_TYPE_FAULT: os_log_type_t = os_log_type_t(0x11);
+    pub(crate) const OS_LOG_TYPE_DEFAULT: os_log_type_t =
+        os_log_type_t(0x00);
+    pub(crate) const OS_LOG_TYPE_INFO: os_log_type_t =
+        os_log_type_t(0x01);
+    pub(crate) const OS_LOG_TYPE_DEBUG: os_log_type_t =
+        os_log_type_t(0x02);
+    pub(crate) const OS_LOG_TYPE_ERROR: os_log_type_t =
+        os_log_type_t(0x10);
+    pub(crate) const OS_LOG_TYPE_FAULT: os_log_type_t =
+        os_log_type_t(0x11);
 
     extern "C" {
         pub(crate) fn os_log_create(
