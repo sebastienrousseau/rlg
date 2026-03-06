@@ -166,6 +166,7 @@ mod tests {
     #[test]
     #[cfg(not(feature = "debug_enabled"))]
     fn test_macro_debug_log_disabled() {
+        let log = macro_info_log!("2022-01-01", "app", "message");
         let mut output = Vec::new();
         {
             macro_debug_log!(log);
@@ -411,5 +412,18 @@ mod tests {
         // This is primarily for side effects (firing a log event),
         // we test that it compiles and runs without panicking.
         rlg::rlg_mcp_notify!("user_status", "logged_in");
+    }
+
+    #[test]
+    fn test_rlg_span_metric() {
+        use rlg::engine::ENGINE;
+
+        let before = ENGINE.active_spans();
+        rlg::rlg_span!("Metric Test", {
+            let during = ENGINE.active_spans();
+            assert!(during >= before + 1);
+        });
+        // We do not assert `after == before` here because other tests
+        // may run concurrently and increment the global span count.
     }
 }

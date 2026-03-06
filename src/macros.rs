@@ -196,11 +196,13 @@ macro_rules! macro_log_if {
 macro_rules! rlg_span {
     ($name:expr, $block:block) => {{
         let span_id = $crate::utils::generate_span_id();
+        $crate::engine::ENGINE.inc_spans();
         $crate::log::Log::info($name)
             .with("span_id", &span_id)
             .format($crate::log_format::LogFormat::OTLP)
             .fire();
         let result = $block;
+        $crate::engine::ENGINE.dec_spans();
         result
     }};
 }

@@ -71,3 +71,11 @@ fn test_platform_sink_journald_valid() {
         sink.emit("UNKNOWN", b"test journald valid");
     }
 }
+
+#[test]
+fn test_platform_sink_fallback_env() {
+    std::env::set_var("RLG_FALLBACK_STDOUT", "1");
+    let sink = PlatformSink::native();
+    assert!(matches!(sink, PlatformSink::Stdout));
+    std::env::remove_var("RLG_FALLBACK_STDOUT");
+}

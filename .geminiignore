@@ -1,0 +1,9 @@
+target/
+*.log
+lcov.info
+node_modules/
+dist/
+build/
+.git/
+.github/
+.vscode/

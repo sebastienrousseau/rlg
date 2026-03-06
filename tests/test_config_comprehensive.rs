@@ -46,6 +46,17 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[tokio::test]
+    async fn test_load_async_missing_version() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let config_path = temp_dir.path().join("missing_version.toml");
+        fs::write(&config_path, r#"profile = "test""#).unwrap();
+        let result =
+            Config::load_async(Some(config_path.to_str().unwrap()))
+                .await;
+        assert!(result.is_err());
+    }
+
     #[test]
     fn test_config_error_all_variants() {
         let err = ConfigError::ValidationError("val".to_string());
@@ -56,6 +67,21 @@ mod tests {
 
         let err = ConfigError::FileWriteError("io".to_string());
         assert_eq!(format!("{}", err), "File write error: io");
+
+        let err = ConfigError::FileReadError("read".to_string());
+        assert_eq!(format!("{}", err), "File read error: read");
+
+        let err = ConfigError::InvalidFilePath("path".to_string());
+        assert_eq!(format!("{}", err), "Invalid file path: path");
+
+        let err = ConfigError::VersionError("v".to_string());
+        assert_eq!(
+            format!("{}", err),
+            "Configuration version error: v"
+        );
+
+        let err = ConfigError::MissingFieldError("f".to_string());
+        assert_eq!(format!("{}", err), "Missing required field: f");
 
         let err = ConfigError::EnvVarParseError(envy::Error::Custom(
             "env".to_string(),

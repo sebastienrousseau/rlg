@@ -212,4 +212,27 @@ mod tests {
         assert!(config.set("env_vars", 123).is_err());
         assert!(config.set("unknown", "value").is_err());
     }
+
+    #[test]
+    fn test_log_rotation_from_str_errors() {
+        use rlg::config::LogRotation;
+        use std::str::FromStr;
+        assert!(LogRotation::from_str("size").is_err());
+        assert!(LogRotation::from_str("size:invalid").is_err());
+        assert!(LogRotation::from_str("time").is_err());
+        assert!(LogRotation::from_str("time:invalid").is_err());
+        assert!(LogRotation::from_str("count").is_err());
+        assert!(LogRotation::from_str("count:invalid").is_err());
+        assert!(LogRotation::from_str("invalid:val").is_err());
+    }
+
+    #[test]
+    fn test_config_error_display() {
+        use rlg::config::ConfigError;
+        let err = ConfigError::ValidationError("test".to_string());
+        assert_eq!(
+            format!("{}", err),
+            "Configuration validation error: test"
+        );
+    }
 }

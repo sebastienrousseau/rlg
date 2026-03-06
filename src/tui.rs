@@ -58,6 +58,11 @@ impl TuiMetrics {
     pub fn inc_spans(&self) {
         self.active_spans.fetch_add(1, Ordering::Relaxed);
     }
+
+    /// Decrements active spans.
+    pub fn dec_spans(&self) {
+        self.active_spans.fetch_sub(1, Ordering::Relaxed);
+    }
 }
 
 /// Spawns the background "Liquid Glass" TUI renderer.

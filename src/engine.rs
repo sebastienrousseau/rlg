@@ -134,6 +134,22 @@ impl LockFreeEngine {
         self.filter_level.load(Ordering::Relaxed)
     }
 
+    /// Increments the active span count in the TUI metrics.
+    pub fn inc_spans(&self) {
+        self.metrics.inc_spans();
+    }
+
+    /// Decrements the active span count in the TUI metrics.
+    pub fn dec_spans(&self) {
+        self.metrics.dec_spans();
+    }
+
+    /// Returns the current number of active spans.
+    #[must_use]
+    pub fn active_spans(&self) -> usize {
+        self.metrics.active_spans.load(Ordering::Relaxed)
+    }
+
     /// Applies configuration settings to the engine.
     pub fn apply_config(&self, config: &crate::config::Config) {
         self.set_filter(config.log_level.to_numeric());
