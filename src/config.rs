@@ -638,6 +638,7 @@ mod tests {
     use tokio::time::{sleep, Duration};
 
     #[tokio::test]
+    #[cfg_attr(miri, ignore)]
     async fn test_config_hot_reload_async_full() {
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.toml");
