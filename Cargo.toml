@@ -61,6 +61,7 @@ serde_json = "1.0.149"
 serde_yml = "0.0.12"
 tempfile = "3.26.0"
 thiserror = "2.0.18"
+miette = { version = "7.5.0", features = ["fancy"], optional = true }
 tokio = { version = "1.50.0", features = ["full"]}
 toml = "0.8.23"
 vrd = "0.0.8"
@@ -92,6 +93,7 @@ path = "src/lib.rs"
 # No default features
 default = []
 debug_enabled = []
+miette = ["dep:miette"]
 
 [package.metadata.docs.rs]
 # Specify arguments for rustdoc to enhance documentation quality.

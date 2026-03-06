@@ -73,6 +73,7 @@ pub use crate::error::{RlgError, RlgResult};
 pub use crate::log::Log;
 pub use crate::log_format::LogFormat;
 pub use crate::log_level::LogLevel;
+pub use crate::sink::PlatformSink;
 
 /// The version of the `rlg` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
