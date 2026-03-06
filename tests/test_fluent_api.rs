@@ -1,3 +1,4 @@
+#![cfg(not(miri))]
 #![allow(missing_docs)]
 use rlg::log::Log;
 use rlg::log_format::LogFormat;

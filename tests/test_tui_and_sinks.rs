@@ -1,3 +1,4 @@
+#![cfg(not(miri))]
 #![allow(missing_docs)]
 use rlg::sink::PlatformSink;
 use rlg::tui::{spawn_tui_thread, TuiMetrics};

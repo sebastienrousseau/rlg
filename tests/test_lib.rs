@@ -1,3 +1,4 @@
+#![cfg(not(miri))]
 // test_lib.rs
 // Integration tests for rlg
 #![allow(missing_docs)]
