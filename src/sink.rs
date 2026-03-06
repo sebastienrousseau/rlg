@@ -21,6 +21,7 @@ impl UnixDatagram {
 
 /// A unified interface for platform-native logging.
 #[derive(Debug)]
+#[allow(variant_size_differences)]
 pub enum PlatformSink {
     /// Standard output fallback.
     Stdout,
@@ -45,7 +46,8 @@ mod macos_ffi {
     pub(super) const OS_LOG_TYPE_DEFAULT: os_log_type_t =
         os_log_type_t(0x00);
     #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_INFO: os_log_type_t = os_log_type_t(0x01);
+    pub(super) const OS_LOG_TYPE_INFO: os_log_type_t =
+        os_log_type_t(0x01);
     #[allow(dead_code)]
     pub(super) const OS_LOG_TYPE_DEBUG: os_log_type_t =
         os_log_type_t(0x02);
