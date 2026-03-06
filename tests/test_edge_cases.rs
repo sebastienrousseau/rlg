@@ -40,6 +40,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(not(windows))]
     async fn test_utils_is_file_writable_cannot_create() {
         // A file in a non-existent directory cannot be created
         let path = Path::new("/non_existent_dir_12345/some_file.log");
@@ -49,6 +50,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(not(windows))]
     async fn test_utils_is_directory_writable_read_only() {
         // Create a temp directory and make it read-only
         let temp_dir = tempdir().unwrap();
