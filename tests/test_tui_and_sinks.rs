@@ -1,8 +1,8 @@
 #![allow(missing_docs)]
-use rlg::tui::{TuiMetrics, spawn_tui_thread};
 use rlg::sink::PlatformSink;
-use std::sync::Arc;
+use rlg::tui::{spawn_tui_thread, TuiMetrics};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -10,16 +10,16 @@ use std::time::Duration;
 async fn test_tui_thread_lifecycle() {
     let metrics = Arc::new(TuiMetrics::default());
     let shutdown = Arc::new(AtomicBool::new(false));
-    
+
     metrics.inc_events();
     metrics.inc_errors();
     metrics.inc_spans();
-    
+
     spawn_tui_thread(metrics.clone(), shutdown.clone());
-    
+
     // Let it render a few frames
     thread::sleep(Duration::from_millis(50));
-    
+
     shutdown.store(true, Ordering::SeqCst);
     thread::sleep(Duration::from_millis(20));
 }

@@ -1,12 +1,14 @@
 #![allow(missing_docs)]
 #[cfg(test)]
 mod tests {
-    use rlg::log_level::LogLevel;
     use rlg::log_format::LogFormat;
-    use rlg::utils::{generate_timestamp, is_file_writable, is_directory_writable};
-    use tempfile::tempdir;
+    use rlg::log_level::LogLevel;
+    use rlg::utils::{
+        generate_timestamp, is_directory_writable, is_file_writable,
+    };
     use std::fs;
     use std::path::Path;
+    use tempfile::tempdir;
 
     #[test]
     fn test_log_level_numeric_all_variants() {
@@ -27,7 +29,7 @@ mod tests {
     fn test_log_format_json_formatting_error() {
         let format = LogFormat::JSON;
         // Truly invalid JSON to trigger error
-        let result = format.format_log("{"); 
+        let result = format.format_log("{");
         assert!(result.is_err());
     }
 
@@ -51,11 +53,11 @@ mod tests {
         // Create a temp directory and make it read-only
         let temp_dir = tempdir().unwrap();
         let dir_path = temp_dir.path();
-        
+
         let mut perms = fs::metadata(dir_path).unwrap().permissions();
         perms.set_readonly(true);
         fs::set_permissions(dir_path, perms).unwrap();
-        
+
         let result = is_directory_writable(dir_path).await;
         assert!(result.is_ok());
         assert!(!result.unwrap());
@@ -65,10 +67,19 @@ mod tests {
     #[allow(deprecated)]
     fn test_log_semantic_context_tagging() {
         use rlg::log::Log;
-        let mut log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::JSON);
-        log.attributes.insert("user_id".to_string(), serde_json::json!(123));
-        log.attributes.insert("action".to_string(), serde_json::json!("login"));
-        
+        let mut log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::JSON,
+        );
+        log.attributes
+            .insert("user_id".to_string(), serde_json::json!(123));
+        log.attributes
+            .insert("action".to_string(), serde_json::json!("login"));
+
         let output = format!("{}", log);
         assert!(output.contains("\"user_id\":123"));
         assert!(output.contains("\"action\":\"login\""));

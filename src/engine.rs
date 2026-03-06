@@ -2,7 +2,7 @@
 // Brutalist Lock-Free Ingestion Engine
 
 use crate::sink::PlatformSink;
-use crate::tui::{TuiMetrics, spawn_tui_thread};
+use crate::tui::{spawn_tui_thread, TuiMetrics};
 use crossbeam_queue::ArrayQueue;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -16,7 +16,7 @@ pub struct LogEvent {
     /// The numeric log level for filtering.
     pub level_num: u8,
     /// Pre-formatted or rapidly assembled buffer.
-    pub payload: Vec<u8>, 
+    pub payload: Vec<u8>,
 }
 
 /// The Lock-Free Engine handling background log flushes.
@@ -33,7 +33,8 @@ pub struct LockFreeEngine {
 }
 
 /// Global lazy-initialized lock-free engine.
-pub static ENGINE: LazyLock<LockFreeEngine> = LazyLock::new(|| LockFreeEngine::new(65536)); // Ring buffer size of 65k
+pub static ENGINE: LazyLock<LockFreeEngine> =
+    LazyLock::new(|| LockFreeEngine::new(65536)); // Ring buffer size of 65k
 
 impl LockFreeEngine {
     /// Initializes the lock-free engine and spawns the background flusher.
@@ -41,7 +42,7 @@ impl LockFreeEngine {
     /// # Panics
     ///
     /// This function panics if the flusher background thread fails to spawn.
-    #[must_use] 
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let queue = Arc::new(ArrayQueue::new(capacity));
         let shutdown_flag = Arc::new(AtomicBool::new(false));
@@ -61,14 +62,16 @@ impl LockFreeEngine {
             .name("rlg-flusher".into())
             .spawn(move || {
                 let mut sink = PlatformSink::native();
-                
+
                 loop {
                     // Drain the queue completely
                     while let Some(event) = queue.pop() {
                         sink.emit(&event.level, &event.payload);
                     }
 
-                    if flusher_shutdown.load(Ordering::Relaxed) && queue.is_empty() {
+                    if flusher_shutdown.load(Ordering::Relaxed)
+                        && queue.is_empty()
+                    {
                         break;
                     }
 
@@ -96,8 +99,11 @@ impl LockFreeEngine {
         }
 
         self.metrics.inc_events();
-        
-        if event.level == "ERROR" || event.level == "FATAL" || event.level == "CRITICAL" {
+
+        if event.level == "ERROR"
+            || event.level == "FATAL"
+            || event.level == "CRITICAL"
+        {
             self.metrics.inc_errors();
         }
 

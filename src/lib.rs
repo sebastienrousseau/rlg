@@ -5,8 +5,8 @@
 
 //! # RLG (`RustLogs`) — High-Performance Lock-Free Observability Engine
 //!
-//! `rlg` is a brutalist, zero-allocation logging library designed for the 2026 observability landscape. 
-//! Built on the LMAX Disruptor pattern, it delivers sub-microsecond ingestion latency (~1.4µs) 
+//! `rlg` is a brutalist, zero-allocation logging library designed for the 2026 observability landscape.
+//! Built on the LMAX Disruptor pattern, it delivers sub-microsecond ingestion latency (~1.4µs)
 //! with native platform integration for macOS `os_log` and Linux `journald`.
 //!
 //! ## Core Philosophies
@@ -39,11 +39,16 @@
 //! ```
 //!
 //! ## Architectural Overview
-//! The heart of `rlg` is a lock-free ring buffer (65k capacity) that decouples log emission from 
-//! formatting and I/O. Serialization is performed on a dedicated background flusher thread 
+//! The heart of `rlg` is a lock-free ring buffer (65k capacity) that decouples log emission from
+//! formatting and I/O. Serialization is performed on a dedicated background flusher thread
 //! using stack-based buffers, ensuring that the critical path remains allocation-free.
 
-#![deny(clippy::all, clippy::pedantic, clippy::nursery, rust_2018_idioms)]
+#![deny(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    rust_2018_idioms
+)]
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 
@@ -59,16 +64,16 @@ pub mod log;
 pub mod log_format;
 /// Severity level definitions and parsing.
 pub mod log_level;
+/// Convenience macros for ergonomic logging.
+pub mod macros;
 /// Native platform-specific logging sinks.
 pub mod sink;
+/// Integration with the `tracing` ecosystem.
+pub mod tracing;
 /// Terminal UI Dashboard for generative local development.
 pub mod tui;
 /// High-performance utility functions.
 pub mod utils;
-/// Integration with the `tracing` ecosystem.
-pub mod tracing;
-/// Convenience macros for ergonomic logging.
-pub mod macros;
 
 // Re-exports for a flattened, intuitive API.
 pub use crate::error::{RlgError, RlgResult};

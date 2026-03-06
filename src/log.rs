@@ -7,19 +7,12 @@ use crate::{LogFormat, LogLevel, RlgResult};
 use dtt::datetime::DateTime;
 use hostname;
 use serde::{Deserialize, Serialize};
-use std::{fmt, collections::BTreeMap};
+use std::{collections::BTreeMap, fmt};
 use vrd::random::Random;
 
 /// The `Log` struct provides an easy way to log a message to the console.
 /// It contains a set of defined fields to create a simple log message with a readable output format.
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Serialize,
-    Deserialize,
-    Eq,
-)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Log {
     /// The session ID for the log entry.
     pub session_id: String,
@@ -69,8 +62,11 @@ impl Log {
     }
 
     /// Creates a new log entry with provided details.
-    #[deprecated(since = "0.0.7", note = "Please use the lock-free fluent API (`.fire()`) instead.")]
-    #[must_use] 
+    #[deprecated(
+        since = "0.0.7",
+        note = "Please use the lock-free fluent API (`.fire()`) instead."
+    )]
+    #[must_use]
     pub fn new(
         session_id: &str,
         time: &str,
@@ -91,37 +87,37 @@ impl Log {
     }
 
     /// Starts building a new INFO level log.
-    #[must_use] 
+    #[must_use]
     pub fn info(description: &str) -> Self {
         Self::build(LogLevel::INFO, description)
     }
 
     /// Starts building a new WARN level log.
-    #[must_use] 
+    #[must_use]
     pub fn warn(description: &str) -> Self {
         Self::build(LogLevel::WARN, description)
     }
 
     /// Starts building a new ERROR level log.
-    #[must_use] 
+    #[must_use]
     pub fn error(description: &str) -> Self {
         Self::build(LogLevel::ERROR, description)
     }
 
     /// Starts building a new DEBUG level log.
-    #[must_use] 
+    #[must_use]
     pub fn debug(description: &str) -> Self {
         Self::build(LogLevel::DEBUG, description)
     }
 
     /// Starts building a new TRACE level log.
-    #[must_use] 
+    #[must_use]
     pub fn trace(description: &str) -> Self {
         Self::build(LogLevel::TRACE, description)
     }
 
     /// Starts building a new FATAL level log.
-    #[must_use] 
+    #[must_use]
     pub fn fatal(description: &str) -> Self {
         Self::build(LogLevel::FATAL, description)
     }
@@ -130,7 +126,9 @@ impl Log {
     #[must_use]
     pub fn build(level: LogLevel, description: &str) -> Self {
         Self {
-            session_id: Random::default().int(0, 1_000_000_000).to_string(),
+            session_id: Random::default()
+                .int(0, 1_000_000_000)
+                .to_string(),
             time: DateTime::new().to_string(),
             level,
             component: "default".to_string(),
@@ -141,14 +139,14 @@ impl Log {
     }
 
     /// Sets the time for the log.
-    #[must_use] 
+    #[must_use]
     pub fn time(mut self, time: &str) -> Self {
         self.time = time.to_string();
         self
     }
 
     /// Sets the session ID for the log.
-    #[must_use] 
+    #[must_use]
     pub fn session_id(mut self, session_id: &str) -> Self {
         self.session_id = session_id.to_string();
         self
@@ -164,14 +162,14 @@ impl Log {
     }
 
     /// Sets the component for the log.
-    #[must_use] 
+    #[must_use]
     pub fn component(mut self, component: &str) -> Self {
         self.component = component.to_string();
         self
     }
 
     /// Sets the format for the log.
-    #[must_use] 
+    #[must_use]
     pub const fn format(mut self, format: LogFormat) -> Self {
         self.format = format;
         self
@@ -194,14 +192,24 @@ impl Log {
     ///
     /// This function returns an error if the ingestion into the lock-free engine fails.
     #[allow(deprecated)]
-    #[deprecated(since = "0.0.7", note = "Please use the lock-free fluent API (`.fire()`) instead.")]
+    #[deprecated(
+        since = "0.0.7",
+        note = "Please use the lock-free fluent API (`.fire()`) instead."
+    )]
     pub fn write_log_entry(
         log_level: LogLevel,
         process: &str,
         message: &str,
         log_format: LogFormat,
     ) -> RlgResult<()> {
-        let log_entry = Self::new(&Random::default().int(0, 1_000_000_000).to_string(), &DateTime::new().to_string(), &log_level, process, message, &log_format);
+        let log_entry = Self::new(
+            &Random::default().int(0, 1_000_000_000).to_string(),
+            &DateTime::new().to_string(),
+            &log_level,
+            process,
+            message,
+            &log_format,
+        );
 
         let payload = format!("{log_entry}\n").into_bytes();
         let event = crate::engine::LogEvent {
@@ -210,32 +218,40 @@ impl Log {
             payload,
         };
         crate::engine::ENGINE.ingest(event);
-        
+
         Ok(())
     }
 
-    fn write_json(f: &mut fmt::Formatter<'_>, val: &serde_json::Value) -> fmt::Result {
+    fn write_json(
+        f: &mut fmt::Formatter<'_>,
+        val: &serde_json::Value,
+    ) -> fmt::Result {
         write!(f, "{val}")
     }
 
     fn write_logfmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "level={0} msg=\"{1}\" session_id={2} component=\"{3}\"", 
+        write!(
+            f,
+            "level={0} msg=\"{1}\" session_id={2} component=\"{3}\"",
             self.level.to_string().to_lowercase(),
             self.description.replace('"', "\\\""),
             self.session_id,
             self.component
         )?;
-        
+
         for (key, value) in &self.attributes {
             write!(f, " {key}=")?;
             match value {
                 serde_json::Value::String(s) => {
-                    if s.contains(' ') || s.contains('"') || s.is_empty() {
+                    if s.contains(' ')
+                        || s.contains('"')
+                        || s.is_empty()
+                    {
                         write!(f, "\"{0}\"", s.replace('"', "\\\""))?;
                     } else {
                         write!(f, "{s}")?;
                     }
-                },
+                }
                 _ => write!(f, "{value}")?,
             }
         }
@@ -361,18 +377,31 @@ impl fmt::Display for Log {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::log_level::LogLevel;
     use crate::log_format::LogFormat;
+    use crate::log_level::LogLevel;
 
     #[test]
     #[allow(deprecated)]
     fn test_log_write_logfmt_with_attributes() {
-        let mut log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::Logfmt);
-        log.attributes.insert("key".to_string(), serde_json::json!("value"));
-        log.attributes.insert("space".to_string(), serde_json::json!("has space"));
-        log.attributes.insert("num".to_string(), serde_json::json!(42));
-        log.attributes.insert("empty".to_string(), serde_json::json!(""));
-        
+        let mut log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::Logfmt,
+        );
+        log.attributes
+            .insert("key".to_string(), serde_json::json!("value"));
+        log.attributes.insert(
+            "space".to_string(),
+            serde_json::json!("has space"),
+        );
+        log.attributes
+            .insert("num".to_string(), serde_json::json!(42));
+        log.attributes
+            .insert("empty".to_string(), serde_json::json!(""));
+
         let output = format!("{log}");
         assert!(output.contains("key=value"));
         assert!(output.contains("space=\"has space\""));
@@ -380,7 +409,14 @@ mod tests {
         assert!(output.contains("empty=\"\""));
 
         // Case with no attributes to cover the other branch
-        let log_no_attr = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::Logfmt);
+        let log_no_attr = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::Logfmt,
+        );
         let output_no = format!("{log_no_attr}");
         assert!(!output_no.contains(" key="));
     }

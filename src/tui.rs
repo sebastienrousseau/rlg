@@ -1,11 +1,11 @@
 // tui.rs
 // Generative Terminal UI (TUI) Dashboard for local development.
 
+use std::io::Write;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::io::Write;
 
 #[cfg(not(windows))]
 fn get_terminal_height() -> u16 {
@@ -65,30 +65,33 @@ impl TuiMetrics {
 /// # Panics
 ///
 /// This function panics if the TUI background thread fails to spawn.
-pub fn spawn_tui_thread(metrics: Arc<TuiMetrics>, shutdown_flag: Arc<AtomicBool>) {
+pub fn spawn_tui_thread(
+    metrics: Arc<TuiMetrics>,
+    shutdown_flag: Arc<AtomicBool>,
+) {
     thread::Builder::new()
         .name("rlg-tui".into())
         .spawn(move || {
             // Reserve bottom 4 lines for the dashboard using scroll region
             // ANSI: \x1b[s (save cursor) \x1b[1;{H-4}r (set scroll region)
-            
+
             // For a robust cross-platform implementation, we assume a standard 24 line height
-            // or rely on the terminal handling \x1b[;r to reset. 
+            // or rely on the terminal handling \x1b[;r to reset.
             // In a production Apple-standard system, we'd use libc::ioctl for TIOCGWINSZ.
-            
+
             let mut last_total = 0;
-            
+
             loop {
                 if shutdown_flag.load(Ordering::Relaxed) {
                     break;
                 }
-                
+
                 thread::sleep(Duration::from_millis(16)); // ~60 FPS
 
                 let total = metrics.total_events.load(Ordering::Relaxed);
                 let errors = metrics.error_count.load(Ordering::Relaxed);
                 let spans = metrics.active_spans.load(Ordering::Relaxed);
-                
+
                 // Calculate throughput (events per ~16ms tick -> scale to second)
                 let diff = total.saturating_sub(last_total);
                 last_total = total;
@@ -99,7 +102,7 @@ pub fn spawn_tui_thread(metrics: Arc<TuiMetrics>, shutdown_flag: Arc<AtomicBool>
                 // We use ANSI save/restore cursor to ensure stdout flows cleanly above.
                 let mut stdout = std::io::stdout();
                 let height = get_terminal_height();
-                
+
                 // ANSI escape sequence sequence:
                 // \x1b7 : Save cursor position
                 // \x1b[{height};1H : Move cursor to bottom-most row
@@ -114,7 +117,7 @@ pub fn spawn_tui_thread(metrics: Arc<TuiMetrics>, shutdown_flag: Arc<AtomicBool>
                 );
                 let _ = stdout.flush();
             }
-            
+
             // Clean up terminal state on exit
             let _ = write!(std::io::stdout(), "\x1b[r\x1b[J"); // Reset scroll region
         })

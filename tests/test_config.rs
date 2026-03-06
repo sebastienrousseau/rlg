@@ -270,14 +270,22 @@ mod tests {
             log_level: LogLevel::ERROR,
             log_rotation: Some(LogRotation::Count(10)),
             log_format: "JSON".to_string(),
-            logging_destinations: vec![LoggingDestination::Network("localhost:8080".to_string())],
+            logging_destinations: vec![LoggingDestination::Network(
+                "localhost:8080".to_string(),
+            )],
             env_vars,
         };
 
         let differences = Config::diff(&config1, &config2);
 
-        assert_eq!(differences.get("version"), Some(&"1.0 -> 2.0".to_string()));
-        assert_eq!(differences.get("profile"), Some(&"default -> production".to_string()));
+        assert_eq!(
+            differences.get("version"),
+            Some(&"1.0 -> 2.0".to_string())
+        );
+        assert_eq!(
+            differences.get("profile"),
+            Some(&"default -> production".to_string())
+        );
         assert!(differences.contains_key("log_file_path"));
         assert!(differences.contains_key("log_level"));
         assert!(differences.contains_key("log_rotation"));
@@ -363,7 +371,9 @@ mod tests {
         assert!(config.set("profile", "new_profile").is_ok());
         assert_eq!(config.profile, "new_profile");
 
-        assert!(config.set("log_file_path", PathBuf::from("new.log")).is_ok());
+        assert!(config
+            .set("log_file_path", PathBuf::from("new.log"))
+            .is_ok());
         assert_eq!(config.log_file_path, PathBuf::from("new.log"));
 
         assert!(config.set("log_level", LogLevel::DEBUG).is_ok());
@@ -377,7 +387,9 @@ mod tests {
         assert_eq!(config.log_format, "[%level] %message");
 
         let new_dest = vec![LoggingDestination::Stdout];
-        assert!(config.set("logging_destinations", new_dest.clone()).is_ok());
+        assert!(config
+            .set("logging_destinations", new_dest.clone())
+            .is_ok());
         assert_eq!(config.logging_destinations, new_dest);
 
         let mut new_env = HashMap::new();
@@ -385,7 +397,9 @@ mod tests {
         assert!(config.set("env_vars", &new_env).is_ok());
         assert_eq!(config.env_vars, new_env);
 
-        assert!(matches!(config.set("non_existent", "value"), Err(ConfigError::ValidationError(msg)) if msg.contains("Unknown configuration key")));
+        assert!(
+            matches!(config.set("non_existent", "value"), Err(ConfigError::ValidationError(msg)) if msg.contains("Unknown configuration key"))
+        );
     }
 
     /// Tests the Config::save_to_file method.

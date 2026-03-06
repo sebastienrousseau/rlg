@@ -39,17 +39,29 @@ fn test_fluent_api_session_and_time() {
         .with("str", "val");
     assert_eq!(log.session_id, "sid");
     assert_eq!(log.time, "now");
-    assert_eq!(log.attributes.get("int").unwrap(), &serde_json::json!(1));
-    assert_eq!(log.attributes.get("float").unwrap(), &serde_json::json!(1.5));
-    assert_eq!(log.attributes.get("bool").unwrap(), &serde_json::json!(true));
-    assert_eq!(log.attributes.get("str").unwrap(), &serde_json::json!("val"));
+    assert_eq!(
+        log.attributes.get("int").unwrap(),
+        &serde_json::json!(1)
+    );
+    assert_eq!(
+        log.attributes.get("float").unwrap(),
+        &serde_json::json!(1.5)
+    );
+    assert_eq!(
+        log.attributes.get("bool").unwrap(),
+        &serde_json::json!(true)
+    );
+    assert_eq!(
+        log.attributes.get("str").unwrap(),
+        &serde_json::json!("val")
+    );
 }
 
 #[test]
 fn test_fluent_api_formats() {
     let log_otlp = Log::info("otlp").format(LogFormat::OTLP);
     assert_eq!(log_otlp.format, LogFormat::OTLP);
-    
+
     let log_ecs = Log::info("ecs").format(LogFormat::ECS);
     assert_eq!(log_ecs.format, LogFormat::ECS);
 

@@ -103,15 +103,39 @@ impl FromStr for LogRotation {
         let parts: Vec<&str> = s.trim().splitn(2, ':').collect();
         match parts[0].to_lowercase().as_str() {
             "size" => {
-                let size_str = parts.get(1).ok_or_else(|| ConfigError::ValidationError("Missing size value for log rotation".to_string()))?;
+                let size_str = parts.get(1).ok_or_else(|| {
+                    ConfigError::ValidationError(
+                        "Missing size value for log rotation"
+                            .to_string(),
+                    )
+                })?;
                 let size = size_str.parse::<u64>().map_err(|_| ConfigError::ValidationError(format!("Invalid size value for log rotation: '{size_str}'")))?;
-                Ok(Self::Size(NonZeroU64::new(size).ok_or_else(|| ConfigError::ValidationError("Log rotation size must be greater than 0".to_string()))?))
-            },
+                Ok(Self::Size(NonZeroU64::new(size).ok_or_else(
+                    || {
+                        ConfigError::ValidationError(
+                            "Log rotation size must be greater than 0"
+                                .to_string(),
+                        )
+                    },
+                )?))
+            }
             "time" => {
-                let time_str = parts.get(1).ok_or_else(|| ConfigError::ValidationError("Missing time value for log rotation".to_string()))?;
+                let time_str = parts.get(1).ok_or_else(|| {
+                    ConfigError::ValidationError(
+                        "Missing time value for log rotation"
+                            .to_string(),
+                    )
+                })?;
                 let time = time_str.parse::<u64>().map_err(|_| ConfigError::ValidationError(format!("Invalid time value for log rotation: '{time_str}'")))?;
-                Ok(Self::Time(NonZeroU64::new(time).ok_or_else(|| ConfigError::ValidationError("Log rotation time must be greater than 0".to_string()))?))
-            },
+                Ok(Self::Time(NonZeroU64::new(time).ok_or_else(
+                    || {
+                        ConfigError::ValidationError(
+                            "Log rotation time must be greater than 0"
+                                .to_string(),
+                        )
+                    },
+                )?))
+            }
             "date" => Ok(Self::Date),
             "count" => {
                 let count = parts
@@ -120,9 +144,14 @@ impl FromStr for LogRotation {
                     .parse::<usize>()
                     .map_err(|_| ConfigError::ValidationError(format!("Invalid count value for log rotation: '{0}'", parts[1])))?;
                 if count == 0 {
-                    Err(ConfigError::ValidationError("Log rotation count must be greater than 0".to_string()))
+                    Err(ConfigError::ValidationError(
+                        "Log rotation count must be greater than 0"
+                            .to_string(),
+                    ))
                 } else {
-                    Ok(Self::Count(count.try_into().unwrap_or(u32::MAX)))
+                    Ok(Self::Count(
+                        count.try_into().unwrap_or(u32::MAX),
+                    ))
                 }
             }
             _ => Err(ConfigError::ValidationError(format!(
@@ -173,10 +202,18 @@ pub struct Config {
     pub env_vars: HashMap<String, String>,
 }
 
-fn default_version() -> String { CURRENT_CONFIG_VERSION.to_string() }
-fn default_profile() -> String { "default".to_string() }
-fn default_log_file_path() -> PathBuf { PathBuf::from("RLG.log") }
-fn default_log_format() -> String { "%level - %message".to_string() }
+fn default_version() -> String {
+    CURRENT_CONFIG_VERSION.to_string()
+}
+fn default_profile() -> String {
+    "default".to_string()
+}
+fn default_log_file_path() -> PathBuf {
+    PathBuf::from("RLG.log")
+}
+fn default_log_format() -> String {
+    "%level - %message".to_string()
+}
 fn default_logging_destinations() -> Vec<LoggingDestination> {
     vec![LoggingDestination::File(PathBuf::from("RLG.log"))]
 }
@@ -202,7 +239,7 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// This function returns an error if the configuration file cannot be read, 
+    /// This function returns an error if the configuration file cannot be read,
     /// parsed, or if the version is unsupported.
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
@@ -249,7 +286,8 @@ impl Config {
         &self,
         path: P,
     ) -> Result<(), ConfigError> {
-        let config_string = serde_json::to_string_pretty(self).expect("Failed to serialize config");
+        let config_string = serde_json::to_string_pretty(self)
+            .expect("Failed to serialize config");
         fs::write(path, config_string).map_err(|e| {
             ConfigError::FileWriteError(format!(
                 "Failed to write config file: {e}"
@@ -268,57 +306,88 @@ impl Config {
         key: &str,
         value: T,
     ) -> Result<(), ConfigError> {
-        let val = serde_json::to_value(value).map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+        let val = serde_json::to_value(value)
+            .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
 
         match key {
             "version" => {
                 if let Some(s) = val.as_str() {
                     self.version = s.to_string();
                 } else {
-                    return Err(ConfigError::ValidationError("Invalid version format".to_string()));
+                    return Err(ConfigError::ValidationError(
+                        "Invalid version format".to_string(),
+                    ));
                 }
             }
             "profile" => {
                 if let Some(s) = val.as_str() {
                     self.profile = s.to_string();
                 } else {
-                    return Err(ConfigError::ValidationError("Invalid profile format".to_string()));
+                    return Err(ConfigError::ValidationError(
+                        "Invalid profile format".to_string(),
+                    ));
                 }
             }
             "log_file_path" => {
                 self.log_file_path = serde_json::from_value(val)
-                        .map_err(|e| ConfigError::ConfigParseError(SourceConfigError::Message(e.to_string())))?;
+                    .map_err(|e| {
+                        ConfigError::ConfigParseError(
+                            SourceConfigError::Message(e.to_string()),
+                        )
+                    })?;
             }
             "log_level" => {
-                self.log_level = serde_json::from_value(val)
-                        .map_err(|e| ConfigError::ConfigParseError(SourceConfigError::Message(e.to_string())))?;
+                self.log_level =
+                    serde_json::from_value(val).map_err(|e| {
+                        ConfigError::ConfigParseError(
+                            SourceConfigError::Message(e.to_string()),
+                        )
+                    })?;
             }
             "log_rotation" => {
                 self.log_rotation = serde_json::from_value(val)
-                        .map_err(|e| ConfigError::ConfigParseError(SourceConfigError::Message(e.to_string())))?;
+                    .map_err(|e| {
+                        ConfigError::ConfigParseError(
+                            SourceConfigError::Message(e.to_string()),
+                        )
+                    })?;
             }
             "log_format" => {
                 if let Some(s) = val.as_str() {
                     self.log_format = s.to_string();
                 } else {
-                    return Err(ConfigError::ValidationError("Invalid log format".to_string()));
+                    return Err(ConfigError::ValidationError(
+                        "Invalid log format".to_string(),
+                    ));
                 }
             }
             "logging_destinations" => {
                 self.logging_destinations = serde_json::from_value(val)
-                        .map_err(|e| ConfigError::ConfigParseError(SourceConfigError::Message(e.to_string())))?;
+                    .map_err(|e| {
+                        ConfigError::ConfigParseError(
+                            SourceConfigError::Message(e.to_string()),
+                        )
+                    })?;
             }
             "env_vars" => {
-                self.env_vars = serde_json::from_value(val)
-                        .map_err(|e| ConfigError::ConfigParseError(SourceConfigError::Message(e.to_string())))?;
+                self.env_vars =
+                    serde_json::from_value(val).map_err(|e| {
+                        ConfigError::ConfigParseError(
+                            SourceConfigError::Message(e.to_string()),
+                        )
+                    })?;
             }
             _ => {
                 #[cfg(not(test))]
-                return Err(ConfigError::ValidationError(format!("Unknown configuration key: {key}")));
+                return Err(ConfigError::ValidationError(format!(
+                    "Unknown configuration key: {key}"
+                )));
                 #[cfg(test)]
                 {
                     let _ = key;
-                    return Err(ConfigError::ValidationError("Unknown key".to_string()));
+                    return Err(ConfigError::ValidationError(
+                        "Unknown key".to_string(),
+                    ));
                 }
             }
         }
@@ -331,29 +400,70 @@ impl Config {
     ///
     /// This function returns an error if any configuration setting is invalid.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.version.trim().is_empty() { return Err(ConfigError::ValidationError("Version cannot be empty".to_string())); }
-        if self.profile.trim().is_empty() { return Err(ConfigError::ValidationError("Profile cannot be empty".to_string())); }
-        if self.log_file_path.as_os_str().is_empty() { return Err(ConfigError::ValidationError("Log file path cannot be empty".to_string())); }
-        if self.log_format.trim().is_empty() { return Err(ConfigError::ValidationError("Log format cannot be empty".to_string())); }
-        if self.logging_destinations.is_empty() { return Err(ConfigError::ValidationError("At least one logging destination must be specified".to_string())); }
-        
-        for (key, value) in &self.env_vars {
-            if key.trim().is_empty() { return Err(ConfigError::ValidationError("Environment variable key cannot be empty".to_string())); }
-            if value.trim().is_empty() { return Err(ConfigError::ValidationError(format!("Value for environment variable '{key}' cannot be empty"))); }
+        if self.version.trim().is_empty() {
+            return Err(ConfigError::ValidationError(
+                "Version cannot be empty".to_string(),
+            ));
         }
-        
-        if let Some(LoggingDestination::File(path)) = self.logging_destinations.first() {
-            if let Some(parent_dir) = path.parent() {
-                fs::create_dir_all(parent_dir).map_err(|e| ConfigError::ValidationError(format!("Failed to create directory for log file: {e}")))?;
+        if self.profile.trim().is_empty() {
+            return Err(ConfigError::ValidationError(
+                "Profile cannot be empty".to_string(),
+            ));
+        }
+        if self.log_file_path.as_os_str().is_empty() {
+            return Err(ConfigError::ValidationError(
+                "Log file path cannot be empty".to_string(),
+            ));
+        }
+        if self.log_format.trim().is_empty() {
+            return Err(ConfigError::ValidationError(
+                "Log format cannot be empty".to_string(),
+            ));
+        }
+        if self.logging_destinations.is_empty() {
+            return Err(ConfigError::ValidationError(
+                "At least one logging destination must be specified"
+                    .to_string(),
+            ));
+        }
+
+        for (key, value) in &self.env_vars {
+            if key.trim().is_empty() {
+                return Err(ConfigError::ValidationError(
+                    "Environment variable key cannot be empty"
+                        .to_string(),
+                ));
             }
-            OpenOptions::new().create(true).append(true).open(path)
-                .map_err(|e| ConfigError::ValidationError(format!("Log file is not writable: {e}")))?;
+            if value.trim().is_empty() {
+                return Err(ConfigError::ValidationError(format!("Value for environment variable '{key}' cannot be empty")));
+            }
+        }
+
+        if let Some(LoggingDestination::File(path)) =
+            self.logging_destinations.first()
+        {
+            if let Some(parent_dir) = path.parent() {
+                fs::create_dir_all(parent_dir).map_err(|e| {
+                    ConfigError::ValidationError(format!(
+                        "Failed to create directory for log file: {e}"
+                    ))
+                })?;
+            }
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .map_err(|e| {
+                    ConfigError::ValidationError(format!(
+                        "Log file is not writable: {e}"
+                    ))
+                })?;
         }
         Ok(())
     }
 
     /// Expands environment variables in the configuration values.
-    #[must_use] 
+    #[must_use]
     pub fn expand_env_vars(&self) -> Self {
         let mut new_config = self.clone();
         for (key, value) in &mut new_config.env_vars {
@@ -380,7 +490,10 @@ impl Config {
         let mut watcher = notify::recommended_watcher(move |res| {
             let _ = tx.blocking_send(res);
         })?;
-        watcher.watch(Path::new(config_path), RecursiveMode::NonRecursive)?;
+        watcher.watch(
+            Path::new(config_path),
+            RecursiveMode::NonRecursive,
+        )?;
 
         let config_clone = config.clone();
         let path_owned = config_path.to_string();
@@ -403,22 +516,86 @@ impl Config {
     }
 
     /// Compares two configurations and returns the differences.
-    #[must_use] 
-    pub fn diff(config1: &Self, config2: &Self) -> HashMap<String, String> {
+    #[must_use]
+    pub fn diff(
+        config1: &Self,
+        config2: &Self,
+    ) -> HashMap<String, String> {
         let mut diffs = HashMap::new();
-        if config1.version != config2.version { diffs.insert("version".to_string(), format!("{} -> {}", config1.version, config2.version)); }
-        if config1.profile != config2.profile { diffs.insert("profile".to_string(), format!("{} -> {}", config1.profile, config2.profile)); }
-        if config1.log_file_path != config2.log_file_path { diffs.insert("log_file_path".to_string(), format!("{} -> {}", config1.log_file_path.display(), config2.log_file_path.display())); }
-        if config1.log_level != config2.log_level { diffs.insert("log_level".to_string(), format!("{:?} -> {:?}", config1.log_level, config2.log_level)); }
-        if config1.log_rotation != config2.log_rotation { diffs.insert("log_rotation".to_string(), format!("{:?} -> {:?}", config1.log_rotation, config2.log_rotation)); }
-        if config1.log_format != config2.log_format { diffs.insert("log_format".to_string(), format!("{} -> {}", config1.log_format, config2.log_format)); }
-        if config1.logging_destinations != config2.logging_destinations { diffs.insert("logging_destinations".to_string(), format!("{:?} -> {:?}", config1.logging_destinations, config2.logging_destinations)); }
-        if config1.env_vars != config2.env_vars { diffs.insert("env_vars".to_string(), format!("{:?} -> {:?}", config1.env_vars, config2.env_vars)); }
+        if config1.version != config2.version {
+            diffs.insert(
+                "version".to_string(),
+                format!("{} -> {}", config1.version, config2.version),
+            );
+        }
+        if config1.profile != config2.profile {
+            diffs.insert(
+                "profile".to_string(),
+                format!("{} -> {}", config1.profile, config2.profile),
+            );
+        }
+        if config1.log_file_path != config2.log_file_path {
+            diffs.insert(
+                "log_file_path".to_string(),
+                format!(
+                    "{} -> {}",
+                    config1.log_file_path.display(),
+                    config2.log_file_path.display()
+                ),
+            );
+        }
+        if config1.log_level != config2.log_level {
+            diffs.insert(
+                "log_level".to_string(),
+                format!(
+                    "{:?} -> {:?}",
+                    config1.log_level, config2.log_level
+                ),
+            );
+        }
+        if config1.log_rotation != config2.log_rotation {
+            diffs.insert(
+                "log_rotation".to_string(),
+                format!(
+                    "{:?} -> {:?}",
+                    config1.log_rotation, config2.log_rotation
+                ),
+            );
+        }
+        if config1.log_format != config2.log_format {
+            diffs.insert(
+                "log_format".to_string(),
+                format!(
+                    "{} -> {}",
+                    config1.log_format, config2.log_format
+                ),
+            );
+        }
+        if config1.logging_destinations != config2.logging_destinations
+        {
+            diffs.insert(
+                "logging_destinations".to_string(),
+                format!(
+                    "{:?} -> {:?}",
+                    config1.logging_destinations,
+                    config2.logging_destinations
+                ),
+            );
+        }
+        if config1.env_vars != config2.env_vars {
+            diffs.insert(
+                "env_vars".to_string(),
+                format!(
+                    "{:?} -> {:?}",
+                    config1.env_vars, config2.env_vars
+                ),
+            );
+        }
         diffs
     }
 
     /// Merges another configuration into the current configuration.
-    #[must_use] 
+    #[must_use]
     pub fn merge(&self, other: &Self) -> Self {
         let mut env_vars = self.env_vars.clone();
         env_vars.extend(other.env_vars.clone());
@@ -466,19 +643,23 @@ mod tests {
         let config_path = temp_dir.path().join("config.toml");
         let config = Config::default();
         config.save_to_file(&config_path).unwrap();
-        
+
         let shared_config = Arc::new(RwLock::new(Config::default()));
-        let stop_tx = Config::hot_reload_async(config_path.to_str().unwrap(), &shared_config).unwrap();
-        
+        let stop_tx = Config::hot_reload_async(
+            config_path.to_str().unwrap(),
+            &shared_config,
+        )
+        .unwrap();
+
         // Trigger Modify
         let new_config = Config {
             profile: "modified".to_string(),
             ..Config::default()
         };
         new_config.save_to_file(&config_path).unwrap();
-        
+
         sleep(Duration::from_millis(200)).await;
-        
+
         let _ = stop_tx.send(()).await;
     }
 

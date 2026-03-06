@@ -15,7 +15,13 @@ use thiserror::Error;
 /// Errors that can occur during the logging process
 pub enum RlgError {
     #[error("I/O error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::io_error), help("Ensure the log directory exists and is writable.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::io_error),
+            help("Ensure the log directory exists and is writable.")
+        )
+    )]
     /// I/O error
     IoError(#[from] io::Error),
 
@@ -55,12 +61,21 @@ pub enum RlgError {
     NetworkError(String),
 
     #[error("DateTime parse error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::datetime_parse_error), help("RLG expects RFC 3339 / ISO 8601 timestamps.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::datetime_parse_error),
+            help("RLG expects RFC 3339 / ISO 8601 timestamps.")
+        )
+    )]
     /// `DateTime` parse error
     DateTimeParseError(String),
 
     #[error("{0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::custom_error)))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(code(rlg::custom_error))
+    )]
     /// Custom error
     Custom(String),
 

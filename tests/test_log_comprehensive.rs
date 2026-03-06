@@ -3,10 +3,10 @@
 #[cfg(test)]
 mod tests {
     use rlg::log::Log;
-    use rlg::log_level::LogLevel;
     use rlg::log_format::LogFormat;
-    use tempfile::tempdir;
+    use rlg::log_level::LogLevel;
     use std::fs;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn log_default_values_are_correct() {
@@ -21,7 +21,14 @@ mod tests {
 
     #[tokio::test]
     async fn log_new_creates_correct_instance() {
-        let log = Log::new("session123", "2023-10-27T10:00:00Z", &LogLevel::DEBUG, "componentA", "descriptionB", &LogFormat::JSON);
+        let log = Log::new(
+            "session123",
+            "2023-10-27T10:00:00Z",
+            &LogLevel::DEBUG,
+            "componentA",
+            "descriptionB",
+            &LogFormat::JSON,
+        );
         assert_eq!(log.session_id, "session123");
         assert_eq!(log.time, "2023-10-27T10:00:00Z");
         assert_eq!(log.level, LogLevel::DEBUG);
@@ -33,7 +40,7 @@ mod tests {
     #[tokio::test]
     async fn log_to_file_works_for_all_formats() {
         let _temp_dir = tempdir().unwrap();
-        
+
         let formats = vec![
             LogFormat::CLF,
             LogFormat::JSON,
@@ -52,18 +59,36 @@ mod tests {
         ];
 
         for format in formats {
-            let log = Log::new("session", "time", &LogLevel::INFO, "comp", "desc", &format);
+            let log = Log::new(
+                "session",
+                "time",
+                &LogLevel::INFO,
+                "comp",
+                "desc",
+                &format,
+            );
             let result = log.log();
-            assert!(result.is_ok(), "Logging failed for format {:?}", format);
+            assert!(
+                result.is_ok(),
+                "Logging failed for format {:?}",
+                format
+            );
         }
-        
+
         let _ = fs::remove_file("RLG.log");
     }
 
     #[test]
     fn test_log_display_all_variants() {
-        let log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::CLF);
-        
+        let log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::CLF,
+        );
+
         let variants = vec![
             LogFormat::CLF,
             LogFormat::JSON,
@@ -91,14 +116,26 @@ mod tests {
 
     #[test]
     fn write_log_entry_success() {
-        let result = Log::write_log_entry(LogLevel::WARN, "process", "message", LogFormat::JSON);
+        let result = Log::write_log_entry(
+            LogLevel::WARN,
+            "process",
+            "message",
+            LogFormat::JSON,
+        );
         assert!(result.is_ok());
         let _ = fs::remove_file("RLG.log");
     }
 
     #[test]
     fn log_display_gelf_format() {
-        let log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::GELF);
+        let log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::GELF,
+        );
         let output = format!("{}", log);
         assert!(output.contains("\"version\":\"1.1\""));
         assert!(output.contains("\"host\":\"comp\""));
@@ -106,7 +143,14 @@ mod tests {
 
     #[test]
     fn log_display_logstash_format() {
-        let log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::Logstash);
+        let log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::Logstash,
+        );
         let output = format!("{}", log);
         assert!(output.contains("\"@timestamp\":\"ts\""));
         assert!(output.contains("\"message\":\"desc\""));
@@ -114,7 +158,14 @@ mod tests {
 
     #[test]
     fn log_display_log4jxml_format() {
-        let log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::Log4jXML);
+        let log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::Log4jXML,
+        );
         let output = format!("{}", log);
         assert!(output.contains("<log4j:event"));
         assert!(output.contains("logger=\"comp\""));
@@ -122,7 +173,14 @@ mod tests {
 
     #[test]
     fn log_display_apache_access_log_format() {
-        let log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::ApacheAccessLog);
+        let log = Log::new(
+            "sid",
+            "ts",
+            &LogLevel::INFO,
+            "comp",
+            "desc",
+            &LogFormat::ApacheAccessLog,
+        );
         let output = format!("{}", log);
         // Note: ApacheAccessLog uses hostname::get() which might be different on different machines
         assert!(output.contains("- - [ts] \"desc\" INFO comp"));

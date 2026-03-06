@@ -1,5 +1,5 @@
 #![allow(missing_docs)]
-use rlg::engine::{FastSerializer, ENGINE, LockFreeEngine, LogEvent};
+use rlg::engine::{FastSerializer, LockFreeEngine, LogEvent, ENGINE};
 
 #[test]
 fn test_fast_serializer() {

@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn test_save_to_file_errors() {
         let config = Config::default();
-        
+
         // Use a path that is a directory to trigger a write error
         let dir_path = std::env::temp_dir();
         let res = config.save_to_file(&dir_path);
@@ -54,51 +54,59 @@ mod tests {
 
     #[tokio::test]
     async fn test_hot_reload_async_coverage_events() {
-        use std::sync::Arc;
         use parking_lot::RwLock;
+        use std::sync::Arc;
         use tokio::time::{sleep, Duration};
-        
+
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.json");
         let config = Config::default();
         config.save_to_file(&config_path).unwrap();
-        
+
         let shared_config = Arc::new(RwLock::new(Config::default()));
-        let stop_tx = Config::hot_reload_async(config_path.to_str().unwrap(), &shared_config).unwrap();
-        
+        let stop_tx = Config::hot_reload_async(
+            config_path.to_str().unwrap(),
+            &shared_config,
+        )
+        .unwrap();
+
         // Trigger Modify
         config.save_to_file(&config_path).unwrap();
         sleep(Duration::from_millis(100)).await;
-        
+
         // Trigger Remove
         let _ = fs::remove_file(&config_path);
         sleep(Duration::from_millis(100)).await;
-        
+
         // Trigger Create
         config.save_to_file(&config_path).unwrap();
         sleep(Duration::from_millis(100)).await;
-        
+
         let _ = stop_tx.send(()).await;
     }
 
     #[tokio::test]
     async fn test_hot_reload_async_invalid_toml() {
-        use std::sync::Arc;
         use parking_lot::RwLock;
+        use std::sync::Arc;
         use tokio::time::{sleep, Duration};
-        
+
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.json");
         let config = Config::default();
         config.save_to_file(&config_path).unwrap();
-        
+
         let shared_config = Arc::new(RwLock::new(Config::default()));
-        let stop_tx = Config::hot_reload_async(config_path.to_str().unwrap(), &shared_config).unwrap();
-        
+        let stop_tx = Config::hot_reload_async(
+            config_path.to_str().unwrap(),
+            &shared_config,
+        )
+        .unwrap();
+
         // Write invalid TOML to trigger reload error branch
         fs::write(&config_path, "invalid = [toml").unwrap();
         sleep(Duration::from_millis(200)).await;
-        
+
         let _ = stop_tx.send(()).await;
     }
 
@@ -107,7 +115,9 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("missing_version.json");
         fs::write(&config_path, r#"{"profile": "test"}"#).unwrap();
-        let result = Config::load_async(Some(config_path.to_str().unwrap())).await;
+        let result =
+            Config::load_async(Some(config_path.to_str().unwrap()))
+                .await;
         assert!(result.is_err());
     }
 }

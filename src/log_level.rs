@@ -24,7 +24,7 @@ impl ParseLogLevelError {
     /// # Returns
     ///
     /// A new instance of `ParseLogLevelError` containing the provided invalid log level value.
-    #[must_use] 
+    #[must_use]
     pub fn new(invalid_value: &str) -> Self {
         Self {
             invalid_value: invalid_value.to_string(),
@@ -95,7 +95,7 @@ impl LogLevel {
     /// assert!(!LogLevel::DEBUG.includes(LogLevel::WARN)); // DEBUG does not include WARN
     /// assert!(LogLevel::WARN.includes(LogLevel::DEBUG)); // WARN includes DEBUG
     /// ```
-    #[must_use] 
+    #[must_use]
     pub const fn includes(self, other: Self) -> bool {
         match self {
             Self::ALL => true,   // ALL includes everything
@@ -113,7 +113,7 @@ impl LogLevel {
     /// assert_eq!(LogLevel::ERROR.to_numeric(), 8);
     /// assert_eq!(LogLevel::DEBUG.to_numeric(), 3);
     /// ```
-    #[must_use] 
+    #[must_use]
     pub const fn to_numeric(self) -> u8 {
         match self {
             Self::ALL => 0,
@@ -143,7 +143,7 @@ impl LogLevel {
     /// assert_eq!(LogLevel::from_numeric(8), Some(LogLevel::ERROR));
     /// assert_eq!(LogLevel::from_numeric(5), Some(LogLevel::VERBOSE));
     /// ```
-    #[must_use] 
+    #[must_use]
     pub const fn from_numeric(value: u8) -> Option<Self> {
         match value {
             0 => Some(Self::ALL),

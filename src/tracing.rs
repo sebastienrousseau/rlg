@@ -7,8 +7,8 @@
 
 use crate::log::Log;
 use crate::log_level::LogLevel;
-use tracing_core::{Event, Level, Metadata, Subscriber};
 use tracing_core::field::{Field, Visit};
+use tracing_core::{Event, Level, Metadata, Subscriber};
 
 /// A `tracing::Subscriber` that routes events to the `RLG` engine.
 #[derive(Debug, Default, Clone, Copy)]
@@ -35,13 +35,26 @@ impl Subscriber for RlgSubscriber {
         level.to_numeric() >= crate::engine::ENGINE.filter_level()
     }
 
-    fn new_span(&self, _span: &tracing_core::span::Attributes<'_>) -> tracing_core::span::Id {
+    fn new_span(
+        &self,
+        _span: &tracing_core::span::Attributes<'_>,
+    ) -> tracing_core::span::Id {
         tracing_core::span::Id::from_u64(1) // Simple placeholder for now
     }
 
-    fn record(&self, _span: &tracing_core::span::Id, _values: &tracing_core::span::Record<'_>) {}
+    fn record(
+        &self,
+        _span: &tracing_core::span::Id,
+        _values: &tracing_core::span::Record<'_>,
+    ) {
+    }
 
-    fn record_follows_from(&self, _span: &tracing_core::span::Id, _follows: &tracing_core::span::Id) {}
+    fn record_follows_from(
+        &self,
+        _span: &tracing_core::span::Id,
+        _follows: &tracing_core::span::Id,
+    ) {
+    }
 
     fn event(&self, event: &Event<'_>) {
         let metadata = event.metadata();
@@ -58,7 +71,7 @@ impl Subscriber for RlgSubscriber {
 
         let mut log = Log::build(level, &visitor.message);
         log.component = metadata.target().to_string();
-        
+
         for (key, value) in visitor.fields {
             log = log.with(&key, value);
         }
@@ -78,11 +91,18 @@ struct RlgVisitor {
 }
 
 impl Visit for RlgVisitor {
-    fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
+    fn record_debug(
+        &mut self,
+        field: &Field,
+        value: &dyn std::fmt::Debug,
+    ) {
         if field.name() == "message" {
             self.message = format!("{value:?}");
         } else {
-            self.fields.insert(field.name().to_string(), serde_json::json!(format!("{value:?}")));
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::json!(format!("{value:?}")),
+            );
         }
     }
 
@@ -90,7 +110,10 @@ impl Visit for RlgVisitor {
         if field.name() == "message" {
             self.message = value.to_string();
         } else {
-            self.fields.insert(field.name().to_string(), serde_json::json!(value));
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::json!(value),
+            );
         }
     }
 }

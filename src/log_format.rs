@@ -119,11 +119,16 @@ impl LogFormat {
             | Self::NDJSON
             | Self::MCP
             | Self::OTLP
-            | Self::ECS => serde_json::from_str::<serde_json::Value>(entry).is_ok(),
-            Self::Logfmt => entry.contains('=') && !entry.starts_with('='),
-            Self::Log4jXML => entry.contains("<log4j:event") && entry.contains('>'),
-            Self::ELF
-            | Self::ApacheAccessLog => true, // Basic validation for others
+            | Self::ECS => {
+                serde_json::from_str::<serde_json::Value>(entry).is_ok()
+            }
+            Self::Logfmt => {
+                entry.contains('=') && !entry.starts_with('=')
+            }
+            Self::Log4jXML => {
+                entry.contains("<log4j:event") && entry.contains('>')
+            }
+            Self::ELF | Self::ApacheAccessLog => true, // Basic validation for others
         }
     }
 
@@ -156,10 +161,20 @@ impl LogFormat {
             | Self::MCP
             | Self::OTLP
             | Self::ECS => {
-                let val = serde_json::from_str::<serde_json::Value>(&sanitized_entry)
-                    .map_err(|e| RlgError::FormattingError(format!("Invalid JSON: {e}")))?;
-                
-                serde_json::to_string_pretty(&val).map_err(|e| RlgError::FormattingError(format!("JSON formatting error: {e}")))
+                let val = serde_json::from_str::<serde_json::Value>(
+                    &sanitized_entry,
+                )
+                .map_err(|e| {
+                    RlgError::FormattingError(format!(
+                        "Invalid JSON: {e}"
+                    ))
+                })?;
+
+                serde_json::to_string_pretty(&val).map_err(|e| {
+                    RlgError::FormattingError(format!(
+                        "JSON formatting error: {e}"
+                    ))
+                })
             }
         }
     }
@@ -193,7 +208,10 @@ mod tests {
 
     #[test]
     fn test_log_format_from_str() {
-        assert_eq!(LogFormat::from_str("json").unwrap(), LogFormat::JSON);
+        assert_eq!(
+            LogFormat::from_str("json").unwrap(),
+            LogFormat::JSON
+        );
         assert_eq!(LogFormat::from_str("CLF").unwrap(), LogFormat::CLF);
         assert!(LogFormat::from_str("invalid").is_err());
     }
@@ -210,7 +228,7 @@ mod tests {
         let json_log = r#"{"key":"value"}"#;
         let formatted = LogFormat::JSON.format_log(json_log).unwrap();
         assert!(formatted.contains('"'));
-        
+
         let clf_log = r#"127.0.0.1 - - [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#;
         let formatted = LogFormat::CLF.format_log(clf_log).unwrap();
         assert_eq!(formatted, clf_log); // CLF should remain unchanged

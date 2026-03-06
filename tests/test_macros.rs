@@ -14,8 +14,8 @@ mod tests {
     use rlg::{macro_debug_log, macro_error_log, macro_fatal_log};
     use rlg::{
         macro_info_log, macro_log, macro_log_if,
-        macro_log_with_metadata,
-        macro_set_log_format_clf, macro_trace_log, macro_warn_log,
+        macro_log_with_metadata, macro_set_log_format_clf,
+        macro_trace_log, macro_warn_log,
     };
 
     #[allow(unused_imports)]

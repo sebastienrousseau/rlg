@@ -169,8 +169,14 @@ mod tests {
     fn test_log_format_format_log_others() {
         assert_eq!(LogFormat::ELF.format_log("elf").unwrap(), "elf");
         assert_eq!(LogFormat::W3C.format_log("w3c").unwrap(), "w3c");
-        assert_eq!(LogFormat::ApacheAccessLog.format_log("apache").unwrap(), "apache");
+        assert_eq!(
+            LogFormat::ApacheAccessLog.format_log("apache").unwrap(),
+            "apache"
+        );
         assert_eq!(LogFormat::CEF.format_log("cef").unwrap(), "cef");
-        assert_eq!(LogFormat::Log4jXML.format_log("xml").unwrap(), "xml");
+        assert_eq!(
+            LogFormat::Log4jXML.format_log("xml").unwrap(),
+            "xml"
+        );
     }
 }

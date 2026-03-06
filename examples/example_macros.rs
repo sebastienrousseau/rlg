@@ -18,8 +18,8 @@ use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg::{
     macro_error_log, macro_fatal_log, macro_info_log, macro_log,
-    macro_log_if, macro_log_with_metadata, macro_warn_log,
-    macro_set_log_format_clf,
+    macro_log_if, macro_log_with_metadata, macro_set_log_format_clf,
+    macro_warn_log,
 };
 
 /// Entry point for the RustLogs macros examples.
@@ -74,11 +74,8 @@ fn warn_log_macro_example() {
     println!("\n🦀  **Warn Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log = macro_warn_log!(
-        "2022-01-01T12:00:00Z",
-        "component",
-        "message"
-    );
+    let log =
+        macro_warn_log!("2022-01-01T12:00:00Z", "component", "message");
     log.fire();
 }
 
@@ -87,8 +84,11 @@ fn error_log_macro_example() {
     println!("\n🦀  **Error Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log =
-        macro_error_log!("2022-01-01T12:00:00Z", "component", "message");
+    let log = macro_error_log!(
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
+    );
     log.fire();
 }
 
@@ -110,8 +110,11 @@ fn fatal_log_macro_example() {
     println!("\n🦀  **Fatal Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log =
-        macro_fatal_log!("2022-01-01T12:00:00Z", "component", "message");
+    let log = macro_fatal_log!(
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
+    );
     log.fire();
 }
 
@@ -120,19 +123,13 @@ fn conditional_log_example() {
     println!("\n🦀  **Conditional Log Example**");
     println!("---------------------------------------------");
 
-    let log = macro_info_log!(
-        "2022-01-01T12:00:00Z",
-        "component",
-        "message"
-    );
+    let log =
+        macro_info_log!("2022-01-01T12:00:00Z", "component", "message");
     macro_log_if!(true, log); // Should log
     println!("(Log with true condition should have fired)");
 
-    let log2 = macro_warn_log!(
-        "2022-01-01T12:00:00Z",
-        "component",
-        "message"
-    );
+    let log2 =
+        macro_warn_log!("2022-01-01T12:00:00Z", "component", "message");
     macro_log_if!(false, log2); // Should not log
     println!("(Log with false condition should not have fired)");
 }
@@ -158,11 +155,8 @@ fn log_with_format_example() {
     println!("\n🦀  **Log with Format Example**");
     println!("---------------------------------------------");
 
-    let mut log = macro_info_log!(
-        "2022-01-01T12:00:00Z",
-        "component",
-        "message"
-    );
+    let mut log =
+        macro_info_log!("2022-01-01T12:00:00Z", "component", "message");
     macro_set_log_format_clf!(log);
     println!("Log Format set to: {}", log.format);
 }

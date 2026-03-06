@@ -9,7 +9,7 @@ mod tests {
     fn test_tracing_integration() {
         let subscriber = RlgSubscriber::new();
         let dispatch = Dispatch::new(subscriber);
-        
+
         dispatcher::with_default(&dispatch, || {
             info!(target: "my_comp", key = "val", "This is an info message from tracing");
             warn!("This is a warning");

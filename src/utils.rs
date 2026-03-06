@@ -23,7 +23,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 /// let timestamp = generate_timestamp();
 /// println!("Current timestamp: {}", timestamp);
 /// ```
-#[must_use] 
+#[must_use]
 pub fn generate_timestamp() -> String {
     DateTime::new().to_string()
 }
@@ -49,7 +49,7 @@ pub fn generate_timestamp() -> String {
 /// let sanitized = sanitize_log_message(message);
 /// assert_eq!(sanitized, "Hello World  ");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn sanitize_log_message(message: &str) -> String {
     message
         .replace(['\n', '\r'], " ")
@@ -185,7 +185,7 @@ pub async fn truncate_file(
 /// let formatted = format_file_size(size);
 /// assert_eq!(formatted, "1.43 MB");
 /// ```
-#[must_use] 
+#[must_use]
 pub fn format_file_size(size: u64) -> String {
     const UNITS: [&str; 6] = ["B", "KB", "MB", "GB", "TB", "PB"];
     // SAFETY: Loss of precision is acceptable for human-readable file size formatting.
@@ -254,8 +254,10 @@ pub fn generate_span_id() -> String {
 #[allow(clippy::cast_sign_loss)]
 pub fn generate_trace_id() -> String {
     let mut rng = vrd::random::Random::default();
-    let r1 = ((rng.int(0, i32::MAX) as u64) << 32) | (rng.int(0, i32::MAX) as u64);
-    let r2 = ((rng.int(0, i32::MAX) as u64) << 32) | (rng.int(0, i32::MAX) as u64);
+    let r1 = ((rng.int(0, i32::MAX) as u64) << 32)
+        | (rng.int(0, i32::MAX) as u64);
+    let r2 = ((rng.int(0, i32::MAX) as u64) << 32)
+        | (rng.int(0, i32::MAX) as u64);
     format!("{r1:016x}{r2:016x}")
 }
 

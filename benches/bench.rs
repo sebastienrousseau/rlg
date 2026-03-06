@@ -82,8 +82,12 @@ fn write_benchmark(c: &mut Criterion) {
     group.bench_function("Legacy Tokio File IO", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let mut file =
-                    tokio::fs::OpenOptions::new().append(true).create(true).open("bench_legacy.log").await.unwrap();
+                let mut file = tokio::fs::OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open("bench_legacy.log")
+                    .await
+                    .unwrap();
                 let _ = file
                     .write_all(format!("{clf_log}").as_bytes())
                     .await;

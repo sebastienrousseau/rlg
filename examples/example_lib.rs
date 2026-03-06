@@ -16,11 +16,11 @@ use rlg::config::Config;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
+use rlg::VERSION;
 use rlg::{
     macro_error_log, macro_info_log, macro_log_if,
     macro_log_with_metadata, macro_set_log_format_clf,
 };
-use rlg::VERSION;
 
 /// Entry point for the RustLogs library examples.
 ///

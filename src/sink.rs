@@ -35,7 +35,10 @@ mod macos_ffi {
     pub const OS_LOG_TYPE_FAULT: os_log_type_t = os_log_type_t(0x11);
 
     extern "C" {
-        pub fn os_log_create(subsystem: *const c_char, category: *const c_char) -> os_log_t;
+        pub fn os_log_create(
+            subsystem: *const c_char,
+            category: *const c_char,
+        ) -> os_log_t;
         pub fn _os_log_impl(
             dso: *mut c_void,
             log: os_log_t,
@@ -65,7 +68,8 @@ impl PlatformSink {
         {
             #[cfg(not(test))]
             if let Ok(socket) = UnixDatagram::unbound() {
-                if socket.connect("/run/systemd/journal/socket").is_ok() {
+                if socket.connect("/run/systemd/journal/socket").is_ok()
+                {
                     return Self::Journald(Some(socket));
                 }
             }
@@ -98,33 +102,41 @@ impl PlatformSink {
                 {
                     use macos_ffi::*;
                     use std::ffi::CString;
-                    
-                    let subsystem = CString::new("com.rlg.logger").unwrap();
+
+                    let subsystem =
+                        CString::new("com.rlg.logger").unwrap();
                     let category = CString::new("default").unwrap();
-                    
+
                     // SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
                     // valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
                     unsafe {
-                        let log_handle = os_log_create(subsystem.as_ptr(), category.as_ptr());
+                        let log_handle = os_log_create(
+                            subsystem.as_ptr(),
+                            category.as_ptr(),
+                        );
                         let log_type = match level {
                             "ERROR" | "FATAL" => OS_LOG_TYPE_ERROR,
                             "CRITICAL" => OS_LOG_TYPE_FAULT,
                             "WARN" => OS_LOG_TYPE_DEFAULT,
                             "INFO" => OS_LOG_TYPE_INFO,
-                            "DEBUG" | "TRACE" | "VERBOSE" => OS_LOG_TYPE_DEBUG,
+                            "DEBUG" | "TRACE" | "VERBOSE" => {
+                                OS_LOG_TYPE_DEBUG
+                            }
                             _ => OS_LOG_TYPE_DEFAULT,
                         };
-                        
-                        let format = CString::new("%{public}s").unwrap();
-                        let msg = CString::new(payload).unwrap_or_default();
-                        
+
+                        let format =
+                            CString::new("%{public}s").unwrap();
+                        let msg =
+                            CString::new(payload).unwrap_or_default();
+
                         _os_log_impl(
                             std::ptr::null_mut(),
                             log_handle,
                             log_type,
                             format.as_ptr(),
                             msg.as_ptr() as *const u8,
-                            payload.len() as u32
+                            payload.len() as u32,
                         );
                     }
                 }
@@ -145,11 +157,13 @@ impl PlatformSink {
                         "DEBUG" | "TRACE" | "VERBOSE" => "7",
                         _ => "5",
                     };
-                    
+
                     // Journald expects newline-separated key-value pairs
-                    let mut journal_payload = Vec::with_capacity(payload.len() + 32);
+                    let mut journal_payload =
+                        Vec::with_capacity(payload.len() + 32);
                     journal_payload.extend_from_slice(b"PRIORITY=");
-                    journal_payload.extend_from_slice(priority.as_bytes());
+                    journal_payload
+                        .extend_from_slice(priority.as_bytes());
                     journal_payload.extend_from_slice(b"\nMESSAGE=");
                     journal_payload.extend_from_slice(payload);
                     journal_payload.extend_from_slice(b"\n");
@@ -196,7 +210,7 @@ mod tests {
             let (sock1, _sock2) = UnixDatagram::pair().unwrap();
             let mut sink = PlatformSink::Journald(Some(sock1));
             sink.emit("INFO", b"test journald");
-            
+
             let mut sink_none = PlatformSink::Journald(None);
             sink_none.emit("INFO", b"test journald fallback");
         }
