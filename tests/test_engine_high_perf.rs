@@ -22,20 +22,22 @@ fn test_engine_shutdown() {
 
 #[test]
 fn test_engine_set_filter() {
-    ENGINE.set_filter(3);
-    assert_eq!(ENGINE.filter_level(), 3);
-    ENGINE.set_filter(0);
+    let engine = LockFreeEngine::new(10);
+    engine.set_filter(3);
+    assert_eq!(engine.filter_level(), 3);
+    engine.shutdown();
 }
 
 #[test]
 fn test_engine_apply_config() {
+    let engine = LockFreeEngine::new(10);
     let config = rlg::config::Config {
         log_level: rlg::LogLevel::WARN,
         ..rlg::config::Config::default()
     };
-    ENGINE.apply_config(&config);
-    assert_eq!(ENGINE.filter_level(), rlg::LogLevel::WARN.to_numeric());
-    ENGINE.set_filter(0);
+    engine.apply_config(&config);
+    assert_eq!(engine.filter_level(), rlg::LogLevel::WARN.to_numeric());
+    engine.shutdown();
 }
 
 #[test]
