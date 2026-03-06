@@ -241,15 +241,20 @@ mod tests {
     fn test_config_diff() {
         use rlg::LogLevel;
         let config1 = Config::default();
-        let mut config2 = Config::default();
-        config2.version = "2.0".to_string();
-        config2.profile = "prod".to_string();
-        config2.log_file_path = PathBuf::from("prod.log");
-        config2.log_level = LogLevel::ERROR;
-        config2.log_rotation = None;
-        config2.log_format = "prod_format".to_string();
-        config2.logging_destinations = vec![LoggingDestination::Stdout];
-        config2.env_vars.insert("K".to_string(), "V".to_string());
+        let config2 = Config {
+            version: "2.0".to_string(),
+            profile: "prod".to_string(),
+            log_file_path: PathBuf::from("prod.log"),
+            log_level: LogLevel::ERROR,
+            log_rotation: None,
+            log_format: "prod_format".to_string(),
+            logging_destinations: vec![LoggingDestination::Stdout],
+            env_vars: {
+                let mut map = HashMap::new();
+                map.insert("K".to_string(), "V".to_string());
+                map
+            },
+        };
 
         let diffs = Config::diff(&config1, &config2);
         assert!(diffs.contains_key("version"));
@@ -275,9 +280,15 @@ mod tests {
     fn test_log_rotation_display() {
         use rlg::config::LogRotation;
         use std::num::NonZeroU64;
-        let s = format!("{}", LogRotation::Size(NonZeroU64::new(10).unwrap()));
+        let s = format!(
+            "{}",
+            LogRotation::Size(NonZeroU64::new(10).unwrap())
+        );
         assert!(s.contains("Size: 10 bytes"));
-        let s = format!("{}", LogRotation::Time(NonZeroU64::new(60).unwrap()));
+        let s = format!(
+            "{}",
+            LogRotation::Time(NonZeroU64::new(60).unwrap())
+        );
         assert!(s.contains("Time: 60 seconds"));
         let s = format!("{}", LogRotation::Date);
         assert!(s.contains("Date-based rotation"));

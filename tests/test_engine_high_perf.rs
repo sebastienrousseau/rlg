@@ -29,8 +29,10 @@ fn test_engine_set_filter() {
 
 #[test]
 fn test_engine_apply_config() {
-    let mut config = rlg::config::Config::default();
-    config.log_level = rlg::LogLevel::WARN;
+    let config = rlg::config::Config {
+        log_level: rlg::LogLevel::WARN,
+        ..rlg::config::Config::default()
+    };
     ENGINE.apply_config(&config);
     assert_eq!(ENGINE.filter_level(), rlg::LogLevel::WARN.to_numeric());
     ENGINE.set_filter(0);
