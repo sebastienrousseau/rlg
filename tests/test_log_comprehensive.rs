@@ -186,4 +186,17 @@ mod tests {
         // Note: ApacheAccessLog uses hostname::get() which might be different on different machines
         assert!(output.contains("- - [ts] \"desc\" INFO comp"));
     }
+
+    #[test]
+    fn test_log_with_diverse_attributes() {
+        let log = Log::info("test")
+            .with("int", 123)
+            .with("bool", true)
+            .with("float", 1.23)
+            .format(LogFormat::Logfmt);
+        let output = format!("{}", log);
+        assert!(output.contains("int=123"));
+        assert!(output.contains("bool=true"));
+        assert!(output.contains("float=1.23"));
+    }
 }

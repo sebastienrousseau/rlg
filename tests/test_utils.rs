@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod tests {
     use rlg::utils::*;
+    use std::path::Path;
     use tokio::fs::{self, File};
 
     use tempfile::tempdir;
@@ -98,6 +99,22 @@ mod tests {
             fs::read_to_string(&file_path).await.unwrap(),
             "12345"
         );
+    }
+
+    #[tokio::test]
+    async fn test_is_file_writable_invalid_path() {
+        let invalid_path = Path::new("/root/no_access_123.log");
+        // This might return false or Ok(false) depending on OS, but should be handled
+        let _ = is_file_writable(invalid_path).await;
+    }
+
+    #[tokio::test]
+    async fn test_truncate_file_not_found() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("does_not_exist.log");
+        // truncate_file uses OpenOptions with create(true) so it should actually create it
+        truncate_file(&file_path, 1024).await.unwrap();
+        assert!(file_path.exists());
     }
 
     #[tokio::test]

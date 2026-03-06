@@ -39,6 +39,13 @@ mod tests {
                 debug_val = ?vec![1, 2, 3],
                 "Testing all types"
             );
+            // Specifically trigger i64 and other variants if they weren't hit
+            info!(field = -42i64, "i64");
+            info!(field = 42u64, "u64");
+            info!(field = true, "bool");
+            info!(field = 1.23f64, "f64");
+            info!(field = 1u128, "u128");
+            info!(field = -1i128, "i128");
         });
     }
 

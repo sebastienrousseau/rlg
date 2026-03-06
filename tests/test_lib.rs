@@ -146,6 +146,38 @@ mod tests {
     }
 
     #[test]
+    fn test_log_fire_all_levels() {
+        Log::info("info").fire();
+        Log::warn("warn").fire();
+        Log::error("error").fire();
+        Log::debug("debug").fire();
+        Log::trace("trace").fire();
+        Log::fatal("fatal").fire();
+    }
+
+    #[test]
+    fn test_log_fire_all_formats() {
+        Log::info("clf").format(LogFormat::CLF).fire();
+        Log::info("json").format(LogFormat::JSON).fire();
+        Log::info("cef").format(LogFormat::CEF).fire();
+        Log::info("elf").format(LogFormat::ELF).fire();
+        Log::info("w3c").format(LogFormat::W3C).fire();
+        Log::info("gelf").format(LogFormat::GELF).fire();
+        Log::info("mcp").format(LogFormat::MCP).fire();
+        Log::info("otlp").format(LogFormat::OTLP).fire();
+        Log::info("ecs").format(LogFormat::ECS).fire();
+    }
+
+    #[test]
+    fn test_log_with_attributes_coverage() {
+        let log = Log::info("attr test")
+            .with("str", "val")
+            .with("int", 42)
+            .with("bool", true);
+        assert_eq!(log.attributes.len(), 3);
+    }
+
+    #[test]
     fn test_log_methods_shortcuts() {
         assert_eq!(Log::info("desc").level, LogLevel::INFO);
         assert_eq!(Log::warn("desc").level, LogLevel::WARN);

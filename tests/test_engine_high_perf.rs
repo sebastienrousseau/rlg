@@ -21,6 +21,17 @@ fn test_engine_shutdown() {
 }
 
 #[test]
+fn test_engine_span_metrics() {
+    let engine = LockFreeEngine::new(10);
+    assert_eq!(engine.active_spans(), 0);
+    engine.inc_spans();
+    assert_eq!(engine.active_spans(), 1);
+    engine.dec_spans();
+    assert_eq!(engine.active_spans(), 0);
+    engine.shutdown();
+}
+
+#[test]
 fn test_engine_set_filter() {
     let engine = LockFreeEngine::new(10);
     engine.set_filter(3);

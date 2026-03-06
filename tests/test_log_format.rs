@@ -164,6 +164,7 @@ mod tests {
         assert!(LogFormat::ECS.validate("{}"));
         assert!(LogFormat::Logfmt.validate("key=value"));
         assert!(!LogFormat::Logfmt.validate("no_equals"));
+        assert!(!LogFormat::Logfmt.validate("=starts_with_equals"));
     }
 
     #[test]
@@ -179,6 +180,10 @@ mod tests {
             LogFormat::Log4jXML.format_log("xml").unwrap(),
             "xml"
         );
+        assert_eq!(
+            LogFormat::Logfmt.format_log("key=val").unwrap(),
+            "key=val"
+        );
 
         // JSON-based others
         let json = "{\"k\":\"v\"}";
@@ -188,5 +193,14 @@ mod tests {
         assert!(LogFormat::MCP.format_log(json).is_ok());
         assert!(LogFormat::OTLP.format_log(json).is_ok());
         assert!(LogFormat::ECS.format_log(json).is_ok());
+
+        // Invalid JSON for JSON-based formats
+        let invalid = "not json";
+        assert!(LogFormat::Logstash.format_log(invalid).is_err());
+        assert!(LogFormat::NDJSON.format_log(invalid).is_err());
+        assert!(LogFormat::GELF.format_log(invalid).is_err());
+        assert!(LogFormat::MCP.format_log(invalid).is_err());
+        assert!(LogFormat::OTLP.format_log(invalid).is_err());
+        assert!(LogFormat::ECS.format_log(invalid).is_err());
     }
 }

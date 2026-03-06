@@ -238,6 +238,26 @@ mod tests {
     }
 
     #[test]
+    fn test_log_rotation_from_str_exhaustive() {
+        use std::str::FromStr;
+        use rlg::config::LogRotation;
+        
+        assert!(matches!(LogRotation::from_str("size:10").unwrap(), LogRotation::Size(_)));
+        assert!(matches!(LogRotation::from_str("time:60").unwrap(), LogRotation::Time(_)));
+        assert!(matches!(LogRotation::from_str("date").unwrap(), LogRotation::Date));
+        assert!(matches!(LogRotation::from_str("count:5").unwrap(), LogRotation::Count(_)));
+
+        // Error cases
+        assert!(LogRotation::from_str("size").is_err());
+        assert!(LogRotation::from_str("size:abc").is_err());
+        assert!(LogRotation::from_str("time").is_err());
+        assert!(LogRotation::from_str("time:abc").is_err());
+        assert!(LogRotation::from_str("count").is_err());
+        assert!(LogRotation::from_str("count:abc").is_err());
+        assert!(LogRotation::from_str("unknown:1").is_err());
+    }
+
+    #[test]
     fn test_config_diff() {
         use rlg::LogLevel;
         let config1 = Config::default();
@@ -274,6 +294,38 @@ mod tests {
         config2.env_vars.insert("K".to_string(), "V".to_string());
         let merged = config1.merge(&config2);
         assert_eq!(merged.env_vars.get("K").unwrap(), "V");
+    }
+
+    #[test]
+    fn test_config_validate_empty_fields() {
+        let mut config = Config::default();
+        
+        config.version = "".to_string();
+        assert!(config.validate().is_err());
+        config.version = "1.0".to_string();
+
+        config.profile = "".to_string();
+        assert!(config.validate().is_err());
+        config.profile = "default".to_string();
+
+        config.log_file_path = PathBuf::new();
+        assert!(config.validate().is_err());
+        config.log_file_path = PathBuf::from("RLG.log");
+
+        config.log_format = "".to_string();
+        assert!(config.validate().is_err());
+        config.log_format = "%level".to_string();
+
+        config.logging_destinations = vec![];
+        assert!(config.validate().is_err());
+        config.logging_destinations = vec![LoggingDestination::Stdout];
+
+        config.env_vars.insert(" ".to_string(), "val".to_string());
+        assert!(config.validate().is_err());
+        config.env_vars.clear();
+
+        config.env_vars.insert("KEY".to_string(), "".to_string());
+        assert!(config.validate().is_err());
     }
 
     #[test]
