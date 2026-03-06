@@ -3,8 +3,20 @@
 
 use std::io::Write;
 
-#[cfg(any(target_os = "linux", test))]
+#[cfg(unix)]
 use std::os::unix::net::UnixDatagram;
+
+#[cfg(not(unix))]
+#[allow(dead_code)]
+struct UnixDatagram;
+
+#[cfg(not(unix))]
+#[allow(dead_code)]
+impl UnixDatagram {
+    fn send(&self, _: &[u8]) -> std::io::Result<usize> {
+        Ok(0)
+    }
+}
 
 /// A unified interface for platform-native logging.
 #[derive(Debug)]
@@ -198,8 +210,6 @@ impl PlatformSink {
 #[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
-    #[cfg(target_os = "linux")]
-    use std::os::unix::net::UnixDatagram;
 
     #[test]
     #[cfg_attr(miri, ignore)]
@@ -220,14 +230,14 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore)]
     fn test_platform_sink_journald_coverage() {
-        #[cfg(target_os = "linux")]
+        #[cfg(unix)]
         {
             let (sock1, _sock2) = UnixDatagram::pair().unwrap();
             let mut sink = PlatformSink::Journald(Some(sock1));
             sink.emit("INFO", b"test journald");
-
-            let mut sink_none = PlatformSink::Journald(None);
-            sink_none.emit("INFO", b"test journald fallback");
         }
+
+        let mut sink_none = PlatformSink::Journald(None);
+        sink_none.emit("INFO", b"test journald fallback");
     }
 }
