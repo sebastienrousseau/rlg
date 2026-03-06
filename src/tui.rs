@@ -7,6 +7,29 @@ use std::thread;
 use std::time::Duration;
 use std::io::Write;
 
+#[cfg(not(windows))]
+fn get_terminal_height() -> u16 {
+    unsafe {
+        let mut winsize = libc::winsize {
+            ws_row: 0,
+            ws_col: 0,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        // SAFETY: 1 is the file descriptor for stdout. winsize is a valid pointer to a winsize struct.
+        if libc::ioctl(1, libc::TIOCGWINSZ, &mut winsize) == 0 {
+            winsize.ws_row
+        } else {
+            24 // Fallback
+        }
+    }
+}
+
+#[cfg(windows)]
+fn get_terminal_height() -> u16 {
+    24 // Fallback for windows if not using a virtual terminal
+}
+
 /// Live metrics tracked by the lock-free engine.
 #[derive(Debug, Default)]
 pub struct TuiMetrics {
@@ -75,16 +98,16 @@ pub fn spawn_tui_thread(metrics: Arc<TuiMetrics>, shutdown_flag: Arc<AtomicBool>
                 // Render "Liquid Glass" Dashboard at the bottom of the screen.
                 // We use ANSI save/restore cursor to ensure stdout flows cleanly above.
                 let mut stdout = std::io::stdout();
+                let height = get_terminal_height();
                 
                 // ANSI escape sequence sequence:
                 // \x1b7 : Save cursor position
-                // \x1b[1;30r : Set scroll region (assuming approx 30 lines, fallback logic)
-                // \x1b[999;1H : Move cursor to bottom-most row
-                // \x1b[4A : Move up 4 lines
+                // \x1b[{height};1H : Move cursor to bottom-most row
+                // \x1b[3A : Move up 3 lines
                 // \x1b[J : Clear below
                 let _ = write!(
                     stdout,
-                    "\x1b7\x1b[999;1H\x1b[3A\x1b[J
+                    "\x1b7\x1b[{height};1H\x1b[3A\x1b[J
 \x1b[38;5;33m[ \x1b[1;37mRLG Liquid Glass Dashboard \x1b[0;38;5;33m]\x1b[0m
 \x1b[1mErrors:\x1b[0m {errors} | \x1b[1mActive Spans:\x1b[0m {spans} | \x1b[1mThroughput:\x1b[0m {tps} ev/s
 \x1b[38;5;239m-------------------------------------------------\x1b[0m\x1b8"

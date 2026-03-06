@@ -91,14 +91,17 @@ impl LockFreeEngine {
             self.metrics.inc_errors();
         }
 
-        // If the buffer is full, we forcefully push, dropping the oldest if necessary to prioritize liveness over latency.
+        // If the buffer is full, we forcefully push, dropping the oldest if necessary.
         let mut ev = event;
+        let mut retries = 0;
         while let Err(err) = self.queue.push(ev) {
             let _ = self.queue.pop(); // Drop oldest log to make room
             ev = err;
-            #[cfg(test)]
-            {
-                let _ = ev;
+            retries += 1;
+            if retries >= 10 {
+                break;
+            }
+            if cfg!(test) {
                 break;
             }
         }

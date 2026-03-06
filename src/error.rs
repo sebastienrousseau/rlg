@@ -54,6 +54,7 @@ pub enum RlgError {
 
 impl RlgError {
     /// Create a new custom error with a given message.
+    #[must_use]
     pub fn custom<T: fmt::Display>(msg: T) -> Self {
         Self::Custom(msg.to_string())
     }

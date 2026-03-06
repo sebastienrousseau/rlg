@@ -146,6 +146,7 @@ pub enum LoggingDestination {
 
 /// Configuration structure for the logging system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::unsafe_derive_deserialize)]
 pub struct Config {
     /// Version of the configuration.
     #[serde(default = "default_version")]
@@ -198,10 +199,16 @@ impl Default for Config {
 
 impl Config {
     /// Loads configuration from a file or environment variables.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the configuration file cannot be read, 
+    /// parsed, or if the version is unsupported.
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Self>>, ConfigError> {
-        let config = if let Some(path) = config_path {
+        let path_buf = config_path.map(|p| p.as_ref().to_path_buf());
+        let config = if let Some(path) = path_buf {
             let mut file = File::open(&path).await.map_err(|e| {
                 ConfigError::FileReadError(e.to_string())
             })?;
@@ -230,11 +237,19 @@ impl Config {
     }
 
     /// Saves the current configuration to a file.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the file cannot be written.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if serialization to JSON fails (unreachable for this struct).
     pub fn save_to_file<P: AsRef<Path>>(
         &self,
         path: P,
     ) -> Result<(), ConfigError> {
-        let config_string = serde_json::to_string_pretty(self).unwrap();
+        let config_string = serde_json::to_string_pretty(self).expect("Failed to serialize config");
         fs::write(path, config_string).map_err(|e| {
             ConfigError::FileWriteError(format!(
                 "Failed to write config file: {e}"
@@ -244,6 +259,10 @@ impl Config {
     }
 
     /// Sets a value in the configuration based on the specified key.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the value cannot be serialized or if the key is unknown.
     pub fn set<T: Serialize>(
         &mut self,
         key: &str,
@@ -307,6 +326,10 @@ impl Config {
     }
 
     /// Validates the configuration settings.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if any configuration setting is invalid.
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.version.trim().is_empty() { return Err(ConfigError::ValidationError("Version cannot be empty".to_string())); }
         if self.profile.trim().is_empty() { return Err(ConfigError::ValidationError("Profile cannot be empty".to_string())); }
@@ -342,6 +365,10 @@ impl Config {
     }
 
     /// Hot-reloads configuration on file change.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the watcher cannot be initialized.
     #[allow(clippy::incompatible_msrv)]
     pub fn hot_reload_async(
         config_path: &str,
@@ -444,8 +471,10 @@ mod tests {
         let stop_tx = Config::hot_reload_async(config_path.to_str().unwrap(), &shared_config).unwrap();
         
         // Trigger Modify
-        let mut new_config = Config::default();
-        new_config.profile = "modified".to_string();
+        let new_config = Config {
+            profile: "modified".to_string(),
+            ..Config::default()
+        };
         new_config.save_to_file(&config_path).unwrap();
         
         sleep(Duration::from_millis(200)).await;

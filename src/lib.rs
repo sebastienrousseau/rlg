@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! # RLG (RustLogs) — High-Performance Lock-Free Observability Engine
+//! # RLG (`RustLogs`) — High-Performance Lock-Free Observability Engine
 //!
 //! `rlg` is a brutalist, zero-allocation logging library designed for the 2026 observability landscape. 
 //! Built on the LMAX Disruptor pattern, it delivers sub-microsecond ingestion latency (~1.4µs) 
