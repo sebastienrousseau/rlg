@@ -12,7 +12,7 @@ description = """
     readable output format. Features include log rotation, network logging, and support for multiple structured formats like JSON, CEF, and more.
 """
 documentation = "https://docs.rs/rlg"
-edition = "2021"
+edition = "2024"
 exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://rustlogs.com/"
 keywords = ["debugging", "log", "rlg", "logging", "tracing"]
@@ -40,6 +40,16 @@ name = "benchmark"
 harness = false
 path = "benches/bench.rs"
 
+[[bench]]
+name = "log_bench"
+harness = false
+path = "benches/log_bench.rs"
+
+[[bench]]
+name = "config_bench"
+harness = false
+path = "benches/config_bench.rs"
+
 [profile.bench]
 # Profile for benchmarks.
 debug = true
@@ -52,13 +62,10 @@ envy = "0.4.2"
 hostname = "0.4.2"
 log = "0.4.29"
 notify = "8.2.0"
-once_cell = "1.21.3"
 parking_lot = "0.12.5"
-rayon = "1.11.0"
 regex = "1.12.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-serde_yml = "0.0.12"
 tempfile = "3.26.0"
 thiserror = "2.0.18"
 miette = { version = "7.5.0", features = ["fancy"], optional = true }
@@ -72,8 +79,7 @@ reqwest = { version = "0.13.2", optional = true }
 itoa = "1.0.17"
 ryu = "1.0.23"
 crossbeam-queue = "0.3.12"
-libc = "0.2.182"
-crossbeam-utils = "0.8.21"
+terminal_size = "0.4"
 
 [build-dependencies]
 version_check = "0.9.5"
@@ -81,6 +87,8 @@ version_check = "0.9.5"
 [dev-dependencies]
 # Development dependencies are only used for testing and building.
 criterion = "0.8.2"
+divan = "0.1.21"
+serial_test = "3"
 tokio-test = "0.4.5"
 tracing = "0.1.41"
 
@@ -127,7 +135,7 @@ elided_lifetimes_in_paths = "allow"
 non_camel_case_types = "allow"
 non_upper_case_globals = "allow"
 trivial_bounds = "allow"
-unsafe_code = "allow"
+unsafe_code = "deny"
 
 ## Forbid
 # missing_docs = "warn"
@@ -186,8 +194,8 @@ debug = false
 debug-assertions = false
 incremental = false
 lto = true
-opt-level = "s"
-overflow-checks = false
+opt-level = 3
+overflow-checks = true
 panic = "abort"
 rpath = false
 strip = "symbols"

@@ -34,6 +34,7 @@ pub enum PlatformSink {
 }
 
 #[cfg(any(target_os = "macos", test))]
+#[allow(unsafe_code)]
 mod macos_ffi {
     use std::os::raw::{c_char, c_void};
     #[allow(dead_code)]
@@ -58,7 +59,7 @@ mod macos_ffi {
     pub(super) const OS_LOG_TYPE_FAULT: os_log_type_t =
         os_log_type_t(0x11);
 
-    extern "C" {
+    unsafe extern "C" {
         #[allow(dead_code)]
         pub(super) fn os_log_create(
             subsystem: *const c_char,
@@ -92,24 +93,33 @@ impl PlatformSink {
         {
             Self::OsLog
         }
-        #[cfg(all(target_os = "linux", not(test)))]
+        #[cfg(target_os = "linux")]
         {
-            if let Ok(socket) = UnixDatagram::unbound() {
-                if socket.connect("/run/systemd/journal/socket").is_ok()
-                {
-                    return Self::Journald(Some(socket));
-                }
-            }
-            Self::Journald(None)
-        }
-        #[cfg(all(target_os = "linux", test))]
-        {
-            Self::Journald(None)
+            Self::detect_journald()
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
             Self::Stdout
         }
+    }
+
+    /// Detects the journald socket on Linux.
+    #[cfg(target_os = "linux")]
+    fn detect_journald() -> Self {
+        Self::try_journald_socket("/run/systemd/journal/socket")
+    }
+
+    /// Attempts to connect a `UnixDatagram` to the given socket path.
+    #[cfg(target_os = "linux")]
+    fn try_journald_socket(path: &str) -> Self {
+        UnixDatagram::unbound()
+            .ok()
+            .and_then(|socket| {
+                socket.connect(path).ok().map(|()| socket)
+            })
+            .map_or(Self::Journald(None), |s| {
+                Self::Journald(Some(s))
+            })
     }
 
     /// Emits a log payload via the native sink mechanism.
@@ -121,7 +131,7 @@ impl PlatformSink {
                 let _ = std::io::stdout().write_all(payload);
                 let _ = std::io::stdout().write_all(b"\n");
             }
-            Self::File(ref mut f) => {
+            Self::File(f) => {
                 let _ = f.write_all(payload);
                 let _ = f.write_all(b"\n");
             }
@@ -145,11 +155,19 @@ impl PlatformSink {
 
                             // SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
                             // valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
+                            // We check `log_handle` for null before passing it to `_os_log_impl`.
+                            #[allow(unsafe_code)]
                             unsafe {
                                 let log_handle = os_log_create(
                                     subsystem.as_ptr(),
                                     category.as_ptr(),
                                 );
+                                if log_handle.is_null() {
+                                    // Fallback to stdout if os_log_create fails
+                                    let _ = std::io::stdout().write_all(payload);
+                                    let _ = std::io::stdout().write_all(b"\n");
+                                    return;
+                                }
                                 let log_type = match level {
                                     "ERROR" | "FATAL" => {
                                         OS_LOG_TYPE_ERROR
@@ -165,7 +183,9 @@ impl PlatformSink {
 
                                 let format =
                                     CString::new("%{public}s").unwrap();
-                                let msg = CString::new(payload)
+                                // Strip null bytes from payload before creating CString
+                                let clean_payload: Vec<u8> = payload.iter().copied().filter(|&b| b != 0).collect();
+                                let msg = CString::new(clean_payload)
                                     .unwrap_or_default();
 
                                 _os_log_impl(
@@ -173,8 +193,8 @@ impl PlatformSink {
                                     log_handle,
                                     log_type,
                                     format.as_ptr(),
-                                    msg.as_ptr() as *const u8,
-                                    payload.len() as u32,
+                                    msg.as_ptr().cast::<u8>(),
+                                    msg.as_bytes().len() as u32,
                                 );
                             }
                         }
@@ -242,6 +262,7 @@ impl PlatformSink {
 #[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     #[cfg_attr(miri, ignore)]
@@ -252,11 +273,44 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore)]
+    #[allow(unsafe_code)]
+    #[serial]
     fn test_platform_sink_fallback_env_var() {
-        std::env::set_var("RLG_FALLBACK_STDOUT", "1");
+        // SAFETY: Test-only; no other threads depend on this env var.
+        unsafe { std::env::set_var("RLG_FALLBACK_STDOUT", "1") };
         let sink = PlatformSink::native();
         assert!(matches!(sink, PlatformSink::Stdout));
-        std::env::remove_var("RLG_FALLBACK_STDOUT");
+        // SAFETY: Test-only cleanup.
+        unsafe { std::env::remove_var("RLG_FALLBACK_STDOUT") };
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(unsafe_code)]
+    #[serial]
+    fn test_platform_sink_native_journald_path() {
+        // SAFETY: Test-only env var cleanup so native() reaches platform code.
+        unsafe {
+            std::env::remove_var("RLG_FALLBACK_STDOUT");
+            std::env::remove_var("GITHUB_ACTIONS");
+        }
+        let sink = PlatformSink::native();
+        #[cfg(target_os = "linux")]
+        assert!(matches!(sink, PlatformSink::Journald(_)));
+        #[cfg(target_os = "macos")]
+        assert!(matches!(sink, PlatformSink::OsLog));
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
+        assert!(matches!(sink, PlatformSink::Stdout));
+        // SAFETY: Restore fallback for other tests.
+        unsafe { std::env::set_var("RLG_FALLBACK_STDOUT", "1") };
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_try_journald_socket_failure() {
+        let sink =
+            PlatformSink::try_journald_socket("/nonexistent/path");
+        assert!(matches!(sink, PlatformSink::Journald(None)));
     }
 
     #[test]

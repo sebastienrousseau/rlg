@@ -107,12 +107,14 @@ async fn config_loading_example(
 /// # Errors
 ///
 /// Returns an error if the environment variable handling fails.
+#[allow(unsafe_code)]
 fn config_env_var_expansion_example(
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Config Environment Variable Expansion Example**");
     println!("---------------------------------------------");
 
-    env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log");
+    // SAFETY: Example-only; no other threads depend on this env var at this point.
+    unsafe { env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log") };
 
     let mut config = Config::default();
     config.env_vars.insert(
@@ -126,7 +128,8 @@ fn config_env_var_expansion_example(
         expanded_config
     );
 
-    env::remove_var("RLG_LOG_PATH");
+    // SAFETY: Example-only cleanup.
+    unsafe { env::remove_var("RLG_LOG_PATH") };
 
     Ok(())
 }
@@ -182,7 +185,7 @@ fn config_merging_example() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let merged_config = config1.merge(&config2);
+    let merged_config = config1.override_with(&config2);
     println!("    ✅  Merged config:\n    {:#?}", merged_config);
 
     Ok(())

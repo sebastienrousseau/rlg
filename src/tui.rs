@@ -8,29 +8,24 @@ use std::thread;
 use std::time::Duration;
 
 #[cfg(not(windows))]
-fn get_terminal_height() -> u16 {
-    unsafe {
-        let mut winsize = libc::winsize {
-            ws_row: 0,
-            ws_col: 0,
-            ws_xpixel: 0,
-            ws_ypixel: 0,
-        };
-        // SAFETY: 1 is the file descriptor for stdout. winsize is a valid pointer to a winsize struct.
-        if libc::ioctl(1, libc::TIOCGWINSZ, &mut winsize) == 0 {
-            winsize.ws_row
-        } else {
-            24 // Fallback
-        }
-    }
+/// Returns the terminal height for the given handle, or 24 as fallback.
+///
+/// # Panics
+///
+/// This function does not panic.
+#[must_use]
+pub fn get_terminal_height_of(handle: &impl std::os::fd::AsFd) -> u16 {
+    terminal_size::terminal_size_of(handle)
+        .map_or(24, |(_, terminal_size::Height(h))| h)
 }
 
-#[cfg(windows)]
 fn get_terminal_height() -> u16 {
-    24 // Fallback for windows if not using a virtual terminal
+    terminal_size::terminal_size()
+        .map_or(24, |(_, terminal_size::Height(h))| h)
 }
 
 /// Live metrics tracked by the lock-free engine.
+#[repr(align(64))]
 #[derive(Debug, Default)]
 pub struct TuiMetrics {
     /// Total number of log events ingested.
@@ -82,7 +77,6 @@ pub fn spawn_tui_thread(
 
             // For a robust cross-platform implementation, we assume a standard 24 line height
             // or rely on the terminal handling \x1b[;r to reset.
-            // In a production Apple-standard system, we'd use libc::ioctl for TIOCGWINSZ.
 
             let mut last_total = 0;
 

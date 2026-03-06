@@ -422,8 +422,8 @@ mod tests {
         assert_eq!(LogLevel::from_numeric(0), Some(LogLevel::ALL));
         assert_eq!(LogLevel::from_numeric(1), Some(LogLevel::NONE));
         assert_eq!(LogLevel::from_numeric(2), Some(LogLevel::DISABLED));
-        assert_eq!(LogLevel::from_numeric(3), Some(LogLevel::DEBUG));
-        assert_eq!(LogLevel::from_numeric(4), Some(LogLevel::TRACE));
+        assert_eq!(LogLevel::from_numeric(3), Some(LogLevel::TRACE));
+        assert_eq!(LogLevel::from_numeric(4), Some(LogLevel::DEBUG));
         assert_eq!(LogLevel::from_numeric(5), Some(LogLevel::VERBOSE));
         assert_eq!(LogLevel::from_numeric(6), Some(LogLevel::INFO));
         assert_eq!(LogLevel::from_numeric(7), Some(LogLevel::WARN));

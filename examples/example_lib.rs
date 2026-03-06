@@ -6,25 +6,16 @@
 //! # RustLogs (RLG) Library Examples
 //!
 //! This example demonstrates the usage of the RustLogs (RLG) library,
-//! including creating log entries, formatting logs, and using macros.
+//! including creating log entries, formatting logs, and using the fluent API.
 
-#![allow(deprecated)]
-
-use dtt::datetime::DateTime;
-#[allow(unused_imports)]
-use rlg::config::Config;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg::VERSION;
-use rlg::{
-    macro_error_log, macro_info_log, macro_log_if,
-    macro_log_with_metadata, macro_set_log_format_clf,
-};
 
 /// Entry point for the RustLogs library examples.
 ///
-/// This function demonstrates various logging formats, log levels, and macro functionality.
+/// This function demonstrates various logging formats, log levels, and fluent API.
 pub(crate) fn main() {
     println!("🦀 RustLogs Library Usage Examples 🦀\n");
 
@@ -33,7 +24,7 @@ pub(crate) fn main() {
     log_level_display_example();
     log_version_example();
     log_format_example();
-    log_macros_example();
+    log_fluent_api_example();
 
     println!("\n🎉 All examples completed successfully!");
 }
@@ -57,14 +48,11 @@ fn log_common_format_example() {
     ];
 
     for format in formats {
-        let log = Log::new(
-            "12345",
-            "2023-01-01T12:00:00Z",
-            &LogLevel::INFO,
-            "system",
-            &format!("Log message in {} format", format),
-            &format,
-        );
+        let log = Log::build(LogLevel::INFO, &format!("Log message in {} format", format))
+            .session_id("12345")
+            .time("2023-01-01T12:00:00Z")
+            .component("system")
+            .format(format);
         println!("{}", log);
     }
 }
@@ -74,14 +62,11 @@ fn log_display_example() {
     println!("\n🦀  **Log Display Example**");
     println!("---------------------------------------------");
 
-    let log = Log::new(
-        "67890",
-        "2023-01-01T13:00:00Z",
-        &LogLevel::DEBUG,
-        "app",
-        "This is a debug message",
-        &LogFormat::CLF,
-    );
+    let log = Log::build(LogLevel::DEBUG, "This is a debug message")
+        .session_id("67890")
+        .time("2023-01-01T13:00:00Z")
+        .component("app")
+        .format(LogFormat::CLF);
     println!("Formatted Log: {}", log);
 }
 
@@ -124,51 +109,45 @@ fn log_format_example() {
     let log_format = format_str.parse::<LogFormat>().unwrap();
     println!("Parsed Log Format: {}", log_format);
 
-    let log = Log::new(
-        "54321",
-        "2023-01-01T14:00:00Z",
-        &LogLevel::INFO,
-        "auth",
-        "User logged in",
-        &log_format,
-    );
+    let log = Log::build(LogLevel::INFO, "User logged in")
+        .session_id("54321")
+        .time("2023-01-01T14:00:00Z")
+        .component("auth")
+        .format(log_format);
     println!("Log Entry: {}", log);
 }
 
-/// Demonstrates the usage of macros for creating log entries.
-fn log_macros_example() {
-    println!("\n🦀  **Macro Usage Examples**");
+/// Demonstrates the fluent API for creating log entries.
+fn log_fluent_api_example() {
+    println!("\n🦀  **Fluent API Examples**");
     println!("---------------------------------------------");
 
-    let time = DateTime::new().to_string();
+    // Info log
+    let info_log = Log::info("Information message")
+        .component("app-component");
+    println!("Info Log: {}", info_log);
 
-    // info log macro
-    let info_log =
-        macro_info_log!(&time, "app-component", "Information message");
-    println!("Info Log (Macro): {}", info_log);
+    // Error log
+    let error_log = Log::error("Error occurred")
+        .component("api-component");
+    println!("Error Log: {}", error_log);
 
-    // error log macro
-    let error_log =
-        macro_error_log!(&time, "api-component", "Error occurred");
-    println!("Error Log (Macro): {}", error_log);
+    // Log with attributes
+    let attr_log = Log::debug("Database query executed")
+        .component("db-component")
+        .with("query_time_ms", 42)
+        .with("rows_affected", 5)
+        .format(LogFormat::JSON);
+    println!("Attribute Log: {}", attr_log);
 
-    // log with metadata macro
-    let metadata_log = macro_log_with_metadata!(
-        "session-123",
-        &time,
-        LogLevel::DEBUG,
-        "db-component",
-        "Database query executed",
-        LogFormat::JSON
-    );
-    println!("Metadata Log (Macro): {}", metadata_log);
+    // Conditional fire
+    let should_log = true;
+    if should_log {
+        Log::info("Conditional log fired").fire();
+    }
 
-    // conditional log macro
-    macro_log_if!(true, info_log); // Will log
-    macro_log_if!(false, error_log); // Will not log
-
-    // set log format macro
-    let mut log = Log::default();
-    macro_set_log_format_clf!(log);
-    println!("Log format after macro: {}", log.format);
+    // Set format via fluent API
+    let log = Log::default();
+    let log = log.format(LogFormat::CLF);
+    println!("Log format after fluent API: {}", log.format);
 }

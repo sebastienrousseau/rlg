@@ -2,7 +2,6 @@
 // test_lib.rs
 // Integration tests for rlg
 #![allow(missing_docs)]
-#![allow(deprecated)]
 
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
@@ -14,27 +13,21 @@ mod tests {
 
     #[test]
     fn test_log_new() {
-        let log = Log::new(
-            "123",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::CLF,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("123")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::CLF);
         assert_eq!(log.session_id, "123");
     }
 
     #[test]
     fn test_log_json_format() {
-        let log = Log::new(
-            "123",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::JSON,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("123")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::JSON);
         let output = format!("{}", log);
         assert!(output.contains("\"SessionID\":\"123\""));
         assert!(output.contains("\"Attributes\":{}"));
@@ -42,28 +35,22 @@ mod tests {
 
     #[test]
     fn test_log_mcp_format() {
-        let log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::MCP,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::MCP);
         let output = format!("{}", log);
         assert!(output.contains("\"method\":\"notifications/log\""));
     }
 
     #[test]
     fn test_log_gelf_format() {
-        let log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::GELF,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::GELF);
         let output = format!("{}", log);
         assert!(output.contains("\"version\":\"1.1\""));
         assert!(output.contains("\"_attributes\":{}"));
@@ -71,28 +58,22 @@ mod tests {
 
     #[test]
     fn test_log_ndjson_format() {
-        let log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::NDJSON,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::NDJSON);
         let output = format!("{}", log);
         assert!(output.contains("\"attributes\":{}"));
     }
 
     #[test]
     fn test_log_otlp_format() {
-        let mut log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::OTLP,
-        );
+        let mut log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::OTLP);
         log.attributes
             .insert("trace_id".to_string(), serde_json::json!("t123"));
         let output = format!("{}", log);
@@ -102,14 +83,11 @@ mod tests {
 
     #[test]
     fn test_log_logfmt_format() {
-        let mut log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::Logfmt,
-        );
+        let mut log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::Logfmt);
         log.attributes
             .insert("user".to_string(), serde_json::json!("alice"));
         log.attributes.insert(
@@ -126,14 +104,11 @@ mod tests {
 
     #[test]
     fn test_log_ecs_format() {
-        let log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::ECS,
-        );
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::ECS);
         let output = format!("{}", log);
         assert!(output.contains("\"@timestamp\":\"ts\""));
         assert!(output.contains("\"log.level\":\"info\""));
@@ -188,15 +163,11 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
-    fn test_log_write_log_entry_coverage() {
-        assert!(Log::write_log_entry(
-            LogLevel::INFO,
-            "proc",
-            "msg",
-            LogFormat::CLF
-        )
-        .is_ok());
+    fn test_log_fire_via_build() {
+        Log::build(LogLevel::INFO, "msg")
+            .component("proc")
+            .format(LogFormat::CLF)
+            .fire();
     }
 
     #[tokio::test]
@@ -215,14 +186,11 @@ mod tests {
             LogFormat::MCP,
         ];
         for f in formats {
-            let log = Log::new(
-                "sid",
-                "ts",
-                &LogLevel::INFO,
-                "comp",
-                "desc",
-                &f,
-            );
+            let log = Log::build(LogLevel::INFO, "desc")
+                .session_id("sid")
+                .time("ts")
+                .component("comp")
+                .format(f);
             assert!(log.log().is_ok());
         }
     }

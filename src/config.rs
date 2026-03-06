@@ -11,8 +11,6 @@ use config::{
     File as ConfigFile,
 };
 use envy;
-#[allow(unused_imports)]
-use log::{error, info, warn};
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -175,6 +173,7 @@ pub enum LoggingDestination {
 
 /// Configuration structure for the logging system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+// Allowed because Config contains no unsafe invariants that Deserialize could violate.
 #[allow(clippy::unsafe_derive_deserialize)]
 pub struct Config {
     /// Version of the configuration.
@@ -270,6 +269,7 @@ impl Config {
             Self::default()
         };
         config.validate()?;
+        config.ensure_paths()?;
         Ok(Arc::new(RwLock::new(config)))
     }
 
@@ -439,6 +439,15 @@ impl Config {
             }
         }
 
+        Ok(())
+    }
+
+    /// Creates directories and log files required by the configuration.
+    ///
+    /// # Errors
+    ///
+    /// This function returns an error if the directories or files cannot be created.
+    pub fn ensure_paths(&self) -> Result<(), ConfigError> {
         if let Some(LoggingDestination::File(path)) =
             self.logging_destinations.first()
         {
@@ -498,6 +507,7 @@ impl Config {
         let config_clone = config.clone();
         let path_owned = config_path.to_string();
         tokio::spawn(async move {
+            let _watcher = watcher; // Keep watcher alive for the lifetime of the task
             loop {
                 tokio::select! {
                     Some(res) = rx.recv() => {
@@ -522,81 +532,54 @@ impl Config {
         config2: &Self,
     ) -> HashMap<String, String> {
         let mut diffs = HashMap::new();
-        if config1.version != config2.version {
-            diffs.insert(
-                "version".to_string(),
-                format!("{} -> {}", config1.version, config2.version),
-            );
+        macro_rules! config_diff_fields {
+            ($c1:expr, $c2:expr, $diffs:expr;
+             $( display $field:ident; )*
+             $( debug $dfield:ident; )*
+             $( path $pfield:ident; )*
+            ) => {
+                $(
+                    if $c1.$field != $c2.$field {
+                        $diffs.insert(
+                            stringify!($field).to_string(),
+                            format!("{} -> {}", $c1.$field, $c2.$field),
+                        );
+                    }
+                )*
+                $(
+                    if $c1.$dfield != $c2.$dfield {
+                        $diffs.insert(
+                            stringify!($dfield).to_string(),
+                            format!("{:?} -> {:?}", $c1.$dfield, $c2.$dfield),
+                        );
+                    }
+                )*
+                $(
+                    if $c1.$pfield != $c2.$pfield {
+                        $diffs.insert(
+                            stringify!($pfield).to_string(),
+                            format!("{} -> {}", $c1.$pfield.display(), $c2.$pfield.display()),
+                        );
+                    }
+                )*
+            };
         }
-        if config1.profile != config2.profile {
-            diffs.insert(
-                "profile".to_string(),
-                format!("{} -> {}", config1.profile, config2.profile),
-            );
-        }
-        if config1.log_file_path != config2.log_file_path {
-            diffs.insert(
-                "log_file_path".to_string(),
-                format!(
-                    "{} -> {}",
-                    config1.log_file_path.display(),
-                    config2.log_file_path.display()
-                ),
-            );
-        }
-        if config1.log_level != config2.log_level {
-            diffs.insert(
-                "log_level".to_string(),
-                format!(
-                    "{:?} -> {:?}",
-                    config1.log_level, config2.log_level
-                ),
-            );
-        }
-        if config1.log_rotation != config2.log_rotation {
-            diffs.insert(
-                "log_rotation".to_string(),
-                format!(
-                    "{:?} -> {:?}",
-                    config1.log_rotation, config2.log_rotation
-                ),
-            );
-        }
-        if config1.log_format != config2.log_format {
-            diffs.insert(
-                "log_format".to_string(),
-                format!(
-                    "{} -> {}",
-                    config1.log_format, config2.log_format
-                ),
-            );
-        }
-        if config1.logging_destinations != config2.logging_destinations
-        {
-            diffs.insert(
-                "logging_destinations".to_string(),
-                format!(
-                    "{:?} -> {:?}",
-                    config1.logging_destinations,
-                    config2.logging_destinations
-                ),
-            );
-        }
-        if config1.env_vars != config2.env_vars {
-            diffs.insert(
-                "env_vars".to_string(),
-                format!(
-                    "{:?} -> {:?}",
-                    config1.env_vars, config2.env_vars
-                ),
-            );
-        }
+        config_diff_fields!(config1, config2, diffs;
+            display version;
+            display profile;
+            display log_format;
+            debug log_level;
+            debug log_rotation;
+            debug logging_destinations;
+            debug env_vars;
+            path log_file_path;
+        );
         diffs
     }
 
-    /// Merges another configuration into the current configuration.
+    /// Overrides the current configuration with values from another configuration.
     #[must_use]
-    pub fn merge(&self, other: &Self) -> Self {
+    pub fn override_with(&self, other: &Self) -> Self {
         let mut env_vars = self.env_vars.clone();
         env_vars.extend(other.env_vars.clone());
         Self {

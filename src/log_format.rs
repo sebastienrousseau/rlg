@@ -68,30 +68,49 @@ pub enum LogFormat {
     ECS,
 }
 
-impl FromStr for LogFormat {
-    type Err = RlgError;
+macro_rules! define_log_format_strings {
+    ( $( $variant:ident => $display:expr, [ $( $key:expr ),+ ] );+ $(;)? ) => {
+        impl FromStr for LogFormat {
+            type Err = RlgError;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "clf" => Ok(Self::CLF),
-            "json" => Ok(Self::JSON),
-            "cef" => Ok(Self::CEF),
-            "elf" => Ok(Self::ELF),
-            "w3c" => Ok(Self::W3C),
-            "gelf" => Ok(Self::GELF),
-            "apache" | "apacheaccesslog" => Ok(Self::ApacheAccessLog),
-            "logstash" => Ok(Self::Logstash),
-            "log4jxml" => Ok(Self::Log4jXML),
-            "ndjson" => Ok(Self::NDJSON),
-            "mcp" => Ok(Self::MCP),
-            "otlp" => Ok(Self::OTLP),
-            "logfmt" => Ok(Self::Logfmt),
-            "ecs" => Ok(Self::ECS),
-            _ => Err(RlgError::FormatParseError(format!(
-                "Unknown log format: {s}"
-            ))),
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s.to_lowercase().as_str() {
+                    $(
+                        $( $key )|+ => Ok(Self::$variant),
+                    )+
+                    _ => Err(RlgError::FormatParseError(format!(
+                        "Unknown log format: {s}"
+                    ))),
+                }
+            }
         }
-    }
+
+        impl fmt::Display for LogFormat {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let s = match self {
+                    $( Self::$variant => $display, )+
+                };
+                write!(f, "{s}")
+            }
+        }
+    };
+}
+
+define_log_format_strings! {
+    CLF => "CLF", ["clf"];
+    JSON => "JSON", ["json"];
+    CEF => "CEF", ["cef"];
+    ELF => "ELF", ["elf"];
+    W3C => "W3C", ["w3c"];
+    GELF => "GELF", ["gelf"];
+    ApacheAccessLog => "Apache Access Log", ["apache", "apacheaccesslog"];
+    Logstash => "Logstash", ["logstash"];
+    Log4jXML => "Log4j XML", ["log4jxml"];
+    NDJSON => "NDJSON", ["ndjson"];
+    MCP => "MCP", ["mcp"];
+    OTLP => "OTLP", ["otlp"];
+    Logfmt => "logfmt", ["logfmt"];
+    ECS => "ECS", ["ecs"];
 }
 
 impl LogFormat {
@@ -138,6 +157,12 @@ impl LogFormat {
     ///
     /// This function returns an error if the log entry is not valid JSON for JSON-based formats.
     ///
+    /// # Panics
+    ///
+    /// This function does not panic under normal usage. The internal `expect` guards
+    /// a `serde_json::to_string_pretty` call on a successfully parsed `Value`, which
+    /// can only fail on out-of-memory conditions.
+    ///
     /// # Examples
     ///
     /// ```
@@ -170,35 +195,13 @@ impl LogFormat {
                     ))
                 })?;
 
-                serde_json::to_string_pretty(&val).map_err(|e| {
-                    RlgError::FormattingError(format!(
-                        "JSON formatting error: {e}"
-                    ))
-                })
+                // to_string_pretty on a valid Value writing to String cannot fail
+                // (the only failure mode is I/O error, which String doesn't produce).
+                Ok(serde_json::to_string_pretty(&val).expect(
+                    "serde_json::to_string_pretty cannot fail on a valid Value",
+                ))
             }
         }
-    }
-}
-
-impl fmt::Display for LogFormat {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            Self::CLF => "CLF",
-            Self::JSON => "JSON",
-            Self::CEF => "CEF",
-            Self::ELF => "ELF",
-            Self::W3C => "W3C",
-            Self::GELF => "GELF",
-            Self::ApacheAccessLog => "Apache Access Log",
-            Self::Logstash => "Logstash",
-            Self::Log4jXML => "Log4j XML",
-            Self::NDJSON => "NDJSON",
-            Self::MCP => "MCP",
-            Self::OTLP => "OTLP",
-            Self::Logfmt => "logfmt",
-            Self::ECS => "ECS",
-        };
-        write!(f, "{s}")
     }
 }
 

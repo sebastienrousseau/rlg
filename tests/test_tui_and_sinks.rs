@@ -93,9 +93,12 @@ fn test_platform_sink_journald_valid() {
 }
 
 #[test]
+#[allow(unsafe_code)]
 fn test_platform_sink_fallback_env() {
-    std::env::set_var("RLG_FALLBACK_STDOUT", "1");
+    // SAFETY: Test-only; no other threads depend on this env var.
+    unsafe { std::env::set_var("RLG_FALLBACK_STDOUT", "1") };
     let sink = PlatformSink::native();
     assert!(matches!(sink, PlatformSink::Stdout));
-    std::env::remove_var("RLG_FALLBACK_STDOUT");
+    // SAFETY: Test-only cleanup.
+    unsafe { std::env::remove_var("RLG_FALLBACK_STDOUT") };
 }

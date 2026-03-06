@@ -5,10 +5,20 @@
 
 use crate::{LogFormat, LogLevel, RlgResult};
 use dtt::datetime::DateTime;
-use hostname;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt};
-use vrd::random::Random;
+use std::collections::BTreeMap;
+use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::LazyLock;
+
+/// Monotonic session ID counter (allocation-free).
+static SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// Cached hostname to avoid repeated syscalls.
+static CACHED_HOSTNAME: LazyLock<String> = LazyLock::new(|| {
+    hostname::get()
+        .map_or_else(|_| "localhost".to_string(), |h| h.to_string_lossy().to_string())
+});
 
 /// The `Log` struct provides an easy way to log a message to the console.
 /// It contains a set of defined fields to create a simple log message with a readable output format.
@@ -51,39 +61,16 @@ impl Log {
     ///
     /// This function returns an error if the payload cannot be formatted.
     pub fn log(&self) -> RlgResult<()> {
-        let payload = format!("{self}\n").into_bytes();
+        use std::io::Write;
+        let mut payload = Vec::with_capacity(256);
+        let _ = writeln!(payload, "{self}");
         let event = crate::engine::LogEvent {
-            level: format!("{0:?}", self.level),
+            level: self.level,
             level_num: self.level.to_numeric(),
             payload,
         };
         crate::engine::ENGINE.ingest(event);
         Ok(())
-    }
-
-    /// Creates a new log entry with provided details.
-    #[deprecated(
-        since = "0.0.7",
-        note = "Please use the lock-free fluent API (`.fire()`) instead."
-    )]
-    #[must_use]
-    pub fn new(
-        session_id: &str,
-        time: &str,
-        level: &LogLevel,
-        component: &str,
-        description: &str,
-        format: &LogFormat,
-    ) -> Self {
-        Self {
-            session_id: session_id.to_string(),
-            time: time.to_string(),
-            level: *level,
-            component: component.to_string(),
-            description: description.to_string(),
-            format: *format,
-            attributes: BTreeMap::new(),
-        }
     }
 
     /// Starts building a new INFO level log.
@@ -126,8 +113,8 @@ impl Log {
     #[must_use]
     pub fn build(level: LogLevel, description: &str) -> Self {
         Self {
-            session_id: Random::default()
-                .int(0, 1_000_000_000)
+            session_id: SESSION_COUNTER
+                .fetch_add(1, Ordering::Relaxed)
                 .to_string(),
             time: DateTime::new().to_string(),
             level,
@@ -175,69 +162,29 @@ impl Log {
         self
     }
 
-    /// Fires the log into the lock-free background ingestion engine.
-    pub fn fire(&self) {
-        let payload = format!("{self}\n").into_bytes();
+    /// Fires the log into the lock-free background ingestion engine, consuming it.
+    pub fn fire(self) {
+        use std::io::Write;
+        let mut payload = Vec::with_capacity(256);
+        let _ = writeln!(payload, "{self}");
         let event = crate::engine::LogEvent {
-            level: format!("{0:?}", self.level),
+            level: self.level,
             level_num: self.level.to_numeric(),
             payload,
         };
         crate::engine::ENGINE.ingest(event);
     }
 
-    /// Writes a log entry to the log file using the provided details.
-    ///
-    /// # Errors
-    ///
-    /// This function returns an error if the ingestion into the lock-free engine fails.
-    #[allow(deprecated)]
-    #[deprecated(
-        since = "0.0.7",
-        note = "Please use the lock-free fluent API (`.fire()`) instead."
-    )]
-    pub fn write_log_entry(
-        log_level: LogLevel,
-        process: &str,
-        message: &str,
-        log_format: LogFormat,
-    ) -> RlgResult<()> {
-        let log_entry = Self::new(
-            &Random::default().int(0, 1_000_000_000).to_string(),
-            &DateTime::new().to_string(),
-            &log_level,
-            process,
-            message,
-            &log_format,
-        );
-
-        let payload = format!("{log_entry}\n").into_bytes();
-        let event = crate::engine::LogEvent {
-            level: format!("{log_level:?}"),
-            level_num: log_level.to_numeric(),
-            payload,
-        };
-        crate::engine::ENGINE.ingest(event);
-
-        Ok(())
-    }
-
-    fn write_json(
-        f: &mut fmt::Formatter<'_>,
-        val: &serde_json::Value,
-    ) -> fmt::Result {
-        write!(f, "{val}")
-    }
-
     fn write_logfmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "level={0} msg=\"{1}\" session_id={2} component=\"{3}\"",
-            self.level.to_string().to_lowercase(),
-            self.description.replace('"', "\\\""),
-            self.session_id,
-            self.component
-        )?;
+        f.write_str("level=")?;
+        f.write_str(self.level.as_str_lowercase())?;
+        f.write_str(" msg=\"")?;
+        f.write_str(&self.description.replace('"', "\\\""))?;
+        f.write_str("\" session_id=")?;
+        f.write_str(&self.session_id)?;
+        f.write_str(" component=\"")?;
+        f.write_str(&self.component)?;
+        f.write_str("\"")?;
 
         for (key, value) in &self.attributes {
             write!(f, " {key}=")?;
@@ -257,6 +204,42 @@ impl Log {
         }
         Ok(())
     }
+}
+
+/// Writes a JSON-escaped string (with surrounding quotes) to the formatter.
+fn write_json_str(f: &mut fmt::Formatter<'_>, s: &str) -> fmt::Result {
+    f.write_str("\"")?;
+    for c in s.chars() {
+        match c {
+            '"' => f.write_str("\\\"")?,
+            '\\' => f.write_str("\\\\")?,
+            '\n' => f.write_str("\\n")?,
+            '\r' => f.write_str("\\r")?,
+            '\t' => f.write_str("\\t")?,
+            c if c.is_control() => write!(f, "\\u{:04x}", c as u32)?,
+            c => write!(f, "{c}")?,
+        }
+    }
+    f.write_str("\"")
+}
+
+/// Writes a `BTreeMap<String, serde_json::Value>` as a JSON object.
+fn write_json_map(
+    f: &mut fmt::Formatter<'_>,
+    map: &BTreeMap<String, serde_json::Value>,
+) -> fmt::Result {
+    f.write_str("{")?;
+    let mut first = true;
+    for (key, value) in map {
+        if !first {
+            f.write_str(",")?;
+        }
+        first = false;
+        write_json_str(f, key)?;
+        // serde_json::Value Display already produces valid JSON
+        write!(f, ":{value}")?;
+    }
+    f.write_str("}")
 }
 
 impl fmt::Display for Log {
@@ -284,11 +267,10 @@ impl fmt::Display for Log {
                 self.session_id, self.time, self.level, self.component, self.description
             ),
             LogFormat::ApacheAccessLog => {
-                let host = hostname::get().map_or_else(|_| "localhost".to_string(), |h| h.to_string_lossy().to_string());
                 write!(
                     f,
                     "{} - - [{}] \"{}\" {} {}",
-                    host,
+                    &*CACHED_HOSTNAME,
                     self.time,
                     self.description,
                     self.level,
@@ -300,76 +282,115 @@ impl fmt::Display for Log {
                 r#"<log4j:event logger="{}" timestamp="{}" level="{}" thread="{}"><log4j:message>{}</log4j:message></log4j:event>"#,
                 self.component, self.time, self.level, self.session_id, self.description
             ),
-            LogFormat::JSON => Self::write_json(f, &serde_json::json!({
-                "SessionID": self.session_id,
-                "Timestamp": self.time,
-                "Level": self.level,
-                "Component": self.component,
-                "Description": self.description,
-                "Format": "JSON",
-                "Attributes": self.attributes
-            })),
-            LogFormat::GELF => Self::write_json(f, &serde_json::json!({
-                "version": "1.1",
-                "host": self.component,
-                "short_message": self.description,
-                "full_message": self.description,
-                "timestamp": self.time,
-                "level": self.level.to_numeric(),
-                "_session_id": self.session_id,
-                "_attributes": self.attributes,
-            })),
-            LogFormat::Logstash => Self::write_json(f, &serde_json::json!({
-                "@timestamp": self.time,
-                "level": self.level,
-                "component": self.component,
-                "message": self.description,
-                "session_id": self.session_id,
-                "attributes": self.attributes,
-            })),
-            LogFormat::NDJSON => Self::write_json(f, &serde_json::json!({
-                "timestamp": self.time,
-                "level": self.level,
-                "component": self.component,
-                "message": self.description,
-                "attributes": self.attributes
-            })),
-            LogFormat::MCP => Self::write_json(f, &serde_json::json!({
-                "jsonrpc": "2.0",
-                "method": "notifications/log",
-                "params": {
-                    "level": self.level.to_string().to_lowercase(),
-                    "data": {
-                        "session_id": self.session_id,
-                        "time": self.time,
-                        "component": self.component,
-                        "description": self.description,
-                        "attributes": self.attributes
-                    }
-                }
-            })),
+            LogFormat::JSON => {
+                // Keys in alphabetical order to match previous serde_json output
+                f.write_str("{\"Attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"Component\":")?;
+                write_json_str(f, &self.component)?;
+                f.write_str(",\"Description\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"Format\":\"JSON\",\"Level\":")?;
+                write_json_str(f, self.level.as_str())?;
+                f.write_str(",\"SessionID\":")?;
+                write_json_str(f, &self.session_id)?;
+                f.write_str(",\"Timestamp\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str("}")
+            },
+            LogFormat::GELF => {
+                // Keys in alphabetical order
+                f.write_str("{\"_attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"_session_id\":")?;
+                write_json_str(f, &self.session_id)?;
+                f.write_str(",\"full_message\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"host\":")?;
+                write_json_str(f, &self.component)?;
+                write!(f, ",\"level\":{}", self.level.to_numeric())?;
+                f.write_str(",\"short_message\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"timestamp\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str(",\"version\":\"1.1\"}")
+            },
+            LogFormat::Logstash => {
+                // Keys in alphabetical order
+                f.write_str("{\"@timestamp\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str(",\"attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"component\":")?;
+                write_json_str(f, &self.component)?;
+                f.write_str(",\"level\":")?;
+                write_json_str(f, self.level.as_str())?;
+                f.write_str(",\"message\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"session_id\":")?;
+                write_json_str(f, &self.session_id)?;
+                f.write_str("}")
+            },
+            LogFormat::NDJSON => {
+                // Keys in alphabetical order
+                f.write_str("{\"attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"component\":")?;
+                write_json_str(f, &self.component)?;
+                f.write_str(",\"level\":")?;
+                write_json_str(f, self.level.as_str())?;
+                f.write_str(",\"message\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"timestamp\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str("}")
+            },
+            LogFormat::MCP => {
+                f.write_str("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/log\",\"params\":{\"data\":{\"attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"component\":")?;
+                write_json_str(f, &self.component)?;
+                f.write_str(",\"description\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"session_id\":")?;
+                write_json_str(f, &self.session_id)?;
+                f.write_str(",\"time\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str("},\"level\":")?;
+                write_json_str(f, self.level.as_str_lowercase())?;
+                f.write_str("}}")
+            },
             LogFormat::OTLP => {
-                let trace_id = self.attributes.get("trace_id").cloned().unwrap_or_else(|| serde_json::Value::String(String::new()));
-                let span_id = self.attributes.get("span_id").cloned().unwrap_or_else(|| serde_json::Value::String(String::new()));
-                Self::write_json(f, &serde_json::json!({
-                    "timeUnixNano": self.time,
-                    "severityText": self.level.to_string(),
-                    "severityNumber": self.level.to_numeric(),
-                    "body": { "stringValue": self.description },
-                    "attributes": self.attributes,
-                    "traceId": trace_id,
-                    "spanId": span_id,
-                }))
+                let empty = serde_json::Value::String(String::new());
+                let trace_id = self.attributes.get("trace_id").unwrap_or(&empty);
+                let span_id = self.attributes.get("span_id").unwrap_or(&empty);
+                f.write_str("{\"attributes\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"body\":{\"stringValue\":")?;
+                write_json_str(f, &self.description)?;
+                write!(f, "}},\"severityNumber\":{}", self.level.to_numeric())?;
+                f.write_str(",\"severityText\":")?;
+                write_json_str(f, self.level.as_str())?;
+                write!(f, ",\"spanId\":{span_id}")?;
+                f.write_str(",\"timeUnixNano\":")?;
+                write_json_str(f, &self.time)?;
+                write!(f, ",\"traceId\":{trace_id}}}")
             },
             LogFormat::Logfmt => self.write_logfmt(f),
-            LogFormat::ECS => Self::write_json(f, &serde_json::json!({
-                "@timestamp": self.time,
-                "log.level": self.level.to_string().to_lowercase(),
-                "message": self.description,
-                "process.name": self.component,
-                "log.logger": "rlg",
-                "labels": self.attributes,
-            })),
+            LogFormat::ECS => {
+                // Keys in alphabetical order
+                f.write_str("{\"@timestamp\":")?;
+                write_json_str(f, &self.time)?;
+                f.write_str(",\"labels\":")?;
+                write_json_map(f, &self.attributes)?;
+                f.write_str(",\"log.level\":")?;
+                write_json_str(f, self.level.as_str_lowercase())?;
+                f.write_str(",\"log.logger\":\"rlg\",\"message\":")?;
+                write_json_str(f, &self.description)?;
+                f.write_str(",\"process.name\":")?;
+                write_json_str(f, &self.component)?;
+                f.write_str("}")
+            },
         }
     }
 }
@@ -378,19 +399,14 @@ impl fmt::Display for Log {
 mod tests {
     use super::*;
     use crate::log_format::LogFormat;
-    use crate::log_level::LogLevel;
 
     #[test]
-    #[allow(deprecated)]
     fn test_log_write_logfmt_with_attributes() {
-        let mut log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::Logfmt,
-        );
+        let mut log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::Logfmt);
         log.attributes
             .insert("key".to_string(), serde_json::json!("value"));
         log.attributes.insert(
@@ -409,14 +425,11 @@ mod tests {
         assert!(output.contains("empty=\"\""));
 
         // Case with no attributes to cover the other branch
-        let log_no_attr = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::Logfmt,
-        );
+        let log_no_attr = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::Logfmt);
         let output_no = format!("{log_no_attr}");
         assert!(!output_no.contains(" key="));
     }

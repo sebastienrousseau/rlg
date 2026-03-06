@@ -1,18 +1,20 @@
 // engine.rs
 // Brutalist Lock-Free Ingestion Engine
 
+use crate::log_level::LogLevel;
 use crate::sink::PlatformSink;
 use crate::tui::{spawn_tui_thread, TuiMetrics};
 use crossbeam_queue::ArrayQueue;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::thread;
+use std::time::Duration;
 
 /// A structured log event optimized for zero-allocation handoff.
 #[derive(Debug, Clone)]
 pub struct LogEvent {
     /// The log level severity.
-    pub level: String,
+    pub level: LogLevel,
     /// The numeric log level for filtering.
     pub level_num: u8,
     /// Pre-formatted or rapidly assembled buffer.
@@ -20,7 +22,6 @@ pub struct LogEvent {
 }
 
 /// The Lock-Free Engine handling background log flushes.
-#[derive(Debug)]
 pub struct LockFreeEngine {
     /// Lock-free queue for log events.
     queue: Arc<ArrayQueue<LogEvent>>,
@@ -30,7 +31,23 @@ pub struct LockFreeEngine {
     metrics: Arc<TuiMetrics>,
     /// Global log level filter.
     filter_level: AtomicU8,
+    /// Handle to the background flusher thread.
+    flusher_thread: Option<thread::JoinHandle<()>>,
 }
+
+impl fmt::Debug for LockFreeEngine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LockFreeEngine")
+            .field("queue", &self.queue)
+            .field("shutdown_flag", &self.shutdown_flag)
+            .field("metrics", &self.metrics)
+            .field("filter_level", &self.filter_level)
+            .field("flusher_thread", &self.flusher_thread.as_ref().map(|h| h.thread().id()))
+            .finish()
+    }
+}
+
+use std::fmt;
 
 /// Global lazy-initialized lock-free engine.
 pub static ENGINE: LazyLock<LockFreeEngine> =
@@ -49,83 +66,89 @@ impl LockFreeEngine {
         let metrics = Arc::new(TuiMetrics::default());
         let filter_level = AtomicU8::new(0); // Default to ALL
 
-        let engine = Self {
-            queue: queue.clone(),
-            shutdown_flag: shutdown_flag.clone(),
-            metrics: metrics.clone(),
-            filter_level,
-        };
+        // Clone Arcs for the flusher thread
+        let flusher_queue = queue.clone();
+        let flusher_shutdown = shutdown_flag.clone();
 
         // Spawn lightweight OS thread (Runtime Agnostic)
-        let flusher_shutdown = shutdown_flag.clone();
-        thread::Builder::new()
+        let handle = thread::Builder::new()
             .name("rlg-flusher".into())
             .spawn(move || {
                 let mut sink = PlatformSink::native();
 
                 loop {
-                    // Drain the queue completely
-                    while let Some(event) = queue.pop() {
-                        sink.emit(&event.level, &event.payload);
+                    // Batch drain: dequeue up to 64 events at a time
+                    let mut batch: [Option<LogEvent>; 64] =
+                        std::array::from_fn(|_| None);
+                    let mut count = 0;
+                    while count < 64 {
+                        match flusher_queue.pop() {
+                            Some(event) => {
+                                batch[count] = Some(event);
+                                count += 1;
+                            }
+                            None => break,
+                        }
+                    }
+                    for event in batch.iter().flatten() {
+                        sink.emit(event.level.as_str(), &event.payload);
                     }
 
                     if flusher_shutdown.load(Ordering::Relaxed)
-                        && queue.is_empty()
+                        && flusher_queue.is_empty()
                     {
                         break;
                     }
 
-                    // Yield briefly to avoid 100% CPU lock in the spin loop
-                    // In a true disruptor, this would use a Condvar/WaitStrategy.
-                    thread::yield_now();
+                    // Park briefly as fallback; real wakeup comes from unpark() in ingest().
+                    thread::park_timeout(Duration::from_millis(5));
                 }
             })
             .expect("Failed to spawn rlg-flusher background thread");
 
         // Spawn the Generative TUI Dashboard Thread if enabled
         if std::env::var("RLG_TUI").map(|v| v == "1").unwrap_or(false) {
-            spawn_tui_thread(metrics, shutdown_flag);
+            spawn_tui_thread(metrics.clone(), shutdown_flag.clone());
         }
 
-        engine
+        Self {
+            queue,
+            shutdown_flag,
+            metrics,
+            filter_level,
+            flusher_thread: Some(handle),
+        }
     }
 
     /// Appends an event to the ring buffer.
     ///
     /// This function handles atomic metrics increments and buffer management.
     pub fn ingest(&self, event: LogEvent) {
-        if event.level_num < self.filter_level.load(Ordering::Relaxed) {
+        if event.level_num < self.filter_level.load(Ordering::Acquire) {
             return;
         }
 
         self.metrics.inc_events();
 
-        if event.level == "ERROR"
-            || event.level == "FATAL"
-            || event.level == "CRITICAL"
-        {
+        if event.level_num >= LogLevel::ERROR.to_numeric() {
             self.metrics.inc_errors();
         }
 
-        // If the buffer is full, we forcefully push, dropping the oldest if necessary.
-        let mut ev = event;
-        let mut retries = 0;
-        while let Err(err) = self.queue.push(ev) {
-            let _ = self.queue.pop(); // Drop oldest log to make room
-            ev = err;
-            retries += 1;
-            if retries >= 10 {
-                break;
-            }
-            if cfg!(test) {
-                break;
-            }
+        // If the buffer is full, pop oldest and retry once.
+        if let Err(err) = self.queue.push(event) {
+            let _ = self.queue.pop();
+            let _ = self.queue.push(err);
+        }
+
+        // Wake the flusher thread for sub-microsecond latency.
+        if let Some(handle) = &self.flusher_thread {
+            handle.thread().unpark();
         }
     }
 
     /// Sets the global log level filter.
     pub fn set_filter(&self, level: u8) {
-        self.filter_level.store(level, Ordering::SeqCst);
+        self.filter_level.store(level, Ordering::Release);
     }
 
     /// Returns the current global log level filter.

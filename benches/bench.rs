@@ -3,10 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 #![allow(missing_docs)]
-#![allow(deprecated)]
-use criterion::{
-    black_box, criterion_group, criterion_main, Criterion,
-};
+use criterion::{criterion_group, criterion_main, Criterion};
+use std::hint::black_box;
 
 // Import Log struct for benchmarking
 use rlg::log::Log;
@@ -24,14 +22,11 @@ use rlg::log_level::LogLevel;
 fn new_benchmark(c: &mut Criterion) {
     c.bench_function("new", |b| {
         b.iter(|| {
-            let log = Log::new(
-                "123",
-                "2023-01-23 14:04:09.881393 +00:00:00",
-                &LogLevel::INFO,
-                "test",
-                "test log message",
-                &LogFormat::CLF,
-            );
+            let log = Log::build(LogLevel::INFO, "test log message")
+                .session_id("123")
+                .time("2023-01-23 14:04:09.881393 +00:00:00")
+                .component("test")
+                .format(LogFormat::CLF);
             black_box(log);
         })
     });
@@ -39,23 +34,17 @@ fn new_benchmark(c: &mut Criterion) {
 
 // Benchmark formatting Log structs to string
 fn format_benchmark(c: &mut Criterion) {
-    let clf_log = Log::new(
-        "123",
-        "2023-01-23 14:04:09.881393 +00:00:00",
-        &LogLevel::INFO,
-        "test",
-        "test log message",
-        &LogFormat::CLF,
-    );
+    let clf_log = Log::build(LogLevel::INFO, "test log message")
+        .session_id("123")
+        .time("2023-01-23 14:04:09.881393 +00:00:00")
+        .component("test")
+        .format(LogFormat::CLF);
 
-    let json_log = Log::new(
-        "123",
-        "2023-01-23 14:04:09.881393 +00:00:00",
-        &LogLevel::INFO,
-        "test",
-        "test log message",
-        &LogFormat::JSON,
-    );
+    let json_log = Log::build(LogLevel::INFO, "test log message")
+        .session_id("123")
+        .time("2023-01-23 14:04:09.881393 +00:00:00")
+        .component("test")
+        .format(LogFormat::JSON);
 
     c.bench_function("clf_format", |b| b.iter(|| format!("{clf_log}")));
     c.bench_function("json_format", |b| {
@@ -66,14 +55,11 @@ fn format_benchmark(c: &mut Criterion) {
 // Benchmark async writing logs to files vs Lock-Free Engine
 fn write_benchmark(c: &mut Criterion) {
     // Create test CLF log
-    let clf_log = Log::new(
-        "123",
-        "2023-01-23 14:04:09.881393 +00:00:00",
-        &LogLevel::INFO,
-        "test",
-        "test log message",
-        &LogFormat::CLF,
-    );
+    let clf_log = Log::build(LogLevel::INFO, "test log message")
+        .session_id("123")
+        .time("2023-01-23 14:04:09.881393 +00:00:00")
+        .component("test")
+        .format(LogFormat::CLF);
 
     let rt = tokio::runtime::Runtime::new().unwrap();
 
@@ -98,7 +84,7 @@ fn write_benchmark(c: &mut Criterion) {
     group.bench_function("Brutalist Lock-Free Engine", |b| {
         b.iter(|| {
             let event = rlg::engine::LogEvent {
-                level: "INFO".to_string(),
+                level: LogLevel::INFO,
                 level_num: 6,
                 payload: format!("{clf_log}").into_bytes(),
             };

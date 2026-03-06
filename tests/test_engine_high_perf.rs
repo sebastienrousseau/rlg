@@ -56,7 +56,7 @@ fn test_engine_apply_config() {
 fn test_engine_queue_full_and_errors() {
     // Test the specific branch where an error increments metrics
     let event_err = LogEvent {
-        level: "ERROR".to_string(),
+        level: rlg::LogLevel::ERROR,
         level_num: 8,
         payload: b"error".to_vec(),
     };
@@ -71,10 +71,13 @@ fn test_engine_queue_full_and_errors() {
 
 #[test]
 #[cfg_attr(miri, ignore)]
+#[allow(unsafe_code)]
 fn test_engine_tui_flag() {
     // Temporarily set the flag and spawn an engine to cover the TUI spawn branch
-    std::env::set_var("RLG_TUI", "1");
+    // SAFETY: Test-only; no other threads depend on this env var.
+    unsafe { std::env::set_var("RLG_TUI", "1") };
     let tui_engine = LockFreeEngine::new(10);
     tui_engine.shutdown();
-    std::env::remove_var("RLG_TUI");
+    // SAFETY: Test-only cleanup.
+    unsafe { std::env::remove_var("RLG_TUI") };
 }

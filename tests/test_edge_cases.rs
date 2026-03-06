@@ -18,8 +18,8 @@ mod tests {
         assert_eq!(LogLevel::ALL.to_numeric(), 0);
         assert_eq!(LogLevel::NONE.to_numeric(), 1);
         assert_eq!(LogLevel::DISABLED.to_numeric(), 2);
-        assert_eq!(LogLevel::DEBUG.to_numeric(), 3);
-        assert_eq!(LogLevel::TRACE.to_numeric(), 4);
+        assert_eq!(LogLevel::TRACE.to_numeric(), 3);
+        assert_eq!(LogLevel::DEBUG.to_numeric(), 4);
         assert_eq!(LogLevel::VERBOSE.to_numeric(), 5);
         assert_eq!(LogLevel::INFO.to_numeric(), 6);
         assert_eq!(LogLevel::WARN.to_numeric(), 7);
@@ -69,21 +69,15 @@ mod tests {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_log_semantic_context_tagging() {
         use rlg::log::Log;
-        let mut log = Log::new(
-            "sid",
-            "ts",
-            &LogLevel::INFO,
-            "comp",
-            "desc",
-            &LogFormat::JSON,
-        );
-        log.attributes
-            .insert("user_id".to_string(), serde_json::json!(123));
-        log.attributes
-            .insert("action".to_string(), serde_json::json!("login"));
+        let log = Log::build(LogLevel::INFO, "desc")
+            .session_id("sid")
+            .time("ts")
+            .component("comp")
+            .format(LogFormat::JSON)
+            .with("user_id", 123)
+            .with("action", "login");
 
         let output = format!("{}", log);
         assert!(output.contains("\"user_id\":123"));

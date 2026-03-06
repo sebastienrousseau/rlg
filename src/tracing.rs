@@ -7,8 +7,12 @@
 
 use crate::log::Log;
 use crate::log_level::LogLevel;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tracing_core::field::{Field, Visit};
 use tracing_core::{Event, Level, Metadata, Subscriber};
+
+/// Monotonic span ID counter for unique span identification.
+static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 /// A `tracing::Subscriber` that routes events to the `RLG` engine.
 #[derive(Debug, Default, Clone, Copy)]
@@ -39,7 +43,9 @@ impl Subscriber for RlgSubscriber {
         &self,
         _span: &tracing_core::span::Attributes<'_>,
     ) -> tracing_core::span::Id {
-        tracing_core::span::Id::from_u64(1) // Simple placeholder for now
+        tracing_core::span::Id::from_u64(
+            SPAN_ID_COUNTER.fetch_add(1, Ordering::Relaxed),
+        )
     }
 
     fn record(
@@ -90,6 +96,19 @@ struct RlgVisitor {
     fields: std::collections::BTreeMap<String, serde_json::Value>,
 }
 
+macro_rules! impl_record_field {
+    ($method:ident, $ty:ty) => {
+        fn $method(&mut self, field: &Field, value: $ty) {
+            self.fields.insert(field.name().to_string(), serde_json::json!(value));
+        }
+    };
+    (stringify $method:ident, $ty:ty) => {
+        fn $method(&mut self, field: &Field, value: $ty) {
+            self.fields.insert(field.name().to_string(), serde_json::json!(value.to_string()));
+        }
+    };
+}
+
 impl Visit for RlgVisitor {
     fn record_debug(
         &mut self,
@@ -117,21 +136,6 @@ impl Visit for RlgVisitor {
         }
     }
 
-    fn record_u64(&mut self, field: &Field, value: u64) {
-        self.fields
-            .insert(field.name().to_string(), serde_json::json!(value));
-    }
-
-    fn record_i64(&mut self, field: &Field, value: i64) {
-        self.fields
-            .insert(field.name().to_string(), serde_json::json!(value));
-    }
-
-    fn record_bool(&mut self, field: &Field, value: bool) {
-        self.fields
-            .insert(field.name().to_string(), serde_json::json!(value));
-    }
-
     fn record_error(
         &mut self,
         field: &Field,
@@ -143,22 +147,10 @@ impl Visit for RlgVisitor {
         );
     }
 
-    fn record_f64(&mut self, field: &Field, value: f64) {
-        self.fields
-            .insert(field.name().to_string(), serde_json::json!(value));
-    }
-
-    fn record_u128(&mut self, field: &Field, value: u128) {
-        self.fields.insert(
-            field.name().to_string(),
-            serde_json::json!(value.to_string()),
-        );
-    }
-
-    fn record_i128(&mut self, field: &Field, value: i128) {
-        self.fields.insert(
-            field.name().to_string(),
-            serde_json::json!(value.to_string()),
-        );
-    }
+    impl_record_field!(record_u64, u64);
+    impl_record_field!(record_i64, i64);
+    impl_record_field!(record_bool, bool);
+    impl_record_field!(record_f64, f64);
+    impl_record_field!(stringify record_u128, u128);
+    impl_record_field!(stringify record_i128, i128);
 }

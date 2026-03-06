@@ -134,7 +134,8 @@ mod tests {
             ..Config::default()
         };
 
-        let result = config.validate();
+        // validate() no longer creates files; ensure_paths() does
+        let result = config.ensure_paths();
         assert!(result.is_err());
     }
 }

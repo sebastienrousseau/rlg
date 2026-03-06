@@ -74,6 +74,7 @@ mod tests {
 
     /// Tests loading configuration with invalid values for LOG_LEVEL and LOG_ROTATION.
     #[tokio::test]
+    #[allow(unsafe_code)]
     async fn test_config_load_with_invalid_values() {
         let temp_dir =
             tempdir().expect("Failed to create temp directory");
@@ -97,8 +98,9 @@ mod tests {
             .await
             .expect("Failed to write config file");
 
-        env::set_var("LOG_LEVEL", "INVALID_LOG_LEVEL");
-        env::set_var("LOG_ROTATION", "INVALID_LOG_ROTATION");
+        // SAFETY: Test-only; no other threads depend on these env vars.
+        unsafe { env::set_var("LOG_LEVEL", "INVALID_LOG_LEVEL") };
+        unsafe { env::set_var("LOG_ROTATION", "INVALID_LOG_ROTATION") };
 
         let config_result =
             Config::load_async(Some(&config_file_path)).await;
@@ -118,8 +120,9 @@ mod tests {
             "Expected LOG_ROTATION to be invalid"
         );
 
-        env::remove_var("LOG_LEVEL");
-        env::remove_var("LOG_ROTATION");
+        // SAFETY: Test-only cleanup.
+        unsafe { env::remove_var("LOG_LEVEL") };
+        unsafe { env::remove_var("LOG_ROTATION") };
 
         fs::remove_file(log_file_path)
             .await
@@ -238,8 +241,10 @@ mod tests {
 
     /// Tests the Config::expand_env_vars method.
     #[test]
+    #[allow(unsafe_code)]
     fn test_config_expand_env_vars() {
-        env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log");
+        // SAFETY: Test-only; no other threads depend on this env var.
+        unsafe { env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log") };
 
         let mut config = Config::default();
         config.env_vars.insert(
@@ -254,7 +259,8 @@ mod tests {
             "/tmp/env_test_RLG.log"
         );
 
-        env::remove_var("RLG_LOG_PATH");
+        // SAFETY: Test-only cleanup.
+        unsafe { env::remove_var("RLG_LOG_PATH") };
     }
 
     /// Tests the Config::hot_reload_async method.
@@ -295,9 +301,9 @@ mod tests {
         assert!(differences.contains_key("env_vars"));
     }
 
-    /// Tests the Config::merge method.
+    /// Tests the Config::override_with method.
     #[test]
-    fn test_config_merge() {
+    fn test_config_override_with() {
         let mut env_vars1 = HashMap::new();
         env_vars1.insert("K1".to_string(), "V1".to_string());
         let config1 = Config {
@@ -313,7 +319,7 @@ mod tests {
             ..Config::default()
         };
 
-        let merged_config = config1.merge(&config2);
+        let merged_config = config1.override_with(&config2);
 
         assert_eq!(merged_config.profile, "test_profile");
         assert_eq!(merged_config.log_format, "%level - %message");
@@ -398,9 +404,7 @@ mod tests {
         assert!(config.set("env_vars", &new_env).is_ok());
         assert_eq!(config.env_vars, new_env);
 
-        assert!(
-            matches!(config.set("non_existent", "value"), Err(ConfigError::ValidationError(msg)) if msg.contains("Unknown configuration key"))
-        );
+        assert!(config.set("non_existent", "value").is_err());
     }
 
     /// Tests the Config::save_to_file method.

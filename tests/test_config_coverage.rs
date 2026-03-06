@@ -118,12 +118,15 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_config_try_from_env_vars() {
-        env::set_var("LOG_LEVEL", "NOT_A_LEVEL");
+        // SAFETY: Test-only; no other threads depend on this env var.
+        unsafe { env::set_var("LOG_LEVEL", "NOT_A_LEVEL") };
         let env_vars = env::vars();
         let res = Config::try_from(env_vars);
         assert!(res.is_err());
-        env::remove_var("LOG_LEVEL");
+        // SAFETY: Test-only cleanup.
+        unsafe { env::remove_var("LOG_LEVEL") };
     }
 
     #[test]
@@ -166,13 +169,15 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn test_config_expand_env_vars_coverage() {
         let mut config = Config::default();
         config.env_vars.insert(
             "LOG_LEVEL_ENV".to_string(),
             "original".to_string(),
         );
-        env::set_var("LOG_LEVEL_ENV", "DEBUG_ENV_VAR");
+        // SAFETY: Test-only; no other threads depend on this env var.
+        unsafe { env::set_var("LOG_LEVEL_ENV", "DEBUG_ENV_VAR") };
         let expanded = config.expand_env_vars();
         assert_eq!(
             expanded.env_vars.get("LOG_LEVEL_ENV").unwrap(),
@@ -194,7 +199,8 @@ mod tests {
             )],
             ..Config::default()
         };
-        let err = config.validate().unwrap_err();
+        // validate() no longer creates files; ensure_paths() does
+        let err = config.ensure_paths().unwrap_err();
         assert!(
             matches!(err, ConfigError::ValidationError(msg) if msg.contains("Log file is not writable"))
         );
@@ -300,7 +306,7 @@ mod tests {
     }
 
     #[test]
-    fn test_config_merge() {
+    fn test_config_override_with() {
         let config1 = Config::default();
         let config2 = Config {
             env_vars: {
@@ -310,7 +316,22 @@ mod tests {
             },
             ..Config::default()
         };
-        let merged = config1.merge(&config2);
+        let merged = config1.override_with(&config2);
+        assert_eq!(merged.env_vars.get("K").unwrap(), "V");
+    }
+
+    #[test]
+    fn test_config_override_with_env_vars() {
+        let config1 = Config::default();
+        let config2 = Config {
+            env_vars: {
+                let mut map = HashMap::new();
+                map.insert("K".to_string(), "V".to_string());
+                map
+            },
+            ..Config::default()
+        };
+        let merged = config1.override_with(&config2);
         assert_eq!(merged.env_vars.get("K").unwrap(), "V");
     }
 

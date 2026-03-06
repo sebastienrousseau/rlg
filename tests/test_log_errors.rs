@@ -1,6 +1,5 @@
 #![cfg(not(miri))]
 #![allow(missing_docs)]
-#![allow(deprecated)]
 #[cfg(test)]
 mod tests {
     use rlg::log::Log;
@@ -43,12 +42,11 @@ mod tests {
         // Create a directory named "RLG.log" so that it cannot be opened as a file
         let _ = std::fs::create_dir("RLG.log");
 
-        let res = Log::write_log_entry(
-            LogLevel::INFO,
-            "proc",
-            "msg",
-            LogFormat::CLF,
-        );
+        // Use fluent API instead of deprecated write_log_entry
+        let log = Log::build(LogLevel::INFO, "msg")
+            .component("proc")
+            .format(LogFormat::CLF);
+        let res = log.log();
 
         // It should succeed ingest
         assert!(res.is_ok());

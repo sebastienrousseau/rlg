@@ -1,6 +1,5 @@
 #![cfg(not(miri))]
 #![allow(missing_docs)]
-#![allow(deprecated)]
 #[cfg(test)]
 mod tests {
     use rlg::log::Log;
@@ -10,6 +9,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[tokio::test]
+    #[allow(unsafe_code)]
     async fn test_log_write_error() {
         let temp_dir = tempdir().unwrap();
         let log_file = temp_dir.path().join("readonly.log");
@@ -23,20 +23,20 @@ mod tests {
         // We need to point Config to this file.
         // Config::load_async(None) loads from RLG.log usually.
         // We can set RLG_LOG_FILE env var if it respects it.
-        std::env::set_var("RLG_LOG_FILE", &log_file);
+        // SAFETY: Test-only; no other threads depend on this env var.
+        unsafe { std::env::set_var("RLG_LOG_FILE", &log_file) };
 
         let log = Log::default();
         let res = log.log();
         assert!(res.is_ok()); // Note: In lock-free engine, ingest always returns Ok
 
-        let res = Log::write_log_entry(
-            LogLevel::INFO,
-            "proc",
-            "msg",
-            LogFormat::CLF,
-        );
-        assert!(res.is_ok()); // Note: In lock-free engine, ingest always returns Ok
+        let log2 = Log::build(LogLevel::INFO, "msg")
+            .component("proc")
+            .format(LogFormat::CLF);
+        let res2 = log2.log();
+        assert!(res2.is_ok()); // Note: In lock-free engine, ingest always returns Ok
 
-        std::env::remove_var("RLG_LOG_FILE");
+        // SAFETY: Test-only cleanup.
+        unsafe { std::env::remove_var("RLG_LOG_FILE") };
     }
 }
