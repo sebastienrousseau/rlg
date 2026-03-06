@@ -198,8 +198,7 @@ impl PlatformSink {
     }
 }
 
-#[cfg(test)]
-#[cfg_attr(miri, ignore)]
+#[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
     #[cfg(target_os = "linux")]

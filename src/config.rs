@@ -630,8 +630,7 @@ impl fmt::Display for LogRotation {
     }
 }
 
-#[cfg(test)]
-#[cfg_attr(miri, ignore)]
+#[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
     use parking_lot::RwLock;
