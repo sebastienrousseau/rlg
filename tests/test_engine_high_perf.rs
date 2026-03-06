@@ -23,6 +23,7 @@ fn test_engine_queue_full_and_errors() {
     // Test the specific branch where an error increments metrics
     let event_err = LogEvent {
         level: "ERROR".to_string(),
+        level_num: 8,
         payload: b"error".to_vec(),
     };
     ENGINE.ingest(event_err.clone());

@@ -95,6 +95,7 @@ fn write_benchmark(c: &mut Criterion) {
         b.iter(|| {
             let event = rlg::engine::LogEvent {
                 level: "INFO".to_string(),
+                level_num: 6,
                 payload: format!("{clf_log}").into_bytes(),
             };
             rlg::engine::ENGINE.ingest(black_box(event));

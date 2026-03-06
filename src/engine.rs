@@ -4,7 +4,7 @@
 use crate::sink::PlatformSink;
 use crate::tui::{TuiMetrics, spawn_tui_thread};
 use crossbeam_queue::ArrayQueue;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::thread;
 
@@ -13,6 +13,8 @@ use std::thread;
 pub struct LogEvent {
     /// The log level severity.
     pub level: String,
+    /// The numeric log level for filtering.
+    pub level_num: u8,
     /// Pre-formatted or rapidly assembled buffer.
     pub payload: Vec<u8>, 
 }
@@ -26,6 +28,8 @@ pub struct LockFreeEngine {
     shutdown_flag: Arc<AtomicBool>,
     /// Metrics for the TUI dashboard.
     metrics: Arc<TuiMetrics>,
+    /// Global log level filter.
+    filter_level: AtomicU8,
 }
 
 /// Global lazy-initialized lock-free engine.
@@ -42,11 +46,13 @@ impl LockFreeEngine {
         let queue = Arc::new(ArrayQueue::new(capacity));
         let shutdown_flag = Arc::new(AtomicBool::new(false));
         let metrics = Arc::new(TuiMetrics::default());
+        let filter_level = AtomicU8::new(0); // Default to ALL
 
         let engine = Self {
             queue: queue.clone(),
             shutdown_flag: shutdown_flag.clone(),
             metrics: metrics.clone(),
+            filter_level,
         };
 
         // Spawn lightweight OS thread (Runtime Agnostic)
@@ -85,6 +91,10 @@ impl LockFreeEngine {
     ///
     /// This function handles atomic metrics increments and buffer management.
     pub fn ingest(&self, event: LogEvent) {
+        if event.level_num < self.filter_level.load(Ordering::Relaxed) {
+            return;
+        }
+
         self.metrics.inc_events();
         
         if event.level == "ERROR" || event.level == "FATAL" || event.level == "CRITICAL" {
@@ -105,6 +115,22 @@ impl LockFreeEngine {
                 break;
             }
         }
+    }
+
+    /// Sets the global log level filter.
+    pub fn set_filter(&self, level: u8) {
+        self.filter_level.store(level, Ordering::SeqCst);
+    }
+
+    /// Returns the current global log level filter.
+    #[must_use]
+    pub fn filter_level(&self) -> u8 {
+        self.filter_level.load(Ordering::Relaxed)
+    }
+
+    /// Applies configuration settings to the engine.
+    pub fn apply_config(&self, config: &crate::config::Config) {
+        self.set_filter(config.log_level.to_numeric());
     }
 
     /// Safely halts the background thread, flushing pending logs.

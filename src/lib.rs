@@ -65,6 +65,8 @@ pub mod sink;
 pub mod tui;
 /// High-performance utility functions.
 pub mod utils;
+/// Integration with the `tracing` ecosystem.
+pub mod tracing;
 /// Convenience macros for ergonomic logging.
 pub mod macros;
 
@@ -74,6 +76,7 @@ pub use crate::log::Log;
 pub use crate::log_format::LogFormat;
 pub use crate::log_level::LogLevel;
 pub use crate::sink::PlatformSink;
+pub use crate::tracing::RlgSubscriber;
 
 /// The version of the `rlg` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

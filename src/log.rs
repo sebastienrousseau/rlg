@@ -56,11 +56,12 @@ impl Log {
     ///
     /// # Errors
     ///
-    /// This function returns an error if the ingestion into the lock-free engine fails.
+    /// This function returns an error if the payload cannot be formatted.
     pub fn log(&self) -> RlgResult<()> {
         let payload = format!("{self}\n").into_bytes();
         let event = crate::engine::LogEvent {
             level: format!("{0:?}", self.level),
+            level_num: self.level.to_numeric(),
             payload,
         };
         crate::engine::ENGINE.ingest(event);
@@ -125,7 +126,9 @@ impl Log {
         Self::build(LogLevel::FATAL, description)
     }
 
-    fn build(level: LogLevel, description: &str) -> Self {
+    /// Starts building a new log with the given level and description.
+    #[must_use]
+    pub fn build(level: LogLevel, description: &str) -> Self {
         Self {
             session_id: Random::default().int(0, 1_000_000_000).to_string(),
             time: DateTime::new().to_string(),
@@ -179,6 +182,7 @@ impl Log {
         let payload = format!("{self}\n").into_bytes();
         let event = crate::engine::LogEvent {
             level: format!("{0:?}", self.level),
+            level_num: self.level.to_numeric(),
             payload,
         };
         crate::engine::ENGINE.ingest(event);
@@ -202,6 +206,7 @@ impl Log {
         let payload = format!("{log_entry}\n").into_bytes();
         let event = crate::engine::LogEvent {
             level: format!("{log_level:?}"),
+            level_num: log_level.to_numeric(),
             payload,
         };
         crate::engine::ENGINE.ingest(event);
