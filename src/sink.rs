@@ -3,7 +3,7 @@
 
 use std::io::Write;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", test))]
 use std::os::unix::net::UnixDatagram;
 
 /// A unified interface for platform-native logging.
@@ -14,14 +14,12 @@ pub enum PlatformSink {
     /// File sink fallback.
     File(std::fs::File),
     /// Native OS Log on macOS.
-    #[cfg(target_os = "macos")]
     OsLog,
     /// Systemd Journald socket on Linux.
-    #[cfg(target_os = "linux")]
     Journald(Option<UnixDatagram>),
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", test))]
 mod macos_ffi {
     use std::os::raw::{c_char, c_void};
     #[allow(dead_code)]
@@ -80,19 +78,18 @@ impl PlatformSink {
         {
             Self::OsLog
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(all(target_os = "linux", not(test)))]
         {
-            #[cfg(not(test))]
             if let Ok(socket) = UnixDatagram::unbound() {
                 if socket.connect("/run/systemd/journal/socket").is_ok()
                 {
                     return Self::Journald(Some(socket));
                 }
             }
-            #[cfg(test)]
-            {
-                // In test mode we just return None to avoid side effects
-            }
+            Self::Journald(None)
+        }
+        #[cfg(all(target_os = "linux", test))]
+        {
             Self::Journald(None)
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
@@ -113,9 +110,8 @@ impl PlatformSink {
                 let _ = f.write_all(payload);
                 let _ = f.write_all(b"\n");
             }
-            #[cfg(target_os = "macos")]
             Self::OsLog => {
-                #[cfg(not(any(test, miri)))]
+                #[cfg(all(target_os = "macos", not(any(test, miri))))]
                 {
                     use macos_ffi::*;
                     use std::ffi::CString;
@@ -157,12 +153,11 @@ impl PlatformSink {
                         );
                     }
                 }
-                #[cfg(any(test, miri))]
+                #[cfg(any(not(target_os = "macos"), test, miri))]
                 {
                     let _ = (level, payload);
                 }
             }
-            #[cfg(target_os = "linux")]
             Self::Journald(socket_opt) => {
                 if let Some(socket) = socket_opt {
                     #[cfg(any(test, miri))]
@@ -185,9 +180,9 @@ impl PlatformSink {
                     journal_payload.extend_from_slice(payload);
                     journal_payload.extend_from_slice(b"\n");
 
-                    #[cfg(not(any(test, miri)))]
+                    #[cfg(all(target_os = "linux", not(any(test, miri))))]
                     let _ = socket.send(&journal_payload);
-                    #[cfg(any(test, miri))]
+                    #[cfg(any(not(target_os = "linux"), test, miri))]
                     {
                         let _ = journal_payload;
                     }

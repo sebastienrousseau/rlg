@@ -46,6 +46,10 @@ mod tests {
             info!(field = 1.23f64, "f64");
             info!(field = 1u128, "u128");
             info!(field = -1i128, "i128");
+            // Test record_debug specifically for the "message" branch
+            info!(message = ? "debug message", "ignored");
+            // Test record_debug for other fields
+            info!(debug_field = ? vec![1], "debug field");
         });
     }
 

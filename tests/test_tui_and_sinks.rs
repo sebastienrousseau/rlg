@@ -32,6 +32,25 @@ fn test_platform_sink_stdout() {
 }
 
 #[test]
+fn test_platform_sink_oslog_coverage() {
+    let mut sink = PlatformSink::OsLog;
+    sink.emit("ERROR", b"test oslog");
+    sink.emit("WARN", b"test oslog");
+    sink.emit("INFO", b"test oslog");
+    sink.emit("DEBUG", b"test oslog");
+    sink.emit("FATAL", b"test oslog");
+    sink.emit("CRITICAL", b"test oslog");
+    sink.emit("UNKNOWN", b"test oslog");
+}
+
+#[test]
+fn test_platform_sink_journald_full_coverage() {
+    // We already have some in src/sink.rs but adding here ensures integration coverage
+    let mut sink = PlatformSink::Journald(None);
+    sink.emit("INFO", b"test journald no socket");
+}
+
+#[test]
 fn test_platform_sink_native_creation() {
     let _sink = PlatformSink::native();
 }
@@ -45,32 +64,31 @@ fn test_platform_sink_file() {
     sink.emit("INFO", b"test file payload");
 }
 
-#[cfg(target_os = "macos")]
 #[test]
-#[ignore = "Causes SIGSEGV in CI due to FFI sensitivity"]
 fn test_platform_sink_oslog() {
     let mut sink = PlatformSink::OsLog;
     sink.emit("ERROR", b"test macos payload");
     sink.emit("INFO", b"test macos payload");
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_platform_sink_journald_fallback() {
     let mut sink = PlatformSink::Journald(None);
     sink.emit("ERROR", b"test journald fallback");
 }
 
-#[cfg(target_os = "linux")]
 #[test]
 fn test_platform_sink_journald_valid() {
-    use std::os::unix::net::UnixDatagram;
-    if let Ok(socket) = UnixDatagram::unbound() {
-        let mut sink = PlatformSink::Journald(Some(socket));
-        sink.emit("WARN", b"test journald valid");
-        sink.emit("DEBUG", b"test journald valid");
-        sink.emit("FATAL", b"test journald valid");
-        sink.emit("UNKNOWN", b"test journald valid");
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::net::UnixDatagram;
+        if let Ok(socket) = UnixDatagram::unbound() {
+            let mut sink = PlatformSink::Journald(Some(socket));
+            sink.emit("WARN", b"test journald valid");
+            sink.emit("DEBUG", b"test journald valid");
+            sink.emit("FATAL", b"test journald valid");
+            sink.emit("UNKNOWN", b"test journald valid");
+        }
     }
 }
 

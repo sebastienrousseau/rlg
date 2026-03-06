@@ -106,6 +106,9 @@ mod tests {
         let invalid_path = Path::new("/root/no_access_123.log");
         // This might return false or Ok(false) depending on OS, but should be handled
         let _ = is_file_writable(invalid_path).await;
+        
+        let empty_path = Path::new("");
+        assert!(is_file_writable(empty_path).await.is_ok()); // exists() is false
     }
 
     #[tokio::test]
@@ -115,6 +118,10 @@ mod tests {
         // truncate_file uses OpenOptions with create(true) so it should actually create it
         truncate_file(&file_path, 1024).await.unwrap();
         assert!(file_path.exists());
+
+        // Test with a path that definitely fails
+        let invalid_path = Path::new("/root/no_access_truncate.log");
+        assert!(truncate_file(invalid_path, 1024).await.is_err());
     }
 
     #[tokio::test]
