@@ -8,14 +8,18 @@
 //! This example demonstrates the usage of various macros in the RustLogs (RLG) library,
 //! including logging at different levels, adding metadata, and log formatting.
 
-#![allow(missing_docs)]
 #![allow(deprecated)]
 
-use rlg::{log_format::LogFormat, log_level::LogLevel};
+#[allow(unused_imports)]
+use dtt::datetime::DateTime;
+#[allow(unused_imports)]
+use rlg::log_format::LogFormat;
+#[allow(unused_imports)]
+use rlg::log_level::LogLevel;
 use rlg::{
     macro_error_log, macro_fatal_log, macro_info_log, macro_log,
-    macro_log_if, macro_log_with_metadata,
-    macro_set_log_format_clf, macro_trace_log, macro_warn_log,
+    macro_log_if, macro_log_with_metadata, macro_warn_log,
+    macro_set_log_format_clf,
 };
 
 /// Entry point for the RustLogs macros examples.
@@ -40,9 +44,6 @@ pub(crate) fn main() {
 }
 
 /// Demonstrates basic usage of the `macro_log!` macro.
-///
-/// This function logs a message with the provided session ID, timestamp, log level, component,
-/// description, and log format.
 fn basic_macro_log_example() {
     println!("🦀  **Basic Macro Log Example**");
     println!("---------------------------------------------");
@@ -51,162 +52,130 @@ fn basic_macro_log_example() {
         "session_id",
         "2022-01-01T12:00:00Z",
         &LogLevel::INFO,
-        "Component",
-        "This is a log message",
+        "component",
+        "This is an info message",
         &LogFormat::JSON
     );
-
-    println!("    ✅  Log created: {:?}", log);
+    log.fire();
 }
 
-/// Demonstrates logging an informational message using the `macro_info_log!` macro.
-///
-/// This function creates a log entry at the INFO level.
+/// Demonstrates usage of the `macro_info_log!` macro.
 fn info_log_macro_example() {
     println!("\n🦀  **Info Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log = macro_info_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Informational log message"
-    );
-
-    println!("    ✅  Info log created: {:?}", log);
+    let log =
+        macro_info_log!("2022-01-01T12:00:00Z", "component", "message");
+    log.fire();
 }
 
-/// Demonstrates logging a warning message using the `macro_warn_log!` macro.
-///
-/// This function creates a log entry at the WARN level.
+/// Demonstrates usage of the `macro_warn_log!` macro.
 fn warn_log_macro_example() {
     println!("\n🦀  **Warn Log Macro Example**");
     println!("---------------------------------------------");
 
     let log = macro_warn_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Warning log message"
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
     );
-
-    println!("    ✅  Warn log created: {:?}", log);
+    log.fire();
 }
 
-/// Demonstrates logging an error message using the `macro_error_log!` macro.
-///
-/// This function creates a log entry at the ERROR level.
+/// Demonstrates usage of the `macro_error_log!` macro.
 fn error_log_macro_example() {
     println!("\n🦀  **Error Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log = macro_error_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Error log message"
-    );
-
-    println!("    ✅  Error log created: {:?}", log);
+    let log =
+        macro_error_log!("2022-01-01T12:00:00Z", "component", "message");
+    log.fire();
 }
 
-/// Demonstrates logging a trace message using the `macro_trace_log!` macro.
-///
-/// This function creates a log entry at the TRACE level.
+/// Demonstrates usage of the `macro_trace_log!` macro.
 fn trace_log_macro_example() {
     println!("\n🦀  **Trace Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log = macro_trace_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Trace log message"
+    let log = rlg::macro_trace_log!(
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
     );
-
-    println!("    ✅  Trace log created: {:?}", log);
+    log.fire();
 }
 
-/// Demonstrates logging a fatal error message using the `macro_fatal_log!` macro.
-///
-/// This function creates a log entry at the FATAL level.
+/// Demonstrates usage of the `macro_fatal_log!` macro.
 fn fatal_log_macro_example() {
     println!("\n🦀  **Fatal Log Macro Example**");
     println!("---------------------------------------------");
 
-    let log = macro_fatal_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Fatal error log message"
-    );
-
-    println!("    ✅  Fatal log created: {:?}", log);
+    let log =
+        macro_fatal_log!("2022-01-01T12:00:00Z", "component", "message");
+    log.fire();
 }
 
-/// Demonstrates conditional logging using the `macro_log_if!` macro.
-///
-/// This function logs a message only if a specified condition is true.
+/// Demonstrates usage of the `macro_log_if!` macro.
 fn conditional_log_example() {
     println!("\n🦀  **Conditional Log Example**");
     println!("---------------------------------------------");
 
     let log = macro_info_log!(
-        "2024-01-01T12:00:00Z",
-        "ConditionalComponent",
-        "This log will only appear if the condition is true"
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
     );
+    macro_log_if!(true, log); // Should log
+    println!("(Log with true condition should have fired)");
 
-    macro_log_if!(true, log); // Logs if the condition is true
-    macro_log_if!(false, log); // Will not log if the condition is false
-
-    println!("    ✅  Conditional logging executed.");
+    let log2 = macro_warn_log!(
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
+    );
+    macro_log_if!(false, log2); // Should not log
+    println!("(Log with false condition should not have fired)");
 }
 
-/// Demonstrates adding metadata to logs using the `macro_log_with_metadata!` macro.
-///
-/// This function logs a message with additional metadata.
+/// Demonstrates usage of the `macro_log_with_metadata!` macro.
 fn log_with_metadata_example() {
     println!("\n🦀  **Log with Metadata Example**");
     println!("---------------------------------------------");
 
     let log_message = macro_log_with_metadata!(
-        "session123",
-        "2024-01-01T12:00:00Z",
-        &LogLevel::INFO,
-        "MetadataComponent",
-        "Log message with metadata",
-        &LogFormat::JSON
+        "session_id",
+        "2022-01-01T12:00:00Z",
+        LogLevel::INFO,
+        "component",
+        "message",
+        LogFormat::JSON
     );
-
-    println!("    ✅  Log with metadata created: {}", log_message);
+    println!("Log Message JSON: {}", log_message);
 }
 
-/// Demonstrates changing the log format using the `macro_set_log_format_clf!` macro.
-///
-/// This function changes the log format to CLF (Common Log Format).
+/// Demonstrates setting log format using `macro_set_log_format_clf!`.
 fn log_with_format_example() {
-    println!("\n🦀  **Log Format Example**");
+    println!("\n🦀  **Log with Format Example**");
     println!("---------------------------------------------");
 
     let mut log = macro_info_log!(
-        "2024-01-01T12:00:00Z",
-        "AppComponent",
-        "Log message"
+        "2022-01-01T12:00:00Z",
+        "component",
+        "message"
     );
-    println!("    Original format: {:?}", log.format);
-
     macro_set_log_format_clf!(log);
-    println!("    ✅  Log format changed to CLF: {:?}", log.format);
+    println!("Log Format set to: {}", log.format);
 }
 
-/// Demonstrates logging messages that contain Unicode characters.
-///
-/// This function creates a log entry with special Unicode characters in the message.
+/// Demonstrates logging messages with Unicode characters.
 fn unicode_log_example() {
     println!("\n🦀  **Unicode Log Example**");
     println!("---------------------------------------------");
 
     let log = macro_info_log!(
-        "2024-01-01T12:00:00Z",
-        "UnicodeComponent",
-        "Unicode log: 你好, världen, 🌍"
+        "2022-01-01T12:00:00Z",
+        "component",
+        "こんにちは RustLogs! 🦀"
     );
-
-    println!("    ✅  Unicode log created: {:?}", log);
+    log.fire();
 }

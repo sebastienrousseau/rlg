@@ -6,6 +6,7 @@
 #![allow(deprecated)]
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use dtt::datetime::DateTime;
     use rlg::{log_format::LogFormat, log_level::LogLevel};
