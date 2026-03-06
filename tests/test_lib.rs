@@ -139,6 +139,34 @@ mod tests {
         assert!(output.contains("\"log.level\":\"info\""));
     }
 
+    #[test]
+    fn test_log_fire() {
+        let log = Log::info("fire test");
+        log.fire();
+    }
+
+    #[test]
+    fn test_log_methods_shortcuts() {
+        assert_eq!(Log::info("desc").level, LogLevel::INFO);
+        assert_eq!(Log::warn("desc").level, LogLevel::WARN);
+        assert_eq!(Log::error("desc").level, LogLevel::ERROR);
+        assert_eq!(Log::debug("desc").level, LogLevel::DEBUG);
+        assert_eq!(Log::trace("desc").level, LogLevel::TRACE);
+        assert_eq!(Log::fatal("desc").level, LogLevel::FATAL);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_log_write_log_entry_coverage() {
+        assert!(Log::write_log_entry(
+            LogLevel::INFO,
+            "proc",
+            "msg",
+            LogFormat::CLF
+        )
+        .is_ok());
+    }
+
     #[tokio::test]
     async fn test_log_log_async_all_formats() {
         let formats = vec![

@@ -73,6 +73,33 @@ mod tests {
         assert!(parse_datetime("invalid datetime").is_err());
     }
 
+    #[test]
+    fn test_generate_timestamp_coverage() {
+        let ts = generate_timestamp();
+        assert!(!ts.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_is_file_writable_not_file() {
+        let temp_dir = tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+        // A directory is not a file
+        assert!(!is_file_writable(&dir_path).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_truncate_file_no_op() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("test_no_op.log");
+        fs::write(&file_path, "12345").await.unwrap();
+        // Truncate to same size should be essentially no-op or just set_len
+        truncate_file(&file_path, 5).await.unwrap();
+        assert_eq!(
+            fs::read_to_string(&file_path).await.unwrap(),
+            "12345"
+        );
+    }
+
     #[tokio::test]
     async fn test_is_directory_writable() {
         let temp_dir = tempdir().unwrap();

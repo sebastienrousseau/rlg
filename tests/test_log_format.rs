@@ -179,5 +179,14 @@ mod tests {
             LogFormat::Log4jXML.format_log("xml").unwrap(),
             "xml"
         );
+
+        // JSON-based others
+        let json = "{\"k\":\"v\"}";
+        assert!(LogFormat::Logstash.format_log(json).is_ok());
+        assert!(LogFormat::NDJSON.format_log(json).is_ok());
+        assert!(LogFormat::GELF.format_log(json).is_ok());
+        assert!(LogFormat::MCP.format_log(json).is_ok());
+        assert!(LogFormat::OTLP.format_log(json).is_ok());
+        assert!(LogFormat::ECS.format_log(json).is_ok());
     }
 }

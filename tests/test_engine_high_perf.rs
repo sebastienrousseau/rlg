@@ -21,6 +21,22 @@ fn test_engine_shutdown() {
 }
 
 #[test]
+fn test_engine_set_filter() {
+    ENGINE.set_filter(3);
+    assert_eq!(ENGINE.filter_level(), 3);
+    ENGINE.set_filter(0);
+}
+
+#[test]
+fn test_engine_apply_config() {
+    let mut config = rlg::config::Config::default();
+    config.log_level = rlg::LogLevel::WARN;
+    ENGINE.apply_config(&config);
+    assert_eq!(ENGINE.filter_level(), rlg::LogLevel::WARN.to_numeric());
+    ENGINE.set_filter(0);
+}
+
+#[test]
 #[cfg_attr(miri, ignore)]
 fn test_engine_queue_full_and_errors() {
     // Test the specific branch where an error increments metrics
