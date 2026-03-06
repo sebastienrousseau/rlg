@@ -239,13 +239,25 @@ mod tests {
 
     #[test]
     fn test_log_rotation_from_str_exhaustive() {
-        use std::str::FromStr;
         use rlg::config::LogRotation;
-        
-        assert!(matches!(LogRotation::from_str("size:10").unwrap(), LogRotation::Size(_)));
-        assert!(matches!(LogRotation::from_str("time:60").unwrap(), LogRotation::Time(_)));
-        assert!(matches!(LogRotation::from_str("date").unwrap(), LogRotation::Date));
-        assert!(matches!(LogRotation::from_str("count:5").unwrap(), LogRotation::Count(_)));
+        use std::str::FromStr;
+
+        assert!(matches!(
+            LogRotation::from_str("size:10").unwrap(),
+            LogRotation::Size(_)
+        ));
+        assert!(matches!(
+            LogRotation::from_str("time:60").unwrap(),
+            LogRotation::Time(_)
+        ));
+        assert!(matches!(
+            LogRotation::from_str("date").unwrap(),
+            LogRotation::Date
+        ));
+        assert!(matches!(
+            LogRotation::from_str("count:5").unwrap(),
+            LogRotation::Count(_)
+        ));
 
         // Error cases
         assert!(LogRotation::from_str("size").is_err());
@@ -299,7 +311,7 @@ mod tests {
     #[test]
     fn test_config_validate_empty_fields() {
         let mut config = Config::default();
-        
+
         config.version = "".to_string();
         assert!(config.validate().is_err());
         config.version = "1.0".to_string();

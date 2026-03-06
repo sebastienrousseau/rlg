@@ -70,7 +70,9 @@ impl PlatformSink {
     #[allow(clippy::missing_const_for_fn)]
     pub fn native() -> Self {
         // IBM-Standard Rigor: Provide an explicit escape hatch for high-compliance environments.
-        if std::env::var("RLG_FALLBACK_STDOUT").is_ok() {
+        if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
+            || std::env::var("GITHUB_ACTIONS").is_ok()
+        {
             return Self::Stdout;
         }
 
