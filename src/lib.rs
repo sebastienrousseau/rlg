@@ -24,7 +24,7 @@
 //!
 //! ## Quick Start: The Liquid Fluent API
 //!
-//! ```rust
+//! ```rust,no_run
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //!

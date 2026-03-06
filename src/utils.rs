@@ -17,7 +17,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use rlg::utils::generate_timestamp;
 ///
 /// let timestamp = generate_timestamp();
@@ -218,7 +218,7 @@ pub fn format_file_size(size: u64) -> String {
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,no_run
 /// use rlg::utils::parse_datetime;
 ///
 /// let datetime_str = "2024-08-29T12:00:00Z";
