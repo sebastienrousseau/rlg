@@ -62,6 +62,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_log_semantic_context_tagging() {
         use rlg::log::Log;
         let mut log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::JSON);

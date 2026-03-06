@@ -360,6 +360,7 @@ mod tests {
     use crate::log_format::LogFormat;
 
     #[test]
+    #[allow(deprecated)]
     fn test_log_write_logfmt_with_attributes() {
         let mut log = Log::new("sid", "ts", &LogLevel::INFO, "comp", "desc", &LogFormat::Logfmt);
         log.attributes.insert("key".to_string(), serde_json::json!("value"));

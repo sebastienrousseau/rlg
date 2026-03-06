@@ -52,6 +52,11 @@ impl PlatformSink {
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn native() -> Self {
+        // IBM-Standard Rigor: Provide an explicit escape hatch for high-compliance environments.
+        if std::env::var("RLG_FALLBACK_STDOUT").is_ok() {
+            return Self::Stdout;
+        }
+
         #[cfg(target_os = "macos")]
         {
             Self::OsLog
@@ -174,6 +179,14 @@ mod tests {
     fn test_platform_sink_stdout() {
         let mut sink = PlatformSink::Stdout;
         sink.emit("INFO", b"test stdout");
+    }
+
+    #[test]
+    fn test_platform_sink_fallback_env_var() {
+        std::env::set_var("RLG_FALLBACK_STDOUT", "1");
+        let sink = PlatformSink::native();
+        assert!(matches!(sink, PlatformSink::Stdout));
+        std::env::remove_var("RLG_FALLBACK_STDOUT");
     }
 
     #[test]

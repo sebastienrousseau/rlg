@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #![allow(missing_docs)]
+#![allow(deprecated)]
 use criterion::{
     black_box, criterion_group, criterion_main, Criterion,
 };
