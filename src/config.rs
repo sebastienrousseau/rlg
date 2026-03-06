@@ -686,6 +686,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_config_save_to_file_fail_unit() {
         let config = Config::default();
         let dir_path = env::temp_dir();

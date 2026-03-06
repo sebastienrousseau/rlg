@@ -73,7 +73,7 @@ pub fn sanitize_log_message(message: &str) -> String {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use rlg::utils::is_file_writable;
 /// use std::path::Path;
 ///
@@ -120,7 +120,7 @@ pub async fn is_file_writable(path: &Path) -> RlgResult<bool> {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use rlg::utils::truncate_file;
 /// use std::path::Path;
 ///
@@ -278,7 +278,7 @@ pub fn generate_trace_id() -> String {
 ///
 /// # Examples
 ///
-/// ```
+/// ```no_run
 /// use rlg::utils::is_directory_writable;
 /// use std::path::Path;
 ///

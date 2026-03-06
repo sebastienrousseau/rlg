@@ -22,6 +22,7 @@ pub enum PlatformSink {
 }
 
 #[cfg(target_os = "macos")]
+#[allow(dead_code)]
 mod macos_ffi {
     use std::os::raw::{c_char, c_void};
     pub(crate) type os_log_t = *mut c_void;
@@ -195,6 +196,7 @@ mod tests {
     use std::os::unix::net::UnixDatagram;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_platform_sink_stdout() {
         let mut sink = PlatformSink::Stdout;
         sink.emit("INFO", b"test stdout");
@@ -209,6 +211,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_platform_sink_journald_coverage() {
         #[cfg(target_os = "linux")]
         {
