@@ -8,6 +8,7 @@ use std::os::unix::net::UnixDatagram;
 
 #[cfg(not(unix))]
 #[allow(dead_code)]
+#[derive(Debug)]
 struct UnixDatagram;
 
 #[cfg(not(unix))]
@@ -35,35 +36,30 @@ pub enum PlatformSink {
 mod macos_ffi {
     use std::os::raw::{c_char, c_void};
     #[allow(dead_code)]
-    pub(crate) type os_log_t = *mut c_void;
+    pub type os_log_t = *mut c_void;
     #[repr(transparent)]
     #[allow(dead_code)]
-    pub(crate) struct os_log_type_t(pub(crate) u8);
+    pub struct os_log_type_t(pub u8);
 
     #[allow(dead_code)]
-    pub(crate) const OS_LOG_TYPE_DEFAULT: os_log_type_t =
-        os_log_type_t(0x00);
+    pub const OS_LOG_TYPE_DEFAULT: os_log_type_t = os_log_type_t(0x00);
     #[allow(dead_code)]
-    pub(crate) const OS_LOG_TYPE_INFO: os_log_type_t =
-        os_log_type_t(0x01);
+    pub const OS_LOG_TYPE_INFO: os_log_type_t = os_log_type_t(0x01);
     #[allow(dead_code)]
-    pub(crate) const OS_LOG_TYPE_DEBUG: os_log_type_t =
-        os_log_type_t(0x02);
+    pub const OS_LOG_TYPE_DEBUG: os_log_type_t = os_log_type_t(0x02);
     #[allow(dead_code)]
-    pub(crate) const OS_LOG_TYPE_ERROR: os_log_type_t =
-        os_log_type_t(0x10);
+    pub const OS_LOG_TYPE_ERROR: os_log_type_t = os_log_type_t(0x10);
     #[allow(dead_code)]
-    pub(crate) const OS_LOG_TYPE_FAULT: os_log_type_t =
-        os_log_type_t(0x11);
+    pub const OS_LOG_TYPE_FAULT: os_log_type_t = os_log_type_t(0x11);
 
     extern "C" {
         #[allow(dead_code)]
-        pub(crate) fn os_log_create(
+        pub fn os_log_create(
             subsystem: *const c_char,
             category: *const c_char,
         ) -> os_log_t;
         #[allow(dead_code)]
-        pub(crate) fn _os_log_impl(
+        pub fn _os_log_impl(
             dso: *mut c_void,
             log: os_log_t,
             log_type: os_log_type_t,
@@ -112,6 +108,7 @@ impl PlatformSink {
 
     /// Emits a log payload via the native sink mechanism.
     #[allow(unused_variables)]
+    #[allow(clippy::too_many_lines)]
     pub fn emit(&mut self, level: &str, payload: &[u8]) {
         match self {
             Self::Stdout => {
