@@ -13,12 +13,14 @@ fn test_fast_serializer() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_engine_shutdown() {
     // This just ensures shutdown() doesn't panic
     ENGINE.shutdown();
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_engine_queue_full_and_errors() {
     // Test the specific branch where an error increments metrics
     let event_err = LogEvent {
@@ -36,6 +38,7 @@ fn test_engine_queue_full_and_errors() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_engine_tui_flag() {
     // Temporarily set the flag and spawn an engine to cover the TUI spawn branch
     std::env::set_var("RLG_TUI", "1");

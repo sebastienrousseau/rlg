@@ -68,7 +68,6 @@ vrd = "0.0.8"
 tracing-core = "0.1.33"
 
 # Optional dependencies for feature flags
-syslog = { version = "7.0.0", optional = true }
 reqwest = { version = "0.13.2", optional = true }
 itoa = "1.0.17"
 ryu = "1.0.23"

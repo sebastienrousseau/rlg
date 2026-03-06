@@ -20,7 +20,6 @@
 //! |---------|:-------:|-------------|
 //! | `default` | Yes | Core engine, standard sinks, and terminal dashboard. |
 //! | `reqwest` | No | Enables OTLP/HTTP exports for remote observability. |
-//! | `syslog` | No | Enables legacy RFC 5424 syslog support. |
 //! | `debug_enabled` | No | Enables verbose internal engine diagnostics. |
 //!
 //! ## Quick Start: The Liquid Fluent API
