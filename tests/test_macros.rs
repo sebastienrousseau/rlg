@@ -421,7 +421,7 @@ mod tests {
         let before = ENGINE.active_spans();
         rlg::rlg_span!("Metric Test", {
             let during = ENGINE.active_spans();
-            assert!(during >= before + 1);
+            assert!(during > before);
         });
         // We do not assert `after == before` here because other tests
         // may run concurrently and increment the global span count.

@@ -24,22 +24,22 @@ pub enum PlatformSink {
 #[cfg(target_os = "macos")]
 mod macos_ffi {
     use std::os::raw::{c_char, c_void};
-    pub type os_log_t = *mut c_void;
+    pub(crate) type os_log_t = *mut c_void;
     #[repr(transparent)]
-    pub struct os_log_type_t(pub u8);
+    pub(crate) struct os_log_type_t(pub(crate) u8);
 
-    pub const OS_LOG_TYPE_DEFAULT: os_log_type_t = os_log_type_t(0x00);
-    pub const OS_LOG_TYPE_INFO: os_log_type_t = os_log_type_t(0x01);
-    pub const OS_LOG_TYPE_DEBUG: os_log_type_t = os_log_type_t(0x02);
-    pub const OS_LOG_TYPE_ERROR: os_log_type_t = os_log_type_t(0x10);
-    pub const OS_LOG_TYPE_FAULT: os_log_type_t = os_log_type_t(0x11);
+    pub(crate) const OS_LOG_TYPE_DEFAULT: os_log_type_t = os_log_type_t(0x00);
+    pub(crate) const OS_LOG_TYPE_INFO: os_log_type_t = os_log_type_t(0x01);
+    pub(crate) const OS_LOG_TYPE_DEBUG: os_log_type_t = os_log_type_t(0x02);
+    pub(crate) const OS_LOG_TYPE_ERROR: os_log_type_t = os_log_type_t(0x10);
+    pub(crate) const OS_LOG_TYPE_FAULT: os_log_type_t = os_log_type_t(0x11);
 
     extern "C" {
-        pub fn os_log_create(
+        pub(crate) fn os_log_create(
             subsystem: *const c_char,
             category: *const c_char,
         ) -> os_log_t;
-        pub fn _os_log_impl(
+        pub(crate) fn _os_log_impl(
             dso: *mut c_void,
             log: os_log_t,
             log_type: os_log_type_t,

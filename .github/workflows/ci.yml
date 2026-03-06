@@ -61,5 +61,5 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run MIRI
         env:
-          MIRIFLAGS: "-Zmiri-tree-borrows"
+          MIRIFLAGS: "-Zmiri-tree-borrows -Zmiri-disable-isolation"
         run: cargo miri test --workspace --all-features
