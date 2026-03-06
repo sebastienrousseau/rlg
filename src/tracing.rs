@@ -17,7 +17,7 @@ pub struct RlgSubscriber;
 impl RlgSubscriber {
     /// Create a new `RlgSubscriber`.
     #[must_use]
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self
     }
 }
@@ -80,9 +80,9 @@ struct RlgVisitor {
 impl Visit for RlgVisitor {
     fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
         if field.name() == "message" {
-            self.message = format!("{0:?}", value);
+            self.message = format!("{value:?}");
         } else {
-            self.fields.insert(field.name().to_string(), serde_json::json!(format!("{0:?}", value)));
+            self.fields.insert(field.name().to_string(), serde_json::json!(format!("{value:?}")));
         }
     }
 
