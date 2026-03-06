@@ -389,6 +389,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_rlg_span_macro() {
         let res = rlg::rlg_span!("Compute Task", {
             let x = 10;
@@ -399,6 +400,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_rlg_time_it_macro() {
         let res = rlg::rlg_time_it!("Database Query", {
             let x = 100;
@@ -408,6 +410,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_rlg_mcp_notify_macro() {
         // This is primarily for side effects (firing a log event),
         // we test that it compiles and runs without panicking.
@@ -415,6 +418,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_rlg_span_metric() {
         // We call the macro to ensure it compiles and executes.
         // We do not assert on the global span count because concurrent tests

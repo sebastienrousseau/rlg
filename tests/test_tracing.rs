@@ -6,6 +6,7 @@ mod tests {
     use tracing_core::dispatcher::{self, Dispatch};
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_tracing_integration() {
         let subscriber = RlgSubscriber::new();
         let dispatch = Dispatch::new(subscriber);
@@ -18,6 +19,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_tracing_all_types() {
         let subscriber = RlgSubscriber::new();
         let dispatch = Dispatch::new(subscriber);
@@ -40,6 +42,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_tracing_enabled() {
         use rlg::engine::ENGINE;
         let subscriber = RlgSubscriber::new();
@@ -57,6 +60,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_subscriber_noop_methods() {
         let subscriber = RlgSubscriber::new();
         let dispatch = Dispatch::new(subscriber);
