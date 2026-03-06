@@ -1,4 +1,4 @@
-# Maintainer: Sebastien Rousseau <hello@sebastien.sh>
+# Maintainer: Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>
 pkgname=rust-rlg
 pkgver=0.0.7
 pkgrel=1

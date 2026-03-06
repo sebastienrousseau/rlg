@@ -38,5 +38,5 @@ install -m 0644 LICENSE-APACHE %{buildroot}%{_licensedir}/%{name}/LICENSE-APACHE
 %doc README.md
 
 %changelog
-* Thu Mar 05 2026 Sebastien Rousseau <hello@sebastien.sh> - 0.0.7-1
+* Thu Mar 05 2026 Sebastien Rousseau <sebastienrousseau@users.noreply.github.com> - 0.0.7-1
 - Initial v0.0.7 release with Lock-Free Engine and AI-native formats.
