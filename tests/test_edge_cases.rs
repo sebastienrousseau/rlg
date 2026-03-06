@@ -3,10 +3,12 @@
 mod tests {
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
+    #[allow(unused_imports)]
     use rlg::utils::{
         generate_timestamp, is_directory_writable, is_file_writable,
     };
     use std::fs;
+    #[allow(unused_imports)]
     use std::path::Path;
     use tempfile::tempdir;
 

@@ -100,7 +100,8 @@ impl PlatformSink {
     }
 
     /// Emits a log payload via the native sink mechanism.
-    pub fn emit(&mut self, _level: &str, payload: &[u8]) {
+    #[allow(unused_variables)]
+    pub fn emit(&mut self, level: &str, payload: &[u8]) {
         match self {
             Self::Stdout => {
                 let _ = std::io::stdout().write_all(payload);
@@ -128,7 +129,7 @@ impl PlatformSink {
                             subsystem.as_ptr(),
                             category.as_ptr(),
                         );
-                        let log_type = match _level {
+                        let log_type = match level {
                             "ERROR" | "FATAL" => OS_LOG_TYPE_ERROR,
                             "CRITICAL" => OS_LOG_TYPE_FAULT,
                             "WARN" => OS_LOG_TYPE_DEFAULT,
@@ -156,7 +157,7 @@ impl PlatformSink {
                 }
                 #[cfg(any(test, miri))]
                 {
-                    let _ = (_level, payload);
+                    let _ = (level, payload);
                 }
             }
             #[cfg(target_os = "linux")]
@@ -164,7 +165,7 @@ impl PlatformSink {
                 if let Some(socket) = socket_opt {
                     #[cfg(any(test, miri))]
                     let _ = socket;
-                    let priority = match _level {
+                    let priority = match level {
                         "ERROR" | "FATAL" | "CRITICAL" => "3",
                         "WARN" => "4",
                         "INFO" => "6",
