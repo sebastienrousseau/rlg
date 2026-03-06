@@ -310,34 +310,55 @@ mod tests {
 
     #[test]
     fn test_config_validate_empty_fields() {
-        let mut config = Config::default();
+        let config_v = Config {
+            version: "".to_string(),
+            ..Config::default()
+        };
+        assert!(config_v.validate().is_err());
 
-        config.version = "".to_string();
-        assert!(config.validate().is_err());
-        config.version = "1.0".to_string();
+        let config_p = Config {
+            profile: "".to_string(),
+            ..Config::default()
+        };
+        assert!(config_p.validate().is_err());
 
-        config.profile = "".to_string();
-        assert!(config.validate().is_err());
-        config.profile = "default".to_string();
+        let config_path = Config {
+            log_file_path: PathBuf::new(),
+            ..Config::default()
+        };
+        assert!(config_path.validate().is_err());
 
-        config.log_file_path = PathBuf::new();
-        assert!(config.validate().is_err());
-        config.log_file_path = PathBuf::from("RLG.log");
+        let config_f = Config {
+            log_format: "".to_string(),
+            ..Config::default()
+        };
+        assert!(config_f.validate().is_err());
 
-        config.log_format = "".to_string();
-        assert!(config.validate().is_err());
-        config.log_format = "%level".to_string();
+        let config_d = Config {
+            logging_destinations: vec![],
+            ..Config::default()
+        };
+        assert!(config_d.validate().is_err());
 
-        config.logging_destinations = vec![];
-        assert!(config.validate().is_err());
-        config.logging_destinations = vec![LoggingDestination::Stdout];
+        let config_e1 = Config {
+            env_vars: {
+                let mut map = HashMap::new();
+                map.insert(" ".to_string(), "val".to_string());
+                map
+            },
+            ..Config::default()
+        };
+        assert!(config_e1.validate().is_err());
 
-        config.env_vars.insert(" ".to_string(), "val".to_string());
-        assert!(config.validate().is_err());
-        config.env_vars.clear();
-
-        config.env_vars.insert("KEY".to_string(), "".to_string());
-        assert!(config.validate().is_err());
+        let config_e2 = Config {
+            env_vars: {
+                let mut map = HashMap::new();
+                map.insert("KEY".to_string(), "".to_string());
+                map
+            },
+            ..Config::default()
+        };
+        assert!(config_e2.validate().is_err());
     }
 
     #[test]
