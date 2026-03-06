@@ -302,8 +302,14 @@ mod tests {
     #[test]
     fn test_config_merge() {
         let config1 = Config::default();
-        let mut config2 = Config::default();
-        config2.env_vars.insert("K".to_string(), "V".to_string());
+        let config2 = Config {
+            env_vars: {
+                let mut map = HashMap::new();
+                map.insert("K".to_string(), "V".to_string());
+                map
+            },
+            ..Config::default()
+        };
         let merged = config1.merge(&config2);
         assert_eq!(merged.env_vars.get("K").unwrap(), "V");
     }

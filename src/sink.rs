@@ -123,49 +123,65 @@ impl PlatformSink {
                 let _ = f.write_all(b"\n");
             }
             Self::OsLog => {
-                #[cfg(all(target_os = "macos", not(any(test, miri))))]
+                #[cfg(target_os = "macos")]
                 {
-                    use macos_ffi::*;
-                    use std::ffi::CString;
+                    if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
+                        || std::env::var("GITHUB_ACTIONS").is_ok()
+                    {
+                        let _ = (level, payload);
+                    } else {
+                        #[cfg(not(any(test, miri)))]
+                        {
+                            use macos_ffi::*;
+                            use std::ffi::CString;
 
-                    let subsystem =
-                        CString::new("com.rlg.logger").unwrap();
-                    let category = CString::new("default").unwrap();
+                            let subsystem =
+                                CString::new("com.rlg.logger").unwrap();
+                            let category =
+                                CString::new("default").unwrap();
 
-                    // SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
-                    // valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
-                    unsafe {
-                        let log_handle = os_log_create(
-                            subsystem.as_ptr(),
-                            category.as_ptr(),
-                        );
-                        let log_type = match level {
-                            "ERROR" | "FATAL" => OS_LOG_TYPE_ERROR,
-                            "CRITICAL" => OS_LOG_TYPE_FAULT,
-                            "WARN" => OS_LOG_TYPE_DEFAULT,
-                            "INFO" => OS_LOG_TYPE_INFO,
-                            "DEBUG" | "TRACE" | "VERBOSE" => {
-                                OS_LOG_TYPE_DEBUG
+                            // SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
+                            // valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
+                            unsafe {
+                                let log_handle = os_log_create(
+                                    subsystem.as_ptr(),
+                                    category.as_ptr(),
+                                );
+                                let log_type = match level {
+                                    "ERROR" | "FATAL" => {
+                                        OS_LOG_TYPE_ERROR
+                                    }
+                                    "CRITICAL" => OS_LOG_TYPE_FAULT,
+                                    "WARN" => OS_LOG_TYPE_DEFAULT,
+                                    "INFO" => OS_LOG_TYPE_INFO,
+                                    "DEBUG" | "TRACE" | "VERBOSE" => {
+                                        OS_LOG_TYPE_DEBUG
+                                    }
+                                    _ => OS_LOG_TYPE_DEFAULT,
+                                };
+
+                                let format =
+                                    CString::new("%{public}s").unwrap();
+                                let msg = CString::new(payload)
+                                    .unwrap_or_default();
+
+                                _os_log_impl(
+                                    std::ptr::null_mut(),
+                                    log_handle,
+                                    log_type,
+                                    format.as_ptr(),
+                                    msg.as_ptr() as *const u8,
+                                    payload.len() as u32,
+                                );
                             }
-                            _ => OS_LOG_TYPE_DEFAULT,
-                        };
-
-                        let format =
-                            CString::new("%{public}s").unwrap();
-                        let msg =
-                            CString::new(payload).unwrap_or_default();
-
-                        _os_log_impl(
-                            std::ptr::null_mut(),
-                            log_handle,
-                            log_type,
-                            format.as_ptr(),
-                            msg.as_ptr() as *const u8,
-                            payload.len() as u32,
-                        );
+                        }
+                        #[cfg(any(test, miri))]
+                        {
+                            let _ = (level, payload);
+                        }
                     }
                 }
-                #[cfg(any(not(target_os = "macos"), test, miri))]
+                #[cfg(not(target_os = "macos"))]
                 {
                     let _ = (level, payload);
                 }
@@ -192,11 +208,24 @@ impl PlatformSink {
                     journal_payload.extend_from_slice(payload);
                     journal_payload.extend_from_slice(b"\n");
 
-                    #[cfg(all(target_os = "linux", not(any(test, miri))))]
-                    let _ = socket.send(&journal_payload);
-                    #[cfg(any(not(target_os = "linux"), test, miri))]
+                    if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
+                        || std::env::var("GITHUB_ACTIONS").is_ok()
                     {
                         let _ = journal_payload;
+                    } else {
+                        #[cfg(all(
+                            target_os = "linux",
+                            not(any(test, miri))
+                        ))]
+                        let _ = socket.send(&journal_payload);
+                        #[cfg(any(
+                            not(target_os = "linux"),
+                            test,
+                            miri
+                        ))]
+                        {
+                            let _ = journal_payload;
+                        }
                     }
                 } else {
                     let _ = std::io::stdout().write_all(payload);
