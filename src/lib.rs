@@ -3,16 +3,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! # RLG (`RustLogs`) — High-Performance Lock-Free Observability Engine
+//! # RLG (`RustLogs`) — High-Performance Lock-Free Logging Engine
 //!
-//! `rlg` is a brutalist, zero-allocation logging library designed for the 2026 observability landscape.
-//! Built on the LMAX Disruptor pattern, it delivers sub-microsecond ingestion latency (~1.4µs)
-//! with native platform integration for macOS `os_log` and Linux `journald`.
+//! `rlg` is a structured logging library built on a lock-free ring buffer (LMAX Disruptor pattern).
+//! It delivers sub-microsecond ingestion latency (~1.4µs) with deferred formatting on a background
+//! flusher thread, and native platform sinks for macOS `os_log` and Linux `journald`.
 //!
-//! ## Core Philosophies
-//! - **Liquid DX (Apple-Standard):** A chainable, fluent API that makes high-performance logging feel effortless.
-//! - **AI-Native (Google-Standard):** Optimized for ingestion by LLMs and MCP-compliant orchestrators via structured formats (OTLP, MCP, ECS).
-//! - **Enterprise Rigor (IBM-Standard):** MIRI-compliant safety, lock-free concurrency, and direct OS-native binary FFI.
+//! ## Design Principles
+//! - **Fluent API:** Chainable builder pattern for ergonomic log construction.
+//! - **14 structured formats:** JSON, OTLP, MCP, ECS, CEF, GELF, Logfmt, and more.
+//! - **Lock-free concurrency:** MIRI-compliant safety, no mutex contention on the hot path.
 //!
 //! ## Feature Matrix
 //!
@@ -21,6 +21,8 @@
 //! | `default` | &mdash; | No default features; all modules are always compiled. |
 //! | `debug_enabled` | No | Enables verbose internal engine diagnostics. |
 //! | `miette` | No | Pretty diagnostic error reports via `miette`. |
+//! | `tokio` | No | Async config loading, async file utilities (`load_async`, `hot_reload_async`). |
+//! | `tracing-layer` | No | Composable `tracing_subscriber::Layer` via `RlgLayer`. |
 //!
 //! ## Quick Start: The Liquid Fluent API
 //!
@@ -57,21 +59,25 @@ pub mod config;
 pub mod engine;
 /// Custom error types for the RLG ecosystem.
 pub mod error;
+/// Zero-config initialization API.
+pub mod init;
 /// Log entry structures and the Liquid Fluent API.
 pub mod log;
 /// Exhaustive support for industry-standard log formats.
 pub mod log_format;
 /// Severity level definitions and parsing.
 pub mod log_level;
+/// Bridge from the `log` crate facade into the RLG engine.
+pub mod logger;
 /// Convenience macros for ergonomic logging.
 pub mod macros;
 /// Native platform-specific logging sinks.
 pub mod sink;
 /// Integration with the `tracing` ecosystem.
 pub mod tracing;
-/// Terminal UI Dashboard for generative local development.
+/// Terminal UI dashboard for real-time metrics during local development.
 pub mod tui;
-/// High-performance utility functions.
+/// Utility functions for timestamps, file operations, and sanitization.
 pub mod utils;
 
 /// Shared ecosystem utilities from euxis-commons.
@@ -79,11 +85,16 @@ pub use euxis_commons as commons;
 
 // Re-exports for a flattened, intuitive API.
 pub use crate::error::{RlgError, RlgResult};
+pub use crate::init::{InitError, RlgBuilder, builder, init};
 pub use crate::log::Log;
 pub use crate::log_format::LogFormat;
 pub use crate::log_level::LogLevel;
+pub use crate::logger::RlgLogger;
 pub use crate::sink::PlatformSink;
 pub use crate::tracing::RlgSubscriber;
+
+#[cfg(feature = "tracing-layer")]
+pub use crate::tracing::RlgLayer;
 
 /// The version of the `rlg` crate.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Macros for RLG (v0.0.7).
-//! All macros route through the zero-latency LMAX Disruptor engine.
+//! Convenience macros for span tracking, latency measurement, and MCP notifications.
+//! All macros route through the lock-free ingestion engine.
 
 /// Injects OTLP context and executes a block of code.
 #[macro_export]

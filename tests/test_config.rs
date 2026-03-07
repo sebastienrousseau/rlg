@@ -23,6 +23,7 @@ mod tests {
         str::FromStr,
     };
     use tempfile::tempdir;
+    #[cfg(feature = "tokio")]
     use tokio::{fs, io::AsyncWriteExt};
 
     /// Tests parsing different variants of the LogLevel enum from strings.
@@ -73,6 +74,7 @@ mod tests {
     }
 
     /// Tests loading configuration with invalid values for LOG_LEVEL and LOG_ROTATION.
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     #[allow(unsafe_code)]
     async fn test_config_load_with_invalid_values() {

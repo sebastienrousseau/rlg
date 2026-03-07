@@ -303,16 +303,21 @@ mod log_format_conversion {
 mod engine_ingest {
     use divan::{Bencher, black_box};
     use rlg::engine::{ENGINE, LogEvent};
+    use rlg::log::Log;
+    use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
 
     #[divan::bench(args = [10, 64, 256, 1024])]
     fn ingest_payload(bencher: Bencher, size: usize) {
-        let payload = vec![b'X'; size];
+        let msg: String = "X".repeat(size);
         bencher.bench(|| {
+            let log = Log::build(LogLevel::INFO, &msg)
+                .component("bench")
+                .format(LogFormat::MCP);
             let event = LogEvent {
                 level: LogLevel::INFO,
                 level_num: 6,
-                payload: black_box(payload.clone()),
+                log: black_box(log),
             };
             ENGINE.ingest(black_box(event));
         });
@@ -336,11 +341,10 @@ mod full_pipeline {
                 Log::build(black_box(LogLevel::INFO), black_box(msg))
                     .component("pipeline-bench")
                     .format(LogFormat::MCP);
-            let payload = format!("{log}\n").into_bytes();
             let event = rlg::engine::LogEvent {
                 level: LogLevel::INFO,
                 level_num: 6,
-                payload: black_box(payload),
+                log: black_box(log),
             };
             rlg::engine::ENGINE.ingest(black_box(event));
         });

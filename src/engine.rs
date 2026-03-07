@@ -1,24 +1,38 @@
 // engine.rs
-// Brutalist Lock-Free Ingestion Engine
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
+//! Lock-free ingestion engine backed by a bounded ring buffer.
 
 use crate::log_level::LogLevel;
 use crate::sink::PlatformSink;
 use crate::tui::{TuiMetrics, spawn_tui_thread};
 use crossbeam_queue::ArrayQueue;
+use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
 use std::thread;
 use std::time::Duration;
 
+/// Capacity of the lock-free ring buffer (number of log events).
+const RING_BUFFER_CAPACITY: usize = 65_536;
+
+/// Maximum number of events drained per flusher wake-up cycle.
+const MAX_DRAIN_BATCH_SIZE: usize = 64;
+
 /// A structured log event optimized for zero-allocation handoff.
+///
+/// Formatting is deferred to the flusher thread — the caller only pays
+/// the cost of a `Log` move (~128-byte memcpy), not serialization.
 #[derive(Debug, Clone)]
 pub struct LogEvent {
     /// The log level severity.
     pub level: LogLevel,
     /// The numeric log level for filtering.
     pub level_num: u8,
-    /// Pre-formatted or rapidly assembled buffer.
-    pub payload: Vec<u8>,
+    /// Raw structured log data, formatted on the flusher thread.
+    pub log: crate::log::Log,
 }
 
 /// The Lock-Free Engine handling background log flushes.
@@ -50,11 +64,9 @@ impl fmt::Debug for LockFreeEngine {
     }
 }
 
-use std::fmt;
-
 /// Global lazy-initialized lock-free engine.
 pub static ENGINE: LazyLock<LockFreeEngine> =
-    LazyLock::new(|| LockFreeEngine::new(65536)); // Ring buffer size of 65k
+    LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
 impl LockFreeEngine {
     /// Initializes the lock-free engine and spawns the background flusher.
@@ -77,14 +89,16 @@ impl LockFreeEngine {
         let handle = thread::Builder::new()
             .name("rlg-flusher".into())
             .spawn(move || {
+                use std::io::Write;
                 let mut sink = PlatformSink::native();
+                let mut fmt_buf = Vec::with_capacity(512);
 
                 loop {
-                    // Batch drain: dequeue up to 64 events at a time
-                    let mut batch: [Option<LogEvent>; 64] =
+                    let mut batch: [Option<LogEvent>;
+                        MAX_DRAIN_BATCH_SIZE] =
                         std::array::from_fn(|_| None);
                     let mut count = 0;
-                    while count < 64 {
+                    while count < MAX_DRAIN_BATCH_SIZE {
                         match flusher_queue.pop() {
                             Some(event) => {
                                 batch[count] = Some(event);
@@ -94,7 +108,9 @@ impl LockFreeEngine {
                         }
                     }
                     for event in batch.iter().flatten() {
-                        sink.emit(event.level.as_str(), &event.payload);
+                        fmt_buf.clear();
+                        let _ = writeln!(fmt_buf, "{}", &event.log);
+                        sink.emit(event.level.as_str(), &fmt_buf);
                     }
 
                     if flusher_shutdown.load(Ordering::Relaxed)
@@ -109,7 +125,7 @@ impl LockFreeEngine {
             })
             .expect("Failed to spawn rlg-flusher background thread");
 
-        // Spawn the Generative TUI Dashboard Thread if enabled
+        // Spawn the TUI dashboard thread if RLG_TUI=1
         if std::env::var("RLG_TUI").map(|v| v == "1").unwrap_or(false) {
             spawn_tui_thread(metrics.clone(), shutdown_flag.clone());
         }
@@ -125,21 +141,24 @@ impl LockFreeEngine {
 
     /// Appends an event to the ring buffer.
     ///
-    /// This function handles atomic metrics increments and buffer management.
+    /// If the buffer is full, the oldest event is evicted to make room.
+    /// Dropped events are tracked via `TuiMetrics::dropped_events`.
     pub fn ingest(&self, event: LogEvent) {
         if event.level_num < self.filter_level.load(Ordering::Acquire) {
             return;
         }
 
         self.metrics.inc_events();
+        self.metrics.inc_level(event.level);
 
         if event.level_num >= LogLevel::ERROR.to_numeric() {
             self.metrics.inc_errors();
         }
 
-        // If the buffer is full, pop oldest and retry once.
+        // If the buffer is full, evict the oldest event and retry.
         if let Err(err) = self.queue.push(event) {
             let _ = self.queue.pop();
+            self.metrics.inc_dropped();
             let _ = self.queue.push(err);
         }
 
@@ -158,6 +177,11 @@ impl LockFreeEngine {
     #[must_use]
     pub fn filter_level(&self) -> u8 {
         self.filter_level.load(Ordering::Relaxed)
+    }
+
+    /// Increments the format counter in the TUI metrics.
+    pub fn inc_format(&self, format: crate::log_format::LogFormat) {
+        self.metrics.inc_format(format);
     }
 
     /// Increments the active span count in the TUI metrics.

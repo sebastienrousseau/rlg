@@ -191,7 +191,7 @@ mod tests {
                 .time("ts")
                 .component("comp")
                 .format(f);
-            assert!(log.log().is_ok());
+            log.log();
         }
     }
 }

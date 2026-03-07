@@ -4,6 +4,7 @@
 #[cfg(test)]
 mod tests {
     use rlg::config::{Config, ConfigError};
+    #[cfg(feature = "tokio")]
     use std::fs;
 
     #[test]
@@ -53,6 +54,7 @@ mod tests {
         assert!(matches!(res, Err(ConfigError::FileWriteError(_))));
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_hot_reload_async_coverage_events() {
         use parking_lot::RwLock;
@@ -86,6 +88,7 @@ mod tests {
         let _ = stop_tx.send(()).await;
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_hot_reload_async_invalid_toml() {
         use parking_lot::RwLock;
@@ -111,6 +114,7 @@ mod tests {
         let _ = stop_tx.send(()).await;
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_load_async_missing_version() {
         let temp_dir = tempfile::tempdir().unwrap();

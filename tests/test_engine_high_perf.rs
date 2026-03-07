@@ -58,7 +58,7 @@ fn test_engine_queue_full_and_errors() {
     let event_err = LogEvent {
         level: rlg::LogLevel::ERROR,
         level_num: 8,
-        payload: b"error".to_vec(),
+        log: rlg::log::Log::error("error"),
     };
     ENGINE.ingest(event_err.clone());
 

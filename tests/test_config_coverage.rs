@@ -185,6 +185,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_load_async_no_path() {
         let res = Config::load_async(None::<&str>).await;

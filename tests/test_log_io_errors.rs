@@ -27,14 +27,12 @@ mod tests {
         unsafe { std::env::set_var("RLG_LOG_FILE", &log_file) };
 
         let log = Log::default();
-        let res = log.log();
-        assert!(res.is_ok()); // Note: In lock-free engine, ingest always returns Ok
+        log.log();
 
         let log2 = Log::build(LogLevel::INFO, "msg")
             .component("proc")
             .format(LogFormat::CLF);
-        let res2 = log2.log();
-        assert!(res2.is_ok()); // Note: In lock-free engine, ingest always returns Ok
+        log2.log();
 
         // SAFETY: Test-only cleanup.
         unsafe { std::env::remove_var("RLG_LOG_FILE") };

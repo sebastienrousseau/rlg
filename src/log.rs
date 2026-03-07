@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use crate::{LogFormat, LogLevel, RlgResult};
+use crate::{LogFormat, LogLevel};
 use dtt::datetime::DateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -59,20 +59,16 @@ impl Default for Log {
 impl Log {
     /// Logs a message by ingesting it into the lock-free engine.
     ///
-    /// # Errors
-    ///
-    /// This function returns an error if the payload cannot be formatted.
-    pub fn log(&self) -> RlgResult<()> {
-        use std::io::Write;
-        let mut payload = Vec::with_capacity(256);
-        let _ = writeln!(payload, "{self}");
+    /// Formatting is deferred to the background flusher thread.
+    /// This borrows `self` and clones — prefer [`fire()`](Self::fire) to avoid the clone.
+    pub fn log(&self) {
+        crate::engine::ENGINE.inc_format(self.format);
         let event = crate::engine::LogEvent {
             level: self.level,
             level_num: self.level.to_numeric(),
-            payload,
+            log: self.clone(),
         };
         crate::engine::ENGINE.ingest(event);
-        Ok(())
     }
 
     /// Starts building a new INFO level log.
@@ -122,7 +118,7 @@ impl Log {
             level,
             component: "default".to_string(),
             description: description.to_string(),
-            format: LogFormat::MCP, // Phase 2/3 default
+            format: LogFormat::MCP,
             attributes: BTreeMap::new(),
         }
     }
@@ -165,14 +161,15 @@ impl Log {
     }
 
     /// Fires the log into the lock-free background ingestion engine, consuming it.
+    ///
+    /// Formatting is deferred to the background flusher thread — the caller
+    /// only pays for a `Log` move (~128-byte memcpy), not serialization.
     pub fn fire(self) {
-        use std::io::Write;
-        let mut payload = Vec::with_capacity(256);
-        let _ = writeln!(payload, "{self}");
+        crate::engine::ENGINE.inc_format(self.format);
         let event = crate::engine::LogEvent {
             level: self.level,
             level_num: self.level.to_numeric(),
-            payload,
+            log: self,
         };
         crate::engine::ENGINE.ingest(event);
     }

@@ -22,10 +22,7 @@ mod tests {
         let _ = std::fs::create_dir("RLG.log");
 
         let log = Log::default();
-        let res = log.log();
-
-        // In the lock-free engine, ingestion succeeds even if flusher might fail later
-        assert!(res.is_ok());
+        log.log();
 
         // Cleanup
         let _ = std::fs::remove_dir("RLG.log");
@@ -46,10 +43,7 @@ mod tests {
         let log = Log::build(LogLevel::INFO, "msg")
             .component("proc")
             .format(LogFormat::CLF);
-        let res = log.log();
-
-        // It should succeed ingest
-        assert!(res.is_ok());
+        log.log();
 
         // Cleanup
         let _ = std::fs::remove_dir("RLG.log");

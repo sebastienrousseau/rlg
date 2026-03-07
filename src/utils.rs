@@ -5,8 +5,13 @@
 
 use crate::error::RlgResult;
 use dtt::datetime::DateTime;
+
+#[cfg(feature = "tokio")]
 use std::path::Path;
+
+#[cfg(feature = "tokio")]
 use tokio::fs::{self, File, OpenOptions};
+#[cfg(feature = "tokio")]
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 /// Generates a timestamp string in ISO 8601 format.
@@ -85,6 +90,7 @@ pub fn sanitize_log_message(message: &str) -> String {
 ///     Ok(())
 /// }
 /// ```
+#[cfg(feature = "tokio")]
 pub async fn is_file_writable(path: &Path) -> RlgResult<bool> {
     if path.exists() {
         let metadata = fs::metadata(path).await?;
@@ -132,6 +138,7 @@ pub async fn is_file_writable(path: &Path) -> RlgResult<bool> {
 ///     Ok(())
 /// }
 /// ```
+#[cfg(feature = "tokio")]
 pub async fn truncate_file(
     path: &Path,
     size: u64,
@@ -279,6 +286,7 @@ pub fn generate_trace_id() -> String {
 ///     Ok(())
 /// }
 /// ```
+#[cfg(feature = "tokio")]
 pub async fn is_directory_writable(path: &Path) -> RlgResult<bool> {
     if !path.is_dir() {
         return Ok(false);

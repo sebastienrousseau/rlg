@@ -3,10 +3,14 @@
 #[cfg(test)]
 mod tests {
     use rlg::utils::*;
+    #[cfg(feature = "tokio")]
     use std::path::Path;
+    #[cfg(feature = "tokio")]
     use tokio::fs::{self, File};
 
+    #[cfg(feature = "tokio")]
     use tempfile::tempdir;
+    #[cfg(feature = "tokio")]
     use tokio::io::AsyncWriteExt;
 
     #[test]
@@ -24,6 +28,7 @@ mod tests {
         assert_eq!(format_file_size(1024 * 1024 * 1024), "1.00 GB");
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_file_writable() {
         let temp_dir = tempdir().unwrap();
@@ -44,6 +49,7 @@ mod tests {
         assert!(!is_file_writable(&file_path).await.unwrap());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_truncate_file() {
         let temp_dir = tempdir().unwrap();
@@ -80,6 +86,7 @@ mod tests {
         assert!(!ts.is_empty());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_file_writable_not_file() {
         let temp_dir = tempdir().unwrap();
@@ -88,6 +95,7 @@ mod tests {
         assert!(!is_file_writable(&dir_path).await.unwrap());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_truncate_file_no_op() {
         let temp_dir = tempdir().unwrap();
@@ -101,6 +109,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_file_writable_invalid_path() {
         let invalid_path = Path::new("/root/no_access_123.log");
@@ -111,6 +120,7 @@ mod tests {
         assert!(is_file_writable(empty_path).await.is_ok()); // exists() is false
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_truncate_file_not_found() {
         let temp_dir = tempdir().unwrap();
@@ -124,6 +134,7 @@ mod tests {
         assert!(truncate_file(invalid_path, 1024).await.is_err());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_directory_writable() {
         let temp_dir = tempdir().unwrap();

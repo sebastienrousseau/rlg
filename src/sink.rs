@@ -1,5 +1,9 @@
 // sink.rs
-// Platform-native zero-overhead logging sinks.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
+
+//! Platform-native logging sinks (macOS `os_log`, Linux `journald`, stdout).
 
 use std::io::Write;
 
@@ -82,7 +86,7 @@ impl PlatformSink {
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn native() -> Self {
-        // IBM-Standard Rigor: Provide an explicit escape hatch for high-compliance environments.
+        // Allow explicit fallback to stdout via environment variable.
         if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
             || std::env::var("GITHUB_ACTIONS").is_ok()
         {

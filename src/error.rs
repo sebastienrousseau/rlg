@@ -199,4 +199,111 @@ mod tests {
         let rlg_err: RlgError = config_err.into();
         assert!(matches!(rlg_err, RlgError::ConfigError(_)));
     }
+
+    #[test]
+    fn test_io_error_variant() {
+        let io_err =
+            io::Error::new(io::ErrorKind::NotFound, "file missing");
+        let rlg_err: RlgError = io_err.into();
+        assert!(matches!(rlg_err, RlgError::IoError(_)));
+        assert!(rlg_err.to_string().contains("file missing"));
+    }
+
+    #[test]
+    fn test_format_parse_error_variant() {
+        let err = RlgError::FormatParseError("bad format".into());
+        assert_eq!(
+            err.to_string(),
+            "Log format parse error: bad format"
+        );
+    }
+
+    #[test]
+    fn test_level_parse_error_variant() {
+        let err = RlgError::LevelParseError("bad level".into());
+        assert_eq!(err.to_string(), "Log level parse error: bad level");
+    }
+
+    #[test]
+    fn test_unsupported_format_variant() {
+        let err = RlgError::UnsupportedFormat("XML".into());
+        assert_eq!(err.to_string(), "Unsupported log format: XML");
+    }
+
+    #[test]
+    fn test_formatting_error_variant() {
+        let err = RlgError::FormattingError("template".into());
+        assert_eq!(err.to_string(), "Log formatting error: template");
+    }
+
+    #[test]
+    fn test_rotation_error_variant() {
+        let err = RlgError::RotationError("disk full".into());
+        assert_eq!(err.to_string(), "Log rotation error: disk full");
+    }
+
+    #[test]
+    fn test_network_error_variant() {
+        let err = RlgError::NetworkError("timeout".into());
+        assert_eq!(err.to_string(), "Network error: timeout");
+    }
+
+    #[test]
+    fn test_datetime_parse_error_variant() {
+        let err = RlgError::DateTimeParseError("bad date".into());
+        assert_eq!(err.to_string(), "DateTime parse error: bad date");
+    }
+
+    #[test]
+    fn test_native_sink_error_variant() {
+        let err = RlgError::NativeSinkError("journald down".into());
+        assert_eq!(
+            err.to_string(),
+            "Native OS sink failure: journald down"
+        );
+    }
+
+    #[test]
+    fn test_error_debug_all_variants() {
+        let variants: Vec<RlgError> = vec![
+            RlgError::IoError(io::Error::new(
+                io::ErrorKind::Other,
+                "test",
+            )),
+            RlgError::ConfigError(ConfigError::ValidationError(
+                "v".into(),
+            )),
+            RlgError::FormatParseError("f".into()),
+            RlgError::LevelParseError("l".into()),
+            RlgError::UnsupportedFormat("u".into()),
+            RlgError::FormattingError("fm".into()),
+            RlgError::RotationError("r".into()),
+            RlgError::NetworkError("n".into()),
+            RlgError::DateTimeParseError("d".into()),
+            RlgError::Custom("c".into()),
+            RlgError::NativeSinkError("ns".into()),
+        ];
+        for err in &variants {
+            let dbg = format!("{err:?}");
+            assert!(!dbg.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_error_is_std_error() {
+        let err = RlgError::NetworkError("test".into());
+        let _: &dyn std::error::Error = &err;
+    }
+
+    #[test]
+    fn test_rlg_result_ok() {
+        let r: RlgResult<i32> = Ok(42);
+        assert_eq!(r.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_rlg_result_err() {
+        let r: RlgResult<i32> = Err(RlgError::custom("fail"));
+        assert!(r.is_err());
+    }
 }

@@ -61,12 +61,7 @@ mod tests {
                 .time("time")
                 .component("comp")
                 .format(format);
-            let result = log.log();
-            assert!(
-                result.is_ok(),
-                "Logging failed for format {:?}",
-                format
-            );
+            log.log();
         }
 
         let _ = fs::remove_file("RLG.log");

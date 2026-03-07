@@ -49,6 +49,11 @@ name = "config_bench"
 harness = false
 path = "benches/config_bench.rs"
 
+[[bench]]
+name = "competitive_bench"
+harness = false
+path = "benches/competitive_bench.rs"
+
 [profile.bench]
 # Profile for benchmarks.
 debug = true
@@ -67,11 +72,11 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 thiserror = "2.0.18"
 miette = { version = "7.5.0", features = ["fancy"], optional = true }
-tokio = { version = "1.50.0", features = ["full"]}
+tokio = { version = "1.50.0", features = ["full"], optional = true}
 toml = "1.0.6"
 euxis-commons = { version = "0.0.2", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env"], package = "euxis-commons" }
-vrd = "0.0.8"
 tracing-core = "0.1.36"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
 itoa = "1.0.17"
 ryu = "1.0.23"
 crossbeam-queue = "0.3.12"
@@ -86,8 +91,19 @@ criterion = "0.8.2"
 tempfile = "3.26.0"
 divan = "0.1.21"
 serial_test = "3"
+tokio = { version = "1.50.0", features = ["full"] }
 tokio-test = "0.4.5"
 tracing = "0.1.41"
+tracing-subscriber = { version = "0.3", features = ["fmt"] }
+env_logger = "0.11"
+
+[[example]]
+name = "example_utils"
+required-features = ["tokio"]
+
+[[example]]
+name = "example_config"
+required-features = ["tokio"]
 
 [lib]
 # Library configuration.
@@ -100,6 +116,8 @@ path = "src/lib.rs"
 default = []
 debug_enabled = []
 miette = ["dep:miette"]
+tokio = ["dep:tokio"]
+tracing-layer = ["dep:tracing-subscriber"]
 
 [package.metadata.docs.rs]
 # Specify arguments for rustdoc to enhance documentation quality.

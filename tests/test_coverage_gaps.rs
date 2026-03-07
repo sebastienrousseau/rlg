@@ -246,6 +246,7 @@ mod tests {
     // config.rs coverage: VersionError, ensure_paths parent dir creation
     // =========================================================================
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_config_load_async_version_mismatch() {
         use rlg::config::Config;
@@ -436,7 +437,7 @@ mod tests {
         let event = LogEvent {
             level: LogLevel::DEBUG,
             level_num: LogLevel::DEBUG.to_numeric(),
-            payload: b"should be dropped".to_vec(),
+            log: rlg::log::Log::debug("should be dropped"),
         };
         engine.ingest(event);
 
@@ -488,6 +489,7 @@ mod tests {
     // config.rs: hot_reload_async trigger modify event
     // =========================================================================
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_config_hot_reload_modify_event() {
         use parking_lot::RwLock;
@@ -639,7 +641,7 @@ mod tests {
             let event = LogEvent {
                 level: LogLevel::INFO,
                 level_num: LogLevel::INFO.to_numeric(),
-                payload: b"fill".to_vec(),
+                log: rlg::log::Log::info("fill"),
             };
             engine.ingest(event);
         }
@@ -665,6 +667,7 @@ mod tests {
     // config.rs: hot_reload_async with invalid path (watcher error)
     // =========================================================================
 
+    #[cfg(feature = "tokio")]
     #[test]
     fn test_config_hot_reload_invalid_path() {
         use parking_lot::RwLock;
@@ -708,6 +711,7 @@ mod tests {
     // config.rs: hot_reload_async spawn completes cleanly
     // =========================================================================
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_config_hot_reload_spawn_completes() {
         use parking_lot::RwLock;
@@ -887,14 +891,14 @@ mod tests {
         let event1 = LogEvent {
             level: LogLevel::INFO,
             level_num: LogLevel::INFO.to_numeric(),
-            payload: b"fill1".to_vec(),
+            log: rlg::log::Log::info("fill1"),
         };
         engine.ingest(event1); // succeeds, queue now full
 
         let event2 = LogEvent {
             level: LogLevel::INFO,
             level_num: LogLevel::INFO.to_numeric(),
-            payload: b"overflow".to_vec(),
+            log: rlg::log::Log::info("overflow"),
         };
         engine.ingest(event2); // queue full → enters while loop → break
     }

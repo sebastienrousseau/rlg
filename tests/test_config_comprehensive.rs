@@ -6,6 +6,7 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_load_async_file_read_error() {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -13,6 +14,7 @@ mod tests {
         assert!(result.is_err());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_load_async_unsupported_version() {
         let temp_dir = tempfile::tempdir().unwrap();
@@ -47,6 +49,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_load_async_missing_version() {
         let temp_dir = tempfile::tempdir().unwrap();

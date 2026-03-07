@@ -4,13 +4,14 @@
 mod tests {
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
-    #[allow(unused_imports)]
-    use rlg::utils::{
-        generate_timestamp, is_directory_writable, is_file_writable,
-    };
+    use rlg::utils::generate_timestamp;
+    #[cfg(feature = "tokio")]
+    use rlg::utils::{is_directory_writable, is_file_writable};
+    #[cfg(feature = "tokio")]
     use std::fs;
-    #[allow(unused_imports)]
+    #[cfg(feature = "tokio")]
     use std::path::Path;
+    #[cfg(feature = "tokio")]
     use tempfile::tempdir;
 
     #[test]
@@ -42,6 +43,7 @@ mod tests {
         assert!(!ts.is_empty());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     #[cfg(not(windows))]
     async fn test_utils_is_file_writable_cannot_create() {
@@ -52,6 +54,7 @@ mod tests {
         assert!(!result.unwrap());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     #[cfg(not(windows))]
     async fn test_utils_is_directory_writable_read_only() {
@@ -104,6 +107,7 @@ mod tests {
         ENGINE.set_filter(0);
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_utils_truncate_file_larger() {
         let temp_dir = tempdir().unwrap();
