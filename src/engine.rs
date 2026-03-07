@@ -6,19 +6,24 @@
 //! Lock-free ingestion engine backed by a bounded ring buffer.
 
 use crate::log_level::LogLevel;
+#[cfg(not(miri))]
 use crate::sink::PlatformSink;
-use crate::tui::{TuiMetrics, spawn_tui_thread};
+use crate::tui::TuiMetrics;
+#[cfg(not(miri))]
+use crate::tui::spawn_tui_thread;
 use crossbeam_queue::ArrayQueue;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
+#[cfg(not(miri))]
 use std::time::Duration;
 
 /// Capacity of the lock-free ring buffer (number of log events).
 const RING_BUFFER_CAPACITY: usize = 65_536;
 
 /// Maximum number of events drained per flusher wake-up cycle.
+#[cfg(not(miri))]
 const MAX_DRAIN_BATCH_SIZE: usize = 64;
 
 /// A structured log event optimized for zero-allocation handoff.
