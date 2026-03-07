@@ -8,16 +8,18 @@ use dtt::datetime::DateTime;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Monotonic session ID counter (allocation-free).
 static SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 /// Cached hostname to avoid repeated syscalls.
 static CACHED_HOSTNAME: LazyLock<String> = LazyLock::new(|| {
-    hostname::get()
-        .map_or_else(|_| "localhost".to_string(), |h| h.to_string_lossy().to_string())
+    hostname::get().map_or_else(
+        |_| "localhost".to_string(),
+        |h| h.to_string_lossy().to_string(),
+    )
 });
 
 /// The `Log` struct provides an easy way to log a message to the console.
@@ -249,22 +251,38 @@ impl fmt::Display for Log {
             LogFormat::CLF => write!(
                 f,
                 "SessionID={} Timestamp={} Description={} Level={} Component={}",
-                self.session_id, self.time, self.description, self.level, self.component
+                self.session_id,
+                self.time,
+                self.description,
+                self.level,
+                self.component
             ),
             LogFormat::CEF => write!(
                 f,
                 "CEF:0|{}|{}|{}|{}|{}|CEF",
-                self.session_id, self.time, self.level, self.component, self.description
+                self.session_id,
+                self.time,
+                self.level,
+                self.component,
+                self.description
             ),
             LogFormat::ELF => write!(
                 f,
                 "ELF:0|{}|{}|{}|{}|{}|ELF",
-                self.session_id, self.time, self.level, self.component, self.description
+                self.session_id,
+                self.time,
+                self.level,
+                self.component,
+                self.description
             ),
             LogFormat::W3C => write!(
                 f,
                 "W3C:0|{}|{}|{}|{}|{}|W3C",
-                self.session_id, self.time, self.level, self.component, self.description
+                self.session_id,
+                self.time,
+                self.level,
+                self.component,
+                self.description
             ),
             LogFormat::ApacheAccessLog => {
                 write!(
@@ -276,11 +294,15 @@ impl fmt::Display for Log {
                     self.level,
                     self.component
                 )
-            },
+            }
             LogFormat::Log4jXML => write!(
                 f,
                 r#"<log4j:event logger="{}" timestamp="{}" level="{}" thread="{}"><log4j:message>{}</log4j:message></log4j:event>"#,
-                self.component, self.time, self.level, self.session_id, self.description
+                self.component,
+                self.time,
+                self.level,
+                self.session_id,
+                self.description
             ),
             LogFormat::JSON => {
                 // Keys in alphabetical order to match previous serde_json output
@@ -297,7 +319,7 @@ impl fmt::Display for Log {
                 f.write_str(",\"Timestamp\":")?;
                 write_json_str(f, &self.time)?;
                 f.write_str("}")
-            },
+            }
             LogFormat::GELF => {
                 // Keys in alphabetical order
                 f.write_str("{\"_attributes\":")?;
@@ -314,7 +336,7 @@ impl fmt::Display for Log {
                 f.write_str(",\"timestamp\":")?;
                 write_json_str(f, &self.time)?;
                 f.write_str(",\"version\":\"1.1\"}")
-            },
+            }
             LogFormat::Logstash => {
                 // Keys in alphabetical order
                 f.write_str("{\"@timestamp\":")?;
@@ -330,7 +352,7 @@ impl fmt::Display for Log {
                 f.write_str(",\"session_id\":")?;
                 write_json_str(f, &self.session_id)?;
                 f.write_str("}")
-            },
+            }
             LogFormat::NDJSON => {
                 // Keys in alphabetical order
                 f.write_str("{\"attributes\":")?;
@@ -344,7 +366,7 @@ impl fmt::Display for Log {
                 f.write_str(",\"timestamp\":")?;
                 write_json_str(f, &self.time)?;
                 f.write_str("}")
-            },
+            }
             LogFormat::MCP => {
                 f.write_str("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/log\",\"params\":{\"data\":{\"attributes\":")?;
                 write_json_map(f, &self.attributes)?;
@@ -359,23 +381,29 @@ impl fmt::Display for Log {
                 f.write_str("},\"level\":")?;
                 write_json_str(f, self.level.as_str_lowercase())?;
                 f.write_str("}}")
-            },
+            }
             LogFormat::OTLP => {
                 let empty = serde_json::Value::String(String::new());
-                let trace_id = self.attributes.get("trace_id").unwrap_or(&empty);
-                let span_id = self.attributes.get("span_id").unwrap_or(&empty);
+                let trace_id =
+                    self.attributes.get("trace_id").unwrap_or(&empty);
+                let span_id =
+                    self.attributes.get("span_id").unwrap_or(&empty);
                 f.write_str("{\"attributes\":")?;
                 write_json_map(f, &self.attributes)?;
                 f.write_str(",\"body\":{\"stringValue\":")?;
                 write_json_str(f, &self.description)?;
-                write!(f, "}},\"severityNumber\":{}", self.level.to_numeric())?;
+                write!(
+                    f,
+                    "}},\"severityNumber\":{}",
+                    self.level.to_numeric()
+                )?;
                 f.write_str(",\"severityText\":")?;
                 write_json_str(f, self.level.as_str())?;
                 write!(f, ",\"spanId\":{span_id}")?;
                 f.write_str(",\"timeUnixNano\":")?;
                 write_json_str(f, &self.time)?;
                 write!(f, ",\"traceId\":{trace_id}}}")
-            },
+            }
             LogFormat::Logfmt => self.write_logfmt(f),
             LogFormat::ECS => {
                 // Keys in alphabetical order
@@ -390,7 +418,7 @@ impl fmt::Display for Log {
                 f.write_str(",\"process.name\":")?;
                 write_json_str(f, &self.component)?;
                 f.write_str("}")
-            },
+            }
         }
     }
 }
@@ -401,6 +429,7 @@ mod tests {
     use crate::log_format::LogFormat;
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_log_write_logfmt_with_attributes() {
         let mut log = Log::build(LogLevel::INFO, "desc")
             .session_id("sid")

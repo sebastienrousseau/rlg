@@ -117,9 +117,7 @@ impl PlatformSink {
             .and_then(|socket| {
                 socket.connect(path).ok().map(|()| socket)
             })
-            .map_or(Self::Journald(None), |s| {
-                Self::Journald(Some(s))
-            })
+            .map_or(Self::Journald(None), |s| Self::Journald(Some(s)))
     }
 
     /// Emits a log payload via the native sink mechanism.
@@ -164,8 +162,10 @@ impl PlatformSink {
                                 );
                                 if log_handle.is_null() {
                                     // Fallback to stdout if os_log_create fails
-                                    let _ = std::io::stdout().write_all(payload);
-                                    let _ = std::io::stdout().write_all(b"\n");
+                                    let _ = std::io::stdout()
+                                        .write_all(payload);
+                                    let _ = std::io::stdout()
+                                        .write_all(b"\n");
                                     return;
                                 }
                                 let log_type = match level {
@@ -184,7 +184,11 @@ impl PlatformSink {
                                 let format =
                                     CString::new("%{public}s").unwrap();
                                 // Strip null bytes from payload before creating CString
-                                let clean_payload: Vec<u8> = payload.iter().copied().filter(|&b| b != 0).collect();
+                                let clean_payload: Vec<u8> = payload
+                                    .iter()
+                                    .copied()
+                                    .filter(|&b| b != 0)
+                                    .collect();
                                 let msg = CString::new(clean_payload)
                                     .unwrap_or_default();
 
@@ -307,6 +311,7 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore)]
+    #[cfg(target_os = "linux")]
     fn test_try_journald_socket_failure() {
         let sink =
             PlatformSink::try_journald_socket("/nonexistent/path");
