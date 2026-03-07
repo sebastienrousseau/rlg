@@ -1,0 +1,7 @@
+# cargo-audit configuration
+# https://github.com/rustsec/rustsec/tree/main/cargo-audit
+
+[advisories]
+# Advisories to ignore (e.g. unmaintained crates with no alternative).
+# Each entry should include a comment explaining why it is ignored.
+ignore = []

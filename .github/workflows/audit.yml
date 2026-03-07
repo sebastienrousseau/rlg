@@ -14,12 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-audit
-        run: |
-          if ! command -v cargo-audit &> /dev/null; then
-            cargo install cargo-audit
-          fi
-      - name: Audit vulnerabilities
-        run: cargo audit
+      - name: Generate lockfile
+        run: cargo generate-lockfile
+      - uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
