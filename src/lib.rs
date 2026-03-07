@@ -74,6 +74,9 @@ pub mod tui;
 /// High-performance utility functions.
 pub mod utils;
 
+/// Shared ecosystem utilities from euxis-commons.
+pub use euxis_commons as commons;
+
 // Re-exports for a flattened, intuitive API.
 pub use crate::error::{RlgError, RlgResult};
 pub use crate::log::Log;

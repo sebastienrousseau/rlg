@@ -146,6 +146,12 @@ pub enum RlgError {
     NativeSinkError(String),
 }
 
+impl From<crate::commons::error::CommonError> for RlgError {
+    fn from(err: crate::commons::error::CommonError) -> Self {
+        Self::Custom(err.to_string())
+    }
+}
+
 impl RlgError {
     /// Create a new custom error with a given message.
     #[must_use]
@@ -175,6 +181,15 @@ mod tests {
     fn test_custom_error() {
         let err = RlgError::custom("Custom error message");
         assert_eq!(err.to_string(), "Custom error message");
+    }
+
+    #[test]
+    fn test_common_error_conversion() {
+        let common_err =
+            crate::commons::error::CommonError::custom("test");
+        let rlg_err: RlgError = common_err.into();
+        assert!(matches!(rlg_err, RlgError::Custom(_)));
+        assert!(rlg_err.to_string().contains("test"));
     }
 
     #[test]

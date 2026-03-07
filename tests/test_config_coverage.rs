@@ -15,7 +15,7 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(
-            matches!(err, ConfigError::ValidationError(msg) if msg.contains("Version cannot be empty"))
+            matches!(err, ConfigError::ValidationError(msg) if msg.contains("version"))
         );
     }
 
@@ -27,7 +27,7 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(
-            matches!(err, ConfigError::ValidationError(msg) if msg.contains("Profile cannot be empty"))
+            matches!(err, ConfigError::ValidationError(msg) if msg.contains("profile"))
         );
     }
 
@@ -51,7 +51,7 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(
-            matches!(err, ConfigError::ValidationError(msg) if msg.contains("Log format cannot be empty"))
+            matches!(err, ConfigError::ValidationError(msg) if msg.contains("log_format"))
         );
     }
 
@@ -99,7 +99,7 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(
-            matches!(err, ConfigError::ValidationError(msg) if msg.contains("Environment variable key cannot be empty"))
+            matches!(err, ConfigError::ValidationError(msg) if msg.contains("env_var_key_"))
         );
     }
 
@@ -113,7 +113,7 @@ mod tests {
         };
         let err = config.validate().unwrap_err();
         assert!(
-            matches!(err, ConfigError::ValidationError(msg) if msg.contains("Value for environment variable 'KEY' cannot be empty"))
+            matches!(err, ConfigError::ValidationError(msg) if msg.contains("env_var_val_KEY"))
         );
     }
 

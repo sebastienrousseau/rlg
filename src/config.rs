@@ -70,6 +70,12 @@ pub enum ConfigError {
     WatcherError(#[from] notify::Error),
 }
 
+impl From<crate::commons::config::ConfigError> for ConfigError {
+    fn from(err: crate::commons::config::ConfigError) -> Self {
+        Self::ValidationError(err.to_string())
+    }
+}
+
 /// Enum representing log rotation options.
 #[derive(
     Clone,
@@ -400,48 +406,49 @@ impl Config {
     ///
     /// This function returns an error if any configuration setting is invalid.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.version.trim().is_empty() {
-            return Err(ConfigError::ValidationError(
-                "Version cannot be empty".to_string(),
-            ));
-        }
-        if self.profile.trim().is_empty() {
-            return Err(ConfigError::ValidationError(
-                "Profile cannot be empty".to_string(),
-            ));
-        }
+        use crate::commons::validation::{
+            Validator, validate_not_empty,
+        };
+
+        let mut v = Validator::new();
+        v.check("version", || {
+            validate_not_empty(self.version.trim()).map(|_| ())
+        })
+        .check("profile", || {
+            validate_not_empty(self.profile.trim()).map(|_| ())
+        })
+        .check("log_format", || {
+            validate_not_empty(self.log_format.trim()).map(|_| ())
+        });
+
+        // Path and destination checks remain manual (not string validations)
         if self.log_file_path.as_os_str().is_empty() {
             return Err(ConfigError::ValidationError(
-                "Log file path cannot be empty".to_string(),
-            ));
-        }
-        if self.log_format.trim().is_empty() {
-            return Err(ConfigError::ValidationError(
-                "Log format cannot be empty".to_string(),
+                "Log file path cannot be empty".into(),
             ));
         }
         if self.logging_destinations.is_empty() {
             return Err(ConfigError::ValidationError(
                 "At least one logging destination must be specified"
-                    .to_string(),
+                    .into(),
             ));
         }
-
         for (key, value) in &self.env_vars {
-            if key.trim().is_empty() {
-                return Err(ConfigError::ValidationError(
-                    "Environment variable key cannot be empty"
-                        .to_string(),
-                ));
-            }
-            if value.trim().is_empty() {
-                return Err(ConfigError::ValidationError(format!(
-                    "Value for environment variable '{key}' cannot be empty"
-                )));
-            }
+            v.check(&format!("env_var_key_{key}"), || {
+                validate_not_empty(key.trim()).map(|_| ())
+            });
+            v.check(&format!("env_var_val_{key}"), || {
+                validate_not_empty(value.trim()).map(|_| ())
+            });
         }
 
-        Ok(())
+        v.finish().map_err(|errors| {
+            let msgs: Vec<String> = errors
+                .iter()
+                .map(|(f, e)| format!("{f}: {e}"))
+                .collect();
+            ConfigError::ValidationError(msgs.join("; "))
+        })
     }
 
     /// Creates directories and log files required by the configuration.
@@ -676,6 +683,17 @@ mod tests {
         let dir_path = env::temp_dir();
         let res = config.save_to_file(&dir_path);
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn test_commons_config_error_conversion() {
+        let commons_err =
+            crate::commons::config::ConfigError::MissingKey(
+                "test_key".to_string(),
+            );
+        let config_err: ConfigError = commons_err.into();
+        assert!(matches!(config_err, ConfigError::ValidationError(_)));
+        assert!(config_err.to_string().contains("test_key"));
     }
 
     #[test]
