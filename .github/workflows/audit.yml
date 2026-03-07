@@ -6,15 +6,9 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "0 0 * * 1" # Weekly at midnight on Monday
+    - cron: "0 0 * * 1"
 
 jobs:
-  audit:
-    name: Audit dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@cargo-audit
-      - name: Audit vulnerabilities
-        run: cargo audit
+  call-commons-audit:
+    name: Run Master Audit
+    uses: sebastienrousseau/commons/.github/workflows/audit.yml@main
