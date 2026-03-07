@@ -116,8 +116,7 @@ impl LockFreeEngine {
                         }
                         for event in batch.iter().flatten() {
                             fmt_buf.clear();
-                            let _ =
-                                writeln!(fmt_buf, "{}", &event.log);
+                            let _ = writeln!(fmt_buf, "{}", &event.log);
                             sink.emit(event.level.as_str(), &fmt_buf);
                         }
 
@@ -131,14 +130,19 @@ impl LockFreeEngine {
                         thread::park_timeout(Duration::from_millis(5));
                     }
                 })
-                .expect("Failed to spawn rlg-flusher background thread");
+                .expect(
+                    "Failed to spawn rlg-flusher background thread",
+                );
 
             // Spawn the TUI dashboard thread if RLG_TUI=1
             if std::env::var("RLG_TUI")
                 .map(|v| v == "1")
                 .unwrap_or(false)
             {
-                spawn_tui_thread(metrics.clone(), shutdown_flag.clone());
+                spawn_tui_thread(
+                    metrics.clone(),
+                    shutdown_flag.clone(),
+                );
             }
 
             Some(handle)
