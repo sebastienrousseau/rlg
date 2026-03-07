@@ -51,17 +51,16 @@ fn simple_emission(c: &mut Criterion) {
     });
 
     // tracing with a scoped no-op subscriber
-    let subscriber = tracing_subscriber::fmt()
-        .with_writer(std::io::sink)
-        .finish();
+    let dispatch = tracing::Dispatch::new(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::sink)
+            .finish(),
+    );
     group.bench_function("tracing::info!", |b| {
         b.iter(|| {
-            tracing::dispatcher::with_default(
-                &tracing::Dispatch::new(subscriber.clone()),
-                || {
-                    tracing::info!("benchmark message");
-                },
-            );
+            tracing::dispatcher::with_default(&dispatch, || {
+                tracing::info!("benchmark message");
+            });
         });
     });
 
@@ -94,22 +93,21 @@ fn structured_emission(c: &mut Criterion) {
         });
     });
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_writer(std::io::sink)
-        .finish();
+    let dispatch = tracing::Dispatch::new(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::sink)
+            .finish(),
+    );
     group.bench_function("tracing::info! + 3 fields", |b| {
         b.iter(|| {
-            tracing::dispatcher::with_default(
-                &tracing::Dispatch::new(subscriber.clone()),
-                || {
-                    tracing::info!(
-                        user_id = 42,
-                        path = "/api/v1",
-                        latency_ms = 12.5,
-                        "structured event"
-                    );
-                },
-            );
+            tracing::dispatcher::with_default(&dispatch, || {
+                tracing::info!(
+                    user_id = 42,
+                    path = "/api/v1",
+                    latency_ms = 12.5,
+                    "structured event"
+                );
+            });
         });
     });
 
@@ -146,19 +144,18 @@ fn burst_10k(c: &mut Criterion) {
         });
     });
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_writer(std::io::sink)
-        .finish();
+    let dispatch = tracing::Dispatch::new(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::sink)
+            .finish(),
+    );
     group.bench_function("tracing::info! x10k", |b| {
         b.iter(|| {
-            tracing::dispatcher::with_default(
-                &tracing::Dispatch::new(subscriber.clone()),
-                || {
-                    for i in 0..10_000 {
-                        tracing::info!(seq = i, "burst event");
-                    }
-                },
-            );
+            tracing::dispatcher::with_default(&dispatch, || {
+                for i in 0..10_000 {
+                    tracing::info!(seq = i, "burst event");
+                }
+            });
         });
     });
 
@@ -190,17 +187,16 @@ fn latency_distribution(c: &mut Criterion) {
         });
     });
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_writer(std::io::sink)
-        .finish();
+    let dispatch = tracing::Dispatch::new(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::sink)
+            .finish(),
+    );
     group.bench_function("tracing::info! latency", |b| {
         b.iter(|| {
-            tracing::dispatcher::with_default(
-                &tracing::Dispatch::new(subscriber.clone()),
-                || {
-                    tracing::info!("latency probe");
-                },
-            );
+            tracing::dispatcher::with_default(&dispatch, || {
+                tracing::info!("latency probe");
+            });
         });
     });
 

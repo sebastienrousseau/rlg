@@ -5,13 +5,13 @@ mod tests {
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
     use rlg::utils::generate_timestamp;
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", not(windows)))]
     use rlg::utils::{is_directory_writable, is_file_writable};
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", not(windows)))]
     use std::fs;
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", not(windows)))]
     use std::path::Path;
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", not(windows)))]
     use tempfile::tempdir;
 
     #[test]
