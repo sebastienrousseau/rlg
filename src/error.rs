@@ -26,37 +26,93 @@ pub enum RlgError {
     IoError(#[from] io::Error),
 
     #[error("Configuration error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::config_error), help("Check your configuration file or environment variables.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::config_error),
+            help(
+                "Check your configuration file or environment variables."
+            )
+        )
+    )]
     /// Configuration error
     ConfigError(#[from] ConfigError),
 
     #[error("Log format parse error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::format_parse_error), help("Ensure the format string matches supported variants (JSON, OTLP, MCP, etc.).")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::format_parse_error),
+            help(
+                "Ensure the format string matches supported variants (JSON, OTLP, MCP, etc.)."
+            )
+        )
+    )]
     /// Log format parse error
     FormatParseError(String),
 
     #[error("Log level parse error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::level_parse_error), help("Supported levels: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::level_parse_error),
+            help(
+                "Supported levels: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL."
+            )
+        )
+    )]
     /// Log level parse error
     LevelParseError(String),
 
     #[error("Unsupported log format: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::unsupported_format), help("Visit docs.rs/rlg for a list of supported industry formats.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::unsupported_format),
+            help(
+                "Visit docs.rs/rlg for a list of supported industry formats."
+            )
+        )
+    )]
     /// Unsupported log format
     UnsupportedFormat(String),
 
     #[error("Log formatting error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::formatting_error), help("This may happen if attributes contain non-serializable data.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::formatting_error),
+            help(
+                "This may happen if attributes contain non-serializable data."
+            )
+        )
+    )]
     /// Log formatting error
     FormattingError(String),
 
     #[error("Log rotation error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::rotation_error), help("Ensure RLG has permission to rename or delete old log files.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::rotation_error),
+            help(
+                "Ensure RLG has permission to rename or delete old log files."
+            )
+        )
+    )]
     /// Log rotation error
     RotationError(String),
 
     #[error("Network error: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::network_error), help("Check your network connection or the OTLP collector endpoint.")))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::network_error),
+            help(
+                "Check your network connection or the OTLP collector endpoint."
+            )
+        )
+    )]
     /// Network error
     NetworkError(String),
 
@@ -72,18 +128,20 @@ pub enum RlgError {
     DateTimeParseError(String),
 
     #[error("{0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(code(rlg::custom_error))
-    )]
+    #[cfg_attr(feature = "miette", diagnostic(code(rlg::custom_error)))]
     /// Custom error
     Custom(String),
 
     #[error("Native OS sink failure: {0}")]
-    #[cfg_attr(feature = "miette", diagnostic(
-        code(rlg::native_sink_failure),
-        help("Check if systemd-journald is running (Linux) or if 'com.rlg.logger' subsystem is registered (macOS). Ensure RLG_FALLBACK_STDOUT is set if you want to bypass native hooks.")
-    ))]
+    #[cfg_attr(
+        feature = "miette",
+        diagnostic(
+            code(rlg::native_sink_failure),
+            help(
+                "Check if systemd-journald is running (Linux) or if 'com.rlg.logger' subsystem is registered (macOS). Ensure RLG_FALLBACK_STDOUT is set if you want to bypass native hooks."
+            )
+        )
+    )]
     /// Native OS sink failure
     NativeSinkError(String),
 }

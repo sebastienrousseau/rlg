@@ -99,12 +99,18 @@ struct RlgVisitor {
 macro_rules! impl_record_field {
     ($method:ident, $ty:ty) => {
         fn $method(&mut self, field: &Field, value: $ty) {
-            self.fields.insert(field.name().to_string(), serde_json::json!(value));
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::json!(value),
+            );
         }
     };
     (stringify $method:ident, $ty:ty) => {
         fn $method(&mut self, field: &Field, value: $ty) {
-            self.fields.insert(field.name().to_string(), serde_json::json!(value.to_string()));
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::json!(value.to_string()),
+            );
         }
     };
 }

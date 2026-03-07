@@ -3,7 +3,7 @@
 #[cfg(test)]
 mod tests {
     use rlg::tracing::RlgSubscriber;
-    use tracing::{error, info, span, warn, Level};
+    use tracing::{Level, error, info, span, warn};
     use tracing_core::dispatcher::{self, Dispatch};
 
     #[test]

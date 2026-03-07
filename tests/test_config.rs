@@ -244,7 +244,9 @@ mod tests {
     #[allow(unsafe_code)]
     fn test_config_expand_env_vars() {
         // SAFETY: Test-only; no other threads depend on this env var.
-        unsafe { env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log") };
+        unsafe {
+            env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log")
+        };
 
         let mut config = Config::default();
         config.env_vars.insert(
@@ -351,7 +353,8 @@ mod tests {
         println!("Env var error message: {}", env_var_error_message);
 
         assert!(
-            env_var_error_message.contains("field") || env_var_error_message.contains("parse"),
+            env_var_error_message.contains("field")
+                || env_var_error_message.contains("parse"),
             "Env var error should contain 'field' or 'parse' but was: {}",
             env_var_error_message
         );
@@ -378,9 +381,11 @@ mod tests {
         assert!(config.set("profile", "new_profile").is_ok());
         assert_eq!(config.profile, "new_profile");
 
-        assert!(config
-            .set("log_file_path", PathBuf::from("new.log"))
-            .is_ok());
+        assert!(
+            config
+                .set("log_file_path", PathBuf::from("new.log"))
+                .is_ok()
+        );
         assert_eq!(config.log_file_path, PathBuf::from("new.log"));
 
         assert!(config.set("log_level", LogLevel::DEBUG).is_ok());
@@ -394,9 +399,11 @@ mod tests {
         assert_eq!(config.log_format, "[%level] %message");
 
         let new_dest = vec![LoggingDestination::Stdout];
-        assert!(config
-            .set("logging_destinations", new_dest.clone())
-            .is_ok());
+        assert!(
+            config
+                .set("logging_destinations", new_dest.clone())
+                .is_ok()
+        );
         assert_eq!(config.logging_destinations, new_dest);
 
         let mut new_env = HashMap::new();

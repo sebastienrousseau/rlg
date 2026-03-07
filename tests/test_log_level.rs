@@ -288,17 +288,19 @@ mod tests {
                 if a == LogLevel::ALL {
                     // ALL should include all levels
                     assert!(
-                    a.includes(b),
-                    "LogLevel::ALL should include {:?}, but failed for b = {:?}",
-                    a, b
-                );
+                        a.includes(b),
+                        "LogLevel::ALL should include {:?}, but failed for b = {:?}",
+                        a,
+                        b
+                    );
                 } else if a == LogLevel::NONE {
                     // NONE should not include any level
                     assert!(
-                    !a.includes(b),
-                    "LogLevel::NONE should not include {:?}, but passed for b = {:?}",
-                    a, b
-                );
+                        !a.includes(b),
+                        "LogLevel::NONE should not include {:?}, but passed for b = {:?}",
+                        a,
+                        b
+                    );
                 } else {
                     // For other levels, includes should follow numeric precedence
                     assert_eq!(

@@ -79,8 +79,8 @@ fn log_level_parsing_example() {
 /// # Errors
 ///
 /// Returns an error if the configuration loading fails.
-async fn config_loading_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn config_loading_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Config Loading Example**");
     println!("---------------------------------------------");
 
@@ -108,8 +108,8 @@ async fn config_loading_example(
 ///
 /// Returns an error if the environment variable handling fails.
 #[allow(unsafe_code)]
-fn config_env_var_expansion_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn config_env_var_expansion_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Config Environment Variable Expansion Example**");
     println!("---------------------------------------------");
 
@@ -156,15 +156,27 @@ fn config_validation_example() -> Result<(), Box<dyn std::error::Error>>
 
     // Valid configuration
     match config.validate() {
-        Ok(_) => println!("    ✅  Validation passed with valid config: {:#?}", config),
-        Err(e) => println!("    ❌  Validation failed with valid config: {:#?}\n    Error: {}", config, e),
+        Ok(_) => println!(
+            "    ✅  Validation passed with valid config: {:#?}",
+            config
+        ),
+        Err(e) => println!(
+            "    ❌  Validation failed with valid config: {:#?}\n    Error: {}",
+            config, e
+        ),
     }
 
     // Invalid configuration (empty log file path)
     config.log_file_path = PathBuf::new();
     match config.validate() {
-        Ok(_) => println!("    ❌  Validation unexpectedly passed with invalid config: {:#?}", config),
-        Err(e) => println!("    ✅  Validation failed as expected with invalid config: {:#?}\n    Error: {}", config, e),
+        Ok(_) => println!(
+            "    ❌  Validation unexpectedly passed with invalid config: {:#?}",
+            config
+        ),
+        Err(e) => println!(
+            "    ✅  Validation failed as expected with invalid config: {:#?}\n    Error: {}",
+            config, e
+        ),
     }
 
     Ok(())

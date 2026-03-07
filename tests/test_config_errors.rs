@@ -57,7 +57,7 @@ mod tests {
     async fn test_hot_reload_async_coverage_events() {
         use parking_lot::RwLock;
         use std::sync::Arc;
-        use tokio::time::{sleep, Duration};
+        use tokio::time::{Duration, sleep};
 
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.json");
@@ -90,7 +90,7 @@ mod tests {
     async fn test_hot_reload_async_invalid_toml() {
         use parking_lot::RwLock;
         use std::sync::Arc;
-        use tokio::time::{sleep, Duration};
+        use tokio::time::{Duration, sleep};
 
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.json");

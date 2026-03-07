@@ -1,9 +1,9 @@
 #![cfg(not(miri))]
 #![allow(missing_docs)]
 use rlg::sink::PlatformSink;
-use rlg::tui::{spawn_tui_thread, TuiMetrics};
-use std::sync::atomic::{AtomicBool, Ordering};
+use rlg::tui::{TuiMetrics, spawn_tui_thread};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 

@@ -8,10 +8,10 @@
 //! This example demonstrates the usage of the RustLogs (RLG) library,
 //! including creating log entries, formatting logs, and using the fluent API.
 
+use rlg::VERSION;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
-use rlg::VERSION;
 
 /// Entry point for the RustLogs library examples.
 ///
@@ -48,11 +48,14 @@ fn log_common_format_example() {
     ];
 
     for format in formats {
-        let log = Log::build(LogLevel::INFO, &format!("Log message in {} format", format))
-            .session_id("12345")
-            .time("2023-01-01T12:00:00Z")
-            .component("system")
-            .format(format);
+        let log = Log::build(
+            LogLevel::INFO,
+            &format!("Log message in {} format", format),
+        )
+        .session_id("12345")
+        .time("2023-01-01T12:00:00Z")
+        .component("system")
+        .format(format);
         println!("{}", log);
     }
 }
@@ -123,13 +126,13 @@ fn log_fluent_api_example() {
     println!("---------------------------------------------");
 
     // Info log
-    let info_log = Log::info("Information message")
-        .component("app-component");
+    let info_log =
+        Log::info("Information message").component("app-component");
     println!("Info Log: {}", info_log);
 
     // Error log
-    let error_log = Log::error("Error occurred")
-        .component("api-component");
+    let error_log =
+        Log::error("Error occurred").component("api-component");
     println!("Error Log: {}", error_log);
 
     // Log with attributes

@@ -77,12 +77,10 @@ mod tests {
 
     #[test]
     fn test_fluent_api_with_format() {
-        let log = Log::info("message")
-            .format(LogFormat::JSON);
+        let log = Log::info("message").format(LogFormat::JSON);
         assert_eq!(log.format, LogFormat::JSON);
 
-        let log2 = Log::info("message")
-            .format(LogFormat::CLF);
+        let log2 = Log::info("message").format(LogFormat::CLF);
         assert_eq!(log2.format, LogFormat::CLF);
     }
 
@@ -185,9 +183,8 @@ mod tests {
     #[test]
     fn test_fluent_api_with_newlines_in_message() {
         let message = "line1\nline2\nline3";
-        let log = Log::info(message)
-            .component("app")
-            .time("2022-01-01");
+        let log =
+            Log::info(message).component("app").time("2022-01-01");
         assert_eq!(log.description, message);
     }
 
@@ -237,9 +234,8 @@ mod tests {
 
     #[test]
     fn test_fluent_api_with_attributes() {
-        let log = Log::info("test")
-            .with("key", "value")
-            .with("count", 42);
+        let log =
+            Log::info("test").with("key", "value").with("count", 42);
         assert_eq!(log.attributes.len(), 2);
     }
 

@@ -27,7 +27,7 @@ fn main() {
 // ===========================================================================
 
 mod config_default {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::Config;
 
     #[divan::bench]
@@ -51,7 +51,7 @@ mod config_default {
 // ===========================================================================
 
 mod config_diff {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::{Config, LoggingDestination};
     use rlg::log_level::LogLevel;
     use std::collections::HashMap;
@@ -63,7 +63,10 @@ mod config_diff {
         let config1 = Config::default();
         let config2 = Config::default();
         bencher.bench(|| {
-            black_box(Config::diff(black_box(&config1), black_box(&config2)));
+            black_box(Config::diff(
+                black_box(&config1),
+                black_box(&config2),
+            ));
         });
     }
 
@@ -75,7 +78,10 @@ mod config_diff {
             ..Config::default()
         };
         bencher.bench(|| {
-            black_box(Config::diff(black_box(&config1), black_box(&config2)));
+            black_box(Config::diff(
+                black_box(&config1),
+                black_box(&config2),
+            ));
         });
     }
 
@@ -89,16 +95,22 @@ mod config_diff {
             profile: "production".to_string(),
             log_file_path: PathBuf::from("/var/log/app.log"),
             log_level: LogLevel::ERROR,
-            log_rotation: NonZeroU64::new(1024).map(rlg::config::LogRotation::Size),
+            log_rotation: NonZeroU64::new(1024)
+                .map(rlg::config::LogRotation::Size),
             log_format: "%time - %level - %message".to_string(),
             logging_destinations: vec![
                 LoggingDestination::Stdout,
-                LoggingDestination::Network("tcp://localhost:514".to_string()),
+                LoggingDestination::Network(
+                    "tcp://localhost:514".to_string(),
+                ),
             ],
             env_vars,
         };
         bencher.bench(|| {
-            black_box(Config::diff(black_box(&config1), black_box(&config2)));
+            black_box(Config::diff(
+                black_box(&config1),
+                black_box(&config2),
+            ));
         });
     }
 }
@@ -108,7 +120,7 @@ mod config_diff {
 // ===========================================================================
 
 mod config_override {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::{Config, LoggingDestination};
     use rlg::log_level::LogLevel;
     use std::collections::HashMap;
@@ -119,7 +131,9 @@ mod config_override {
         let base = Config::default();
         let overlay = Config::default();
         bencher.bench(|| {
-            black_box(black_box(&base).override_with(black_box(&overlay)));
+            black_box(
+                black_box(&base).override_with(black_box(&overlay)),
+            );
         });
     }
 
@@ -135,7 +149,9 @@ mod config_override {
             ..Config::default()
         };
         bencher.bench(|| {
-            black_box(black_box(&base).override_with(black_box(&overlay)));
+            black_box(
+                black_box(&base).override_with(black_box(&overlay)),
+            );
         });
     }
 
@@ -143,7 +159,8 @@ mod config_override {
     fn override_full(bencher: Bencher) {
         let base = Config::default();
         let mut env_vars = HashMap::new();
-        env_vars.insert("APP_ENV".to_string(), "production".to_string());
+        env_vars
+            .insert("APP_ENV".to_string(), "production".to_string());
         let overlay = Config {
             version: "2.0".to_string(),
             profile: "production".to_string(),
@@ -155,7 +172,9 @@ mod config_override {
             env_vars,
         };
         bencher.bench(|| {
-            black_box(black_box(&base).override_with(black_box(&overlay)));
+            black_box(
+                black_box(&base).override_with(black_box(&overlay)),
+            );
         });
     }
 }
@@ -165,7 +184,7 @@ mod config_override {
 // ===========================================================================
 
 mod config_validate {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::Config;
 
     #[divan::bench]
@@ -195,7 +214,7 @@ mod config_validate {
 // ===========================================================================
 
 mod config_set {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::Config;
 
     const KEYS: &[&str] = &["version", "profile", "log_format"];
@@ -226,7 +245,7 @@ mod config_set {
 // ===========================================================================
 
 mod config_expand {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::Config;
 
     #[divan::bench]
@@ -256,7 +275,7 @@ mod config_expand {
 // ===========================================================================
 
 mod log_rotation_parse {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::config::LogRotation;
     use std::str::FromStr;
 

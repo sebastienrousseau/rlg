@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 #![allow(missing_docs)]
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 
 // Import Log struct for benchmarking

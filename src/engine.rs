@@ -3,7 +3,7 @@
 
 use crate::log_level::LogLevel;
 use crate::sink::PlatformSink;
-use crate::tui::{spawn_tui_thread, TuiMetrics};
+use crate::tui::{TuiMetrics, spawn_tui_thread};
 use crossbeam_queue::ArrayQueue;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -42,7 +42,10 @@ impl fmt::Debug for LockFreeEngine {
             .field("shutdown_flag", &self.shutdown_flag)
             .field("metrics", &self.metrics)
             .field("filter_level", &self.filter_level)
-            .field("flusher_thread", &self.flusher_thread.as_ref().map(|h| h.thread().id()))
+            .field(
+                "flusher_thread",
+                &self.flusher_thread.as_ref().map(|h| h.thread().id()),
+            )
             .finish()
     }
 }

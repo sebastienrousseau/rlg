@@ -130,8 +130,8 @@ mod tests {
         assert!(is_directory_writable(temp_dir.path()).await.unwrap());
 
         let non_existent_dir = temp_dir.path().join("non_existent");
-        assert!(!is_directory_writable(&non_existent_dir)
-            .await
-            .unwrap());
+        assert!(
+            !is_directory_writable(&non_existent_dir).await.unwrap()
+        );
     }
 }

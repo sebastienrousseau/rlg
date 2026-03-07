@@ -34,14 +34,18 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn test_tracing_record_and_follows_from() {
         use rlg::tracing::RlgSubscriber;
-        use tracing::{span, Level};
+        use tracing::{Level, span};
         use tracing_core::dispatcher::{self, Dispatch};
 
         let subscriber = RlgSubscriber::new();
         let dispatch = Dispatch::new(subscriber);
 
         dispatcher::with_default(&dispatch, || {
-            let span1 = span!(Level::INFO, "span1", field1 = tracing::field::Empty);
+            let span1 = span!(
+                Level::INFO,
+                "span1",
+                field1 = tracing::field::Empty
+            );
             let span2 = span!(Level::INFO, "span2");
 
             // Trigger Subscriber::record()
@@ -100,7 +104,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn test_tracing_span_enter_exit() {
         use rlg::tracing::RlgSubscriber;
-        use tracing::{span, Level};
+        use tracing::{Level, span};
         use tracing_core::dispatcher::{self, Dispatch};
 
         let subscriber = RlgSubscriber::new();
@@ -124,8 +128,7 @@ mod tests {
         let dispatch = Dispatch::new(subscriber);
 
         dispatcher::with_default(&dispatch, || {
-            let err =
-                std::io::Error::other("test error for coverage");
+            let err = std::io::Error::other("test error for coverage");
             let err_ref: &(dyn std::error::Error + 'static) = &err;
             info!(error = err_ref, "event with error field");
         });
@@ -174,7 +177,11 @@ mod tests {
     #[test]
     fn test_generate_trace_id() {
         let trace_id = rlg::utils::generate_trace_id();
-        assert_eq!(trace_id.len(), 32, "Trace ID should be 32 hex chars");
+        assert_eq!(
+            trace_id.len(),
+            32,
+            "Trace ID should be 32 hex chars"
+        );
         assert!(
             trace_id.chars().all(|c| c.is_ascii_hexdigit()),
             "Trace ID should be valid hex"
@@ -270,10 +277,13 @@ mod tests {
         use rlg::config::{Config, LoggingDestination};
 
         let temp_dir = tempfile::tempdir().unwrap();
-        let nested_path = temp_dir.path().join("sub").join("dir").join("test.log");
+        let nested_path =
+            temp_dir.path().join("sub").join("dir").join("test.log");
 
         let config = Config {
-            logging_destinations: vec![LoggingDestination::File(nested_path.clone())],
+            logging_destinations: vec![LoggingDestination::File(
+                nested_path.clone(),
+            )],
             ..Config::default()
         };
 
@@ -318,12 +328,19 @@ mod tests {
         assert!(output.contains("\\\""), "Should escape double quotes");
         assert!(output.contains("\\\\"), "Should escape backslashes");
         assert!(output.contains("\\n"), "Should escape newlines");
-        assert!(output.contains("\\r"), "Should escape carriage returns");
+        assert!(
+            output.contains("\\r"),
+            "Should escape carriage returns"
+        );
         assert!(output.contains("\\t"), "Should escape tabs");
 
         // Verify it's valid JSON
         let parsed: serde_json::Value = serde_json::from_str(&output)
-            .unwrap_or_else(|e| panic!("Output should be valid JSON: {e}\nOutput: {output}"));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Output should be valid JSON: {e}\nOutput: {output}"
+                )
+            });
         assert!(parsed.is_object());
     }
 
@@ -341,7 +358,10 @@ mod tests {
             .format(LogFormat::JSON);
 
         let output = format!("{log}");
-        assert!(output.contains("\\t"), "Should escape tabs in component");
+        assert!(
+            output.contains("\\t"),
+            "Should escape tabs in component"
+        );
 
         // Also test in session_id field
         let log2 = Log::build(LogLevel::INFO, "desc")
@@ -350,7 +370,10 @@ mod tests {
             .component("comp")
             .format(LogFormat::JSON);
         let output2 = format!("{log2}");
-        assert!(output2.contains("\\\""), "Should escape quotes in session_id");
+        assert!(
+            output2.contains("\\\""),
+            "Should escape quotes in session_id"
+        );
     }
 
     #[test]
@@ -364,7 +387,10 @@ mod tests {
             .component("comp\\with\\backslash");
 
         let output = format!("{log}");
-        assert!(output.contains("\\n"), "Should escape newlines in GELF format");
+        assert!(
+            output.contains("\\n"),
+            "Should escape newlines in GELF format"
+        );
     }
 
     // =========================================================================
@@ -374,8 +400,6 @@ mod tests {
     #[test]
     #[allow(unsafe_code)]
     fn test_platform_sink_journald_with_env_fallback() {
-        use rlg::sink::PlatformSink;
-
         // Test the journald emit path where RLG_FALLBACK_STDOUT is set
         // This covers the env var check inside the Journald emit branch
         // SAFETY: Test-only; no other threads depend on this env var.
@@ -383,6 +407,7 @@ mod tests {
 
         #[cfg(unix)]
         {
+            use rlg::sink::PlatformSink;
             use std::os::unix::net::UnixDatagram;
             if let Ok(socket) = UnixDatagram::unbound() {
                 let mut sink = PlatformSink::Journald(Some(socket));
@@ -400,8 +425,8 @@ mod tests {
 
     #[test]
     fn test_engine_filter_drops_below_level() {
-        use rlg::engine::{LockFreeEngine, LogEvent};
         use rlg::LogLevel;
+        use rlg::engine::{LockFreeEngine, LogEvent};
 
         let engine = LockFreeEngine::new(10);
         // Set filter to ERROR level
@@ -450,7 +475,8 @@ mod tests {
 
         // This exercises the loop body where both key and value are non-empty
         let mut env_vars = HashMap::new();
-        env_vars.insert("VALID_KEY".to_string(), "valid_value".to_string());
+        env_vars
+            .insert("VALID_KEY".to_string(), "valid_value".to_string());
         let config = Config {
             env_vars,
             ..Config::default()
@@ -467,7 +493,7 @@ mod tests {
         use parking_lot::RwLock;
         use rlg::config::Config;
         use std::sync::Arc;
-        use tokio::time::{sleep, Duration};
+        use tokio::time::{Duration, sleep};
 
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.toml");
@@ -513,10 +539,19 @@ mod tests {
         use std::str::FromStr;
 
         assert_eq!(LogFormat::from_str("mcp").unwrap(), LogFormat::MCP);
-        assert_eq!(LogFormat::from_str("otlp").unwrap(), LogFormat::OTLP);
-        assert_eq!(LogFormat::from_str("logfmt").unwrap(), LogFormat::Logfmt);
+        assert_eq!(
+            LogFormat::from_str("otlp").unwrap(),
+            LogFormat::OTLP
+        );
+        assert_eq!(
+            LogFormat::from_str("logfmt").unwrap(),
+            LogFormat::Logfmt
+        );
         assert_eq!(LogFormat::from_str("ecs").unwrap(), LogFormat::ECS);
-        assert_eq!(LogFormat::from_str("apache").unwrap(), LogFormat::ApacheAccessLog);
+        assert_eq!(
+            LogFormat::from_str("apache").unwrap(),
+            LogFormat::ApacheAccessLog
+        );
     }
 
     // =========================================================================
@@ -545,7 +580,8 @@ mod tests {
             let output = format!("{log}");
             // All JSON formats should produce valid JSON with proper escaping
             assert!(
-                serde_json::from_str::<serde_json::Value>(&output).is_ok(),
+                serde_json::from_str::<serde_json::Value>(&output)
+                    .is_ok(),
                 "Format {:?} should produce valid JSON. Got: {}",
                 format,
                 output
@@ -578,7 +614,8 @@ mod tests {
             .with("key3", true);
 
         let output = format!("{log}");
-        let parsed: serde_json::Value = serde_json::from_str(&output).unwrap();
+        let parsed: serde_json::Value =
+            serde_json::from_str(&output).unwrap();
         let attrs = parsed.get("Attributes").unwrap();
         assert_eq!(attrs.get("key1").unwrap(), "value1");
         assert_eq!(attrs.get("key2").unwrap(), 42);
@@ -591,8 +628,8 @@ mod tests {
 
     #[test]
     fn test_engine_queue_full_retry() {
-        use rlg::engine::{LockFreeEngine, LogEvent};
         use rlg::LogLevel;
+        use rlg::engine::{LockFreeEngine, LogEvent};
 
         // Create a tiny queue
         let engine = LockFreeEngine::new(1);
@@ -676,7 +713,7 @@ mod tests {
         use parking_lot::RwLock;
         use rlg::config::Config;
         use std::sync::Arc;
-        use tokio::time::{sleep, Duration};
+        use tokio::time::{Duration, sleep};
 
         let temp_dir = tempfile::tempdir().unwrap();
         let config_path = temp_dir.path().join("config.toml");
@@ -716,30 +753,39 @@ mod tests {
             .session_id("sid")
             .time("ts")
             .component("comp")
-            .with("simple_str", "nospaces")        // unquoted string
-            .with("spaced_str", "has spaces")       // quoted string (contains space)
-            .with("quoted_str", "has\"quotes")      // quoted string (contains quote)
-            .with("empty_str", "")                  // quoted string (empty)
-            .with("number", 42)                     // non-string value
-            .with("flag", true)                     // non-string value
+            .with("simple_str", "nospaces") // unquoted string
+            .with("spaced_str", "has spaces") // quoted string (contains space)
+            .with("quoted_str", "has\"quotes") // quoted string (contains quote)
+            .with("empty_str", "") // quoted string (empty)
+            .with("number", 42) // non-string value
+            .with("flag", true) // non-string value
             .format(LogFormat::Logfmt);
 
         let output = format!("{log}");
 
         // Verify base fields
-        assert!(output.contains("level=info"), "Should contain level=info");
+        assert!(
+            output.contains("level=info"),
+            "Should contain level=info"
+        );
         assert!(
             output.contains("msg=\"logfmt test\""),
             "Should contain quoted msg"
         );
-        assert!(output.contains("session_id=sid"), "Should contain session_id");
+        assert!(
+            output.contains("session_id=sid"),
+            "Should contain session_id"
+        );
         assert!(
             output.contains("component=\"comp\""),
             "Should contain quoted component"
         );
 
         // Verify attribute formatting
-        assert!(output.contains("simple_str=nospaces"), "Simple string unquoted");
+        assert!(
+            output.contains("simple_str=nospaces"),
+            "Simple string unquoted"
+        );
         assert!(
             output.contains("spaced_str=\"has spaces\""),
             "Spaced string quoted"
@@ -793,7 +839,10 @@ mod tests {
         // A regular file is not a terminal, so terminal_size_of returns None → fallback 24
         let file = std::fs::File::open("/dev/null").unwrap();
         let height = rlg::tui::get_terminal_height_of(&file);
-        assert_eq!(height, 24, "Non-terminal fd should return fallback height");
+        assert_eq!(
+            height, 24,
+            "Non-terminal fd should return fallback height"
+        );
     }
 
     #[test]
@@ -822,8 +871,8 @@ mod tests {
 
     #[test]
     fn test_engine_queue_full_merged_break() {
-        use rlg::engine::{LockFreeEngine, LogEvent};
         use rlg::LogLevel;
+        use rlg::engine::{LockFreeEngine, LogEvent};
 
         // Create the smallest possible queue
         let engine = LockFreeEngine::new(1);
@@ -881,7 +930,8 @@ mod tests {
     fn test_log_format_format_log_non_json() {
         use rlg::log_format::LogFormat;
 
-        let plain_input = "127.0.0.1 - user [2025-01-01] \"GET / HTTP/1.1\" 200 1234";
+        let plain_input =
+            "127.0.0.1 - user [2025-01-01] \"GET / HTTP/1.1\" 200 1234";
 
         for format in [
             LogFormat::CLF,

@@ -157,8 +157,8 @@ fn log_format_validation_example() {
 /// # Errors
 ///
 /// Returns an error if the log formatting fails (e.g., for invalid JSON).
-fn log_format_format_log_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn log_format_format_log_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Log Format Formatting Example**");
     println!("---------------------------------------------");
 

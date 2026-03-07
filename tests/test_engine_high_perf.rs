@@ -1,6 +1,6 @@
 #![cfg(not(miri))]
 #![allow(missing_docs)]
-use rlg::engine::{FastSerializer, LockFreeEngine, LogEvent, ENGINE};
+use rlg::engine::{ENGINE, FastSerializer, LockFreeEngine, LogEvent};
 
 #[test]
 fn test_fast_serializer() {

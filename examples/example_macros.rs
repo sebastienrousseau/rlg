@@ -38,21 +38,13 @@ fn fluent_api_example() {
         .format(LogFormat::JSON)
         .fire();
 
-    Log::warn("This is a warning")
-        .component("component")
-        .fire();
+    Log::warn("This is a warning").component("component").fire();
 
-    Log::error("This is an error")
-        .component("component")
-        .fire();
+    Log::error("This is an error").component("component").fire();
 
-    Log::trace("This is a trace")
-        .component("component")
-        .fire();
+    Log::trace("This is a trace").component("component").fire();
 
-    Log::fatal("This is fatal")
-        .component("component")
-        .fire();
+    Log::fatal("This is fatal").component("component").fire();
 }
 
 /// Demonstrates conditional logging.

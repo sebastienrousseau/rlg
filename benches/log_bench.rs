@@ -28,13 +28,14 @@ fn main() {
 // ---------------------------------------------------------------------------
 
 const PAYLOADS: &[&str] = &[
-    "short msg",                                                     // 10 B
-    "A moderately sized log message with some operational context",   // ~60 B
+    "short msg", // 10 B
+    "A moderately sized log message with some operational context", // ~60 B
 ];
 
 fn large_payload() -> String {
     // ~10 KB JSON-style trace payload
-    let entry = r#"{"trace_id":"abc123","span_id":"def456","key":"val"},"#;
+    let entry =
+        r#"{"trace_id":"abc123","span_id":"def456","key":"val"},"#;
     let mut buf = String::with_capacity(10240);
     buf.push('[');
     while buf.len() < 10200 {
@@ -50,7 +51,7 @@ fn large_payload() -> String {
 // ===========================================================================
 
 mod log_build {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::log::Log;
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
@@ -70,12 +71,15 @@ mod log_build {
     fn build_with_attributes(bencher: Bencher) {
         bencher.bench(|| {
             black_box(
-                Log::build(black_box(LogLevel::ERROR), black_box("request failed"))
-                    .component("api-gateway")
-                    .with("status", 502)
-                    .with("latency_ms", 142)
-                    .with("path", "/v1/ingest")
-                    .format(LogFormat::JSON),
+                Log::build(
+                    black_box(LogLevel::ERROR),
+                    black_box("request failed"),
+                )
+                .component("api-gateway")
+                .with("status", 502)
+                .with("latency_ms", 142)
+                .with("path", "/v1/ingest")
+                .format(LogFormat::JSON),
             );
         });
     }
@@ -85,9 +89,12 @@ mod log_build {
         let payload = super::large_payload();
         bencher.bench(|| {
             black_box(
-                Log::build(black_box(LogLevel::DEBUG), black_box(payload.as_str()))
-                    .component("trace-collector")
-                    .format(LogFormat::OTLP),
+                Log::build(
+                    black_box(LogLevel::DEBUG),
+                    black_box(payload.as_str()),
+                )
+                .component("trace-collector")
+                .format(LogFormat::OTLP),
             );
         });
     }
@@ -114,7 +121,7 @@ mod log_build {
 // ===========================================================================
 
 mod log_display {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::log::Log;
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
@@ -164,13 +171,13 @@ mod log_display {
 // ===========================================================================
 
 mod log_level_conversion {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::log_level::LogLevel;
     use std::str::FromStr;
 
     const LEVEL_STRINGS: &[&str] = &[
-        "ALL", "TRACE", "DEBUG", "VERBOSE", "INFO",
-        "WARN", "ERROR", "FATAL", "CRITICAL", "NONE",
+        "ALL", "TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR",
+        "FATAL", "CRITICAL", "NONE",
     ];
 
     #[divan::bench(args = LEVEL_STRINGS)]
@@ -241,7 +248,9 @@ mod log_level_conversion {
     #[divan::bench(args = ALL_LEVELS)]
     fn includes(bencher: Bencher, level: &LogLevel) {
         bencher.bench(|| {
-            black_box(black_box(*level).includes(black_box(LogLevel::DEBUG)));
+            black_box(
+                black_box(*level).includes(black_box(LogLevel::DEBUG)),
+            );
         });
     }
 }
@@ -251,14 +260,14 @@ mod log_level_conversion {
 // ===========================================================================
 
 mod log_format_conversion {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::log_format::LogFormat;
     use std::str::FromStr;
 
     const FORMAT_STRINGS: &[&str] = &[
-        "clf", "json", "cef", "elf", "w3c", "gelf",
-        "apache", "logstash", "log4jxml", "ndjson",
-        "mcp", "otlp", "logfmt", "ecs",
+        "clf", "json", "cef", "elf", "w3c", "gelf", "apache",
+        "logstash", "log4jxml", "ndjson", "mcp", "otlp", "logfmt",
+        "ecs",
     ];
 
     #[divan::bench(args = FORMAT_STRINGS)]
@@ -292,8 +301,8 @@ mod log_format_conversion {
 // ===========================================================================
 
 mod engine_ingest {
-    use divan::{black_box, Bencher};
-    use rlg::engine::{LogEvent, ENGINE};
+    use divan::{Bencher, black_box};
+    use rlg::engine::{ENGINE, LogEvent};
     use rlg::log_level::LogLevel;
 
     #[divan::bench(args = [10, 64, 256, 1024])]
@@ -315,7 +324,7 @@ mod engine_ingest {
 // ===========================================================================
 
 mod full_pipeline {
-    use divan::{black_box, Bencher};
+    use divan::{Bencher, black_box};
     use rlg::log::Log;
     use rlg::log_format::LogFormat;
     use rlg::log_level::LogLevel;
@@ -323,9 +332,10 @@ mod full_pipeline {
     #[divan::bench(args = super::PAYLOADS)]
     fn build_format_ingest(bencher: Bencher, msg: &&str) {
         bencher.bench(|| {
-            let log = Log::build(black_box(LogLevel::INFO), black_box(msg))
-                .component("pipeline-bench")
-                .format(LogFormat::MCP);
+            let log =
+                Log::build(black_box(LogLevel::INFO), black_box(msg))
+                    .component("pipeline-bench")
+                    .format(LogFormat::MCP);
             let payload = format!("{log}\n").into_bytes();
             let event = rlg::engine::LogEvent {
                 level: LogLevel::INFO,

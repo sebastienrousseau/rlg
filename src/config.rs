@@ -435,7 +435,9 @@ impl Config {
                 ));
             }
             if value.trim().is_empty() {
-                return Err(ConfigError::ValidationError(format!("Value for environment variable '{key}' cannot be empty")));
+                return Err(ConfigError::ValidationError(format!(
+                    "Value for environment variable '{key}' cannot be empty"
+                )));
             }
         }
 
@@ -618,7 +620,7 @@ mod tests {
     use super::*;
     use parking_lot::RwLock;
     use std::sync::Arc;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
 
     #[tokio::test]
     #[cfg_attr(miri, ignore)]

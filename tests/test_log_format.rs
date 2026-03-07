@@ -72,7 +72,9 @@ mod tests {
         assert!(LogFormat::CEF.validate("CEF:0|security|threat|1.0|100|Something happened|5|msg=hello"));
         assert!(LogFormat::W3C.validate("#Fields: date time c-ip cs-method cs-uri-stem sc-status\n2024-01-01 12:34:56 192.168.0.1 GET /index.html 200"));
         assert!(LogFormat::GELF.validate("{\"version\":\"1.1\",\"host\":\"localhost\",\"short_message\":\"A short message\"}"));
-        assert!(LogFormat::Log4jXML.validate("<log4j:event logger=\"myLogger\" timestamp=\"1234567890\">"));
+        assert!(LogFormat::Log4jXML.validate(
+            "<log4j:event logger=\"myLogger\" timestamp=\"1234567890\">"
+        ));
 
         // Invalid cases
         assert!(!LogFormat::CLF.validate("Invalid CLF log"));
@@ -80,7 +82,9 @@ mod tests {
         assert!(!LogFormat::CEF.validate("Invalid CEF log"));
         assert!(!LogFormat::W3C.validate("Invalid W3C log"));
         assert!(!LogFormat::GELF.validate("Invalid GELF log"));
-        assert!(!LogFormat::Log4jXML.validate("<invalid>XML</invalid>"));
+        assert!(
+            !LogFormat::Log4jXML.validate("<invalid>XML</invalid>")
+        );
     }
 
     #[test]
@@ -130,12 +134,17 @@ mod tests {
         // Very long string
         let long_string = "a".repeat(10000);
         assert!(!LogFormat::CLF.validate(&long_string));
-        assert!(LogFormat::JSON
-            .validate(&format!("{{\"key\":\"{}\"}}", long_string)));
+        assert!(
+            LogFormat::JSON
+                .validate(&format!("{{\"key\":\"{}\"}}", long_string))
+        );
 
         // Special characters
-        assert!(LogFormat::JSON
-            .validate("{\"key\":\"value with spaces and 特殊字符\"}"));
+        assert!(
+            LogFormat::JSON.validate(
+                "{\"key\":\"value with spaces and 特殊字符\"}"
+            )
+        );
     }
 
     #[test]
