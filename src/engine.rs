@@ -11,7 +11,7 @@ use crate::tui::{TuiMetrics, spawn_tui_thread};
 use crossbeam_queue::ArrayQueue;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -46,7 +46,7 @@ pub struct LockFreeEngine {
     /// Global log level filter.
     filter_level: AtomicU8,
     /// Handle to the background flusher thread.
-    flusher_thread: Option<thread::JoinHandle<()>>,
+    flusher_thread: Mutex<Option<thread::JoinHandle<()>>>,
 }
 
 impl fmt::Debug for LockFreeEngine {
@@ -58,7 +58,11 @@ impl fmt::Debug for LockFreeEngine {
             .field("filter_level", &self.filter_level)
             .field(
                 "flusher_thread",
-                &self.flusher_thread.as_ref().map(|h| h.thread().id()),
+                &self
+                    .flusher_thread
+                    .lock()
+                    .ok()
+                    .and_then(|g| g.as_ref().map(|h| h.thread().id())),
             )
             .finish()
     }
@@ -81,61 +85,74 @@ impl LockFreeEngine {
         let metrics = Arc::new(TuiMetrics::default());
         let filter_level = AtomicU8::new(0); // Default to ALL
 
-        // Clone Arcs for the flusher thread
-        let flusher_queue = queue.clone();
-        let flusher_shutdown = shutdown_flag.clone();
+        // Under MIRI, skip spawning background threads to avoid
+        // "main thread terminated without waiting" errors.
+        #[cfg(not(miri))]
+        let flusher_handle = {
+            let flusher_queue = queue.clone();
+            let flusher_shutdown = shutdown_flag.clone();
 
-        // Spawn lightweight OS thread (Runtime Agnostic)
-        let handle = thread::Builder::new()
-            .name("rlg-flusher".into())
-            .spawn(move || {
-                use std::io::Write;
-                let mut sink = PlatformSink::native();
-                let mut fmt_buf = Vec::with_capacity(512);
+            // Spawn lightweight OS thread (Runtime Agnostic)
+            let handle = thread::Builder::new()
+                .name("rlg-flusher".into())
+                .spawn(move || {
+                    use std::io::Write;
+                    let mut sink = PlatformSink::native();
+                    let mut fmt_buf = Vec::with_capacity(512);
 
-                loop {
-                    let mut batch: [Option<LogEvent>;
-                        MAX_DRAIN_BATCH_SIZE] =
-                        std::array::from_fn(|_| None);
-                    let mut count = 0;
-                    while count < MAX_DRAIN_BATCH_SIZE {
-                        match flusher_queue.pop() {
-                            Some(event) => {
-                                batch[count] = Some(event);
-                                count += 1;
+                    loop {
+                        let mut batch: [Option<LogEvent>;
+                            MAX_DRAIN_BATCH_SIZE] =
+                            std::array::from_fn(|_| None);
+                        let mut count = 0;
+                        while count < MAX_DRAIN_BATCH_SIZE {
+                            match flusher_queue.pop() {
+                                Some(event) => {
+                                    batch[count] = Some(event);
+                                    count += 1;
+                                }
+                                None => break,
                             }
-                            None => break,
                         }
-                    }
-                    for event in batch.iter().flatten() {
-                        fmt_buf.clear();
-                        let _ = writeln!(fmt_buf, "{}", &event.log);
-                        sink.emit(event.level.as_str(), &fmt_buf);
-                    }
+                        for event in batch.iter().flatten() {
+                            fmt_buf.clear();
+                            let _ =
+                                writeln!(fmt_buf, "{}", &event.log);
+                            sink.emit(event.level.as_str(), &fmt_buf);
+                        }
 
-                    if flusher_shutdown.load(Ordering::Relaxed)
-                        && flusher_queue.is_empty()
-                    {
-                        break;
+                        if flusher_shutdown.load(Ordering::Relaxed)
+                            && flusher_queue.is_empty()
+                        {
+                            break;
+                        }
+
+                        // Park briefly as fallback; real wakeup comes from unpark() in ingest().
+                        thread::park_timeout(Duration::from_millis(5));
                     }
+                })
+                .expect("Failed to spawn rlg-flusher background thread");
 
-                    // Park briefly as fallback; real wakeup comes from unpark() in ingest().
-                    thread::park_timeout(Duration::from_millis(5));
-                }
-            })
-            .expect("Failed to spawn rlg-flusher background thread");
+            // Spawn the TUI dashboard thread if RLG_TUI=1
+            if std::env::var("RLG_TUI")
+                .map(|v| v == "1")
+                .unwrap_or(false)
+            {
+                spawn_tui_thread(metrics.clone(), shutdown_flag.clone());
+            }
 
-        // Spawn the TUI dashboard thread if RLG_TUI=1
-        if std::env::var("RLG_TUI").map(|v| v == "1").unwrap_or(false) {
-            spawn_tui_thread(metrics.clone(), shutdown_flag.clone());
-        }
+            Some(handle)
+        };
+
+        #[cfg(miri)]
+        let flusher_handle = None;
 
         Self {
             queue,
             shutdown_flag,
             metrics,
             filter_level,
-            flusher_thread: Some(handle),
+            flusher_thread: Mutex::new(flusher_handle),
         }
     }
 
@@ -163,7 +180,9 @@ impl LockFreeEngine {
         }
 
         // Wake the flusher thread for sub-microsecond latency.
-        if let Some(handle) = &self.flusher_thread {
+        if let Ok(guard) = self.flusher_thread.lock()
+            && let Some(handle) = guard.as_ref()
+        {
             handle.thread().unpark();
         }
     }
@@ -206,8 +225,17 @@ impl LockFreeEngine {
     }
 
     /// Safely halts the background thread, flushing pending logs.
+    ///
+    /// Signals the flusher thread to stop and waits for it to finish
+    /// draining any remaining events from the queue.
     pub fn shutdown(&self) {
         self.shutdown_flag.store(true, Ordering::SeqCst);
+        if let Ok(mut guard) = self.flusher_thread.lock()
+            && let Some(handle) = guard.take()
+        {
+            handle.thread().unpark();
+            let _ = handle.join();
+        }
     }
 }
 
