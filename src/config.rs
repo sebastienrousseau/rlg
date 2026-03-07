@@ -513,11 +513,10 @@ impl Config {
             loop {
                 tokio::select! {
                     Some(res) = rx.recv() => {
-                        if let Ok(Event { kind: EventKind::Modify(_), .. }) = res {
-                            if let Ok(new_config) = Self::load_async(Some(&path_owned)).await {
+                        if let Ok(Event { kind: EventKind::Modify(_), .. }) = res
+                            && let Ok(new_config) = Self::load_async(Some(&path_owned)).await {
                                 let mut config_write = config_clone.write();
                                 *config_write = new_config.read().clone();
-                            }
                         }
                     }
                     _ = stop_rx.recv() => break,

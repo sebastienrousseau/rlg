@@ -19,7 +19,7 @@ keywords = ["debugging", "log", "rlg", "logging", "tracing"]
 license = "MIT OR Apache-2.0"
 name = "rlg"
 repository = "https://github.com/sebastienrousseau/rlg/"
-rust-version = "1.87.0"
+rust-version = "1.88.0"
 version = "0.0.7"
 include = [
     "/CONTRIBUTING.md",
