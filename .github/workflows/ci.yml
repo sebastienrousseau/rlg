@@ -41,6 +41,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         toolchain: [stable, nightly]
+        exclude:
+          # ubuntu-latest/stable is covered by the Coverage workflow
+          - os: ubuntu-latest
+            toolchain: stable
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
@@ -49,6 +53,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run tests
         run: cargo test --workspace --all-features --verbose
+
+  doc:
+    name: Doc
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - name: Check documentation builds
+        run: RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
 
   miri:
     name: MIRI
