@@ -3,10 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Convenience macros for span tracking, latency measurement, and MCP notifications.
-//! All macros route through the lock-free ingestion engine.
+//! Convenience macros for span tracking, latency profiling, and MCP notifications.
+//!
+//! All macros dispatch through the lock-free [`ENGINE`](crate::engine::ENGINE).
 
-/// Injects OTLP context and executes a block of code.
+/// Execute a block within an OTLP-tagged span.
+///
+/// Emits an OTLP log with a generated `span_id`, increments the active
+/// span counter, runs `$block`, then decrements. Returns the block's value.
 #[macro_export]
 macro_rules! rlg_span {
     ($name:expr, $block:block) => {{
@@ -22,7 +26,10 @@ macro_rules! rlg_span {
     }};
 }
 
-/// Measures latency and emits a Logfmt profile metric.
+/// Measure wall-clock latency of a block and emit a Logfmt metric.
+///
+/// Captures `Instant::now()` before the block, computes elapsed
+/// microseconds after, and fires a Logfmt log with `latency_us`.
 #[macro_export]
 macro_rules! rlg_time_it {
     ($action:expr, $block:block) => {{
@@ -39,7 +46,10 @@ macro_rules! rlg_time_it {
     }};
 }
 
-/// Forces MCP format for AI state synchronization.
+/// Emit an MCP-formatted state transition notification.
+///
+/// Use for AI agent orchestration where state changes must be
+/// machine-readable via JSON-RPC 2.0 notification semantics.
 #[macro_export]
 macro_rules! rlg_mcp_notify {
     ($state_key:expr, $state_val:expr) => {

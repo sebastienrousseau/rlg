@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Terminal UI dashboard for real-time metrics during local development.
+//! Opt-in terminal dashboard for live observability metrics.
+//!
+//! Set `RLG_TUI=1` to spawn a background render thread that paints a
+//! non-clobbering sparkline dashboard at ~60 FPS. Enable the `tui` feature
+//! for automatic terminal size detection; otherwise falls back to 80x24.
 
 use std::io::Write;
 use std::sync::Arc;
@@ -53,7 +57,7 @@ fn get_terminal_height() -> u16 {
     DEFAULT_TERMINAL_HEIGHT
 }
 
-/// Live metrics tracked by the lock-free engine.
+/// Atomic counters for the TUI dashboard. Cache-line aligned (`repr(align(64))`).
 #[repr(align(64))]
 #[derive(Debug, Default)]
 pub struct TuiMetrics {

@@ -3,7 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Lock-free ingestion engine backed by a bounded ring buffer.
+//! Near-lock-free ingestion engine backed by a bounded ring buffer.
+//!
+//! The global [`ENGINE`] accepts [`LogEvent`]s via [`LockFreeEngine::ingest()`]
+//! using only atomic operations. A dedicated background thread drains events
+//! in batches of 64 and writes them through [`PlatformSink`](crate::sink::PlatformSink).
+//!
+//! **The Mutex is never locked on the hot path.** It exists solely for
+//! `shutdown()` to join the flusher thread.
 
 use crate::log_level::LogLevel;
 #[cfg(not(miri))]
@@ -26,33 +33,36 @@ const RING_BUFFER_CAPACITY: usize = 65_536;
 #[cfg(not(miri))]
 const MAX_DRAIN_BATCH_SIZE: usize = 64;
 
-/// A structured log event optimized for zero-allocation handoff.
+/// A structured log event passed through the ring buffer.
 ///
-/// Formatting is deferred to the flusher thread — the caller only pays
-/// the cost of a `Log` move (~128-byte memcpy), not serialization.
+/// The caller pays only for a `Log` move (~128-byte memcpy).
+/// Serialization happens on the flusher thread.
 #[derive(Debug, Clone)]
 pub struct LogEvent {
-    /// The log level severity.
+    /// Severity level of this event.
     pub level: LogLevel,
-    /// The numeric log level for filtering.
+    /// Numeric severity for fast level-gating comparisons.
     pub level_num: u8,
-    /// Raw structured log data, formatted on the flusher thread.
+    /// Structured log data. Formatted on the flusher thread, not here.
     pub log: crate::log::Log,
 }
 
-/// The Lock-Free Engine handling background log flushes.
+/// The near-lock-free ingestion engine.
+///
+/// Owns the ring buffer, flusher thread, and TUI metrics counters.
+/// Access the global instance via [`ENGINE`].
 pub struct LockFreeEngine {
-    /// Lock-free queue for log events.
+    /// Bounded ring buffer (lock-free push/pop via `crossbeam`).
     queue: Arc<ArrayQueue<LogEvent>>,
-    /// Flag to signal shutdown.
+    /// Signals the flusher thread to drain and exit.
     shutdown_flag: Arc<AtomicBool>,
-    /// Metrics for the TUI dashboard.
+    /// Atomic counters consumed by the opt-in TUI dashboard.
     metrics: Arc<TuiMetrics>,
-    /// Global log level filter.
+    /// Minimum severity level. Events below this are dropped at `ingest()`.
     filter_level: AtomicU8,
-    /// Thread handle for lock-free unpark (no Mutex on hot path).
+    /// Flusher thread handle for lock-free `unpark()`. No Mutex involved.
     flusher_thread_handle: Option<thread::Thread>,
-    /// `JoinHandle` held only for shutdown (behind Mutex, never locked on hot path).
+    /// `JoinHandle` for `shutdown()` only. **Never locked on the hot path.**
     flusher_join: Mutex<Option<thread::JoinHandle<()>>>,
 }
 
@@ -74,16 +84,16 @@ impl fmt::Debug for LockFreeEngine {
     }
 }
 
-/// Global lazy-initialized lock-free engine.
+/// Global engine instance, lazily initialized on first access.
 pub static ENGINE: LazyLock<LockFreeEngine> =
     LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
 impl LockFreeEngine {
-    /// Initializes the lock-free engine and spawns the background flusher.
+    /// Create a new engine with the given buffer capacity and spawn the flusher.
     ///
     /// # Panics
     ///
-    /// This function panics if the flusher background thread fails to spawn.
+    /// Panics if the OS cannot spawn the background flusher thread.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
         let queue = Arc::new(ArrayQueue::new(capacity));

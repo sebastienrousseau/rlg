@@ -12,10 +12,10 @@ use std::fmt;
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Monotonic session ID counter (allocation-free).
+/// Monotonic session ID counter. Incremented atomically per `build()` call.
 static SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-/// Cached hostname to avoid repeated syscalls.
+/// Hostname, resolved once and cached for the process lifetime.
 static CACHED_HOSTNAME: LazyLock<String> = LazyLock::new(|| {
     hostname::get().map_or_else(
         |_| "localhost".to_string(),
@@ -23,26 +23,28 @@ static CACHED_HOSTNAME: LazyLock<String> = LazyLock::new(|| {
     )
 });
 
-/// The `Log` struct provides an easy way to log a message to the console.
-/// It contains a set of defined fields to create a simple log message with a readable output format.
+/// A structured log entry with a chainable builder API.
 ///
-/// Uses `Cow<'static, str>` for fields that are commonly static strings,
-/// reducing heap allocations on the hot path.
+/// Fields use `Cow<'static, str>` and `u64` where possible to
+/// minimize heap allocations on the ingestion hot path.
+///
+/// Construct via level shortcuts ([`Log::info`], [`Log::error`], ...)
+/// or the generic [`Log::build`]. Dispatch with [`Log::fire`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Eq)]
 pub struct Log {
-    /// The session ID for the log entry (stored as u64, formatted on output).
+    /// Monotonic counter assigned at `build()` time.
     pub session_id: u64,
-    /// The time the log entry was created (deferred: empty until flusher formats).
+    /// Wall-clock timestamp. Populated at build time; override with `.time()`.
     pub time: Cow<'static, str>,
-    /// The log level of the message.
+    /// Severity level (`INFO`, `ERROR`, etc.).
     pub level: LogLevel,
-    /// The component that generated the log message.
+    /// Originating service or module name. Defaults to `"default"`.
     pub component: Cow<'static, str>,
-    /// The description of the log message.
+    /// Human-readable message body.
     pub description: String,
-    /// The format of the log message.
+    /// Output format applied during `Display` serialization.
     pub format: LogFormat,
-    /// Semantic context tagging (High-cardinality attributes)
+    /// Arbitrary key-value attributes for structured context.
     pub attributes: BTreeMap<String, serde_json::Value>,
 }
 
@@ -61,10 +63,10 @@ impl Default for Log {
 }
 
 impl Log {
-    /// Logs a message by ingesting it into the lock-free engine.
+    /// Ingest this entry into the engine by cloning it.
     ///
-    /// Formatting is deferred to the background flusher thread.
-    /// This borrows `self` and clones — prefer [`fire()`](Self::fire) to avoid the clone.
+    /// **Prefer [`fire()`](Self::fire)**, which consumes `self` and avoids
+    /// the clone. Use `log()` only when you need to retain the entry.
     #[track_caller]
     pub fn log(&self) {
         crate::engine::ENGINE.inc_format(self.format);
@@ -76,59 +78,58 @@ impl Log {
         crate::engine::ENGINE.ingest(event);
     }
 
-    /// Starts building a new INFO level log.
+    /// Build an INFO-level log entry.
     #[must_use]
     pub fn info(description: &str) -> Self {
         Self::build(LogLevel::INFO, description)
     }
 
-    /// Starts building a new WARN level log.
+    /// Build a WARN-level log entry.
     #[must_use]
     pub fn warn(description: &str) -> Self {
         Self::build(LogLevel::WARN, description)
     }
 
-    /// Starts building a new ERROR level log.
+    /// Build an ERROR-level log entry.
     #[must_use]
     pub fn error(description: &str) -> Self {
         Self::build(LogLevel::ERROR, description)
     }
 
-    /// Starts building a new DEBUG level log.
+    /// Build a DEBUG-level log entry.
     #[must_use]
     pub fn debug(description: &str) -> Self {
         Self::build(LogLevel::DEBUG, description)
     }
 
-    /// Starts building a new TRACE level log.
+    /// Build a TRACE-level log entry.
     #[must_use]
     pub fn trace(description: &str) -> Self {
         Self::build(LogLevel::TRACE, description)
     }
 
-    /// Starts building a new VERBOSE level log.
+    /// Build a VERBOSE-level log entry.
     #[must_use]
     pub fn verbose(description: &str) -> Self {
         Self::build(LogLevel::VERBOSE, description)
     }
 
-    /// Starts building a new FATAL level log.
+    /// Build a FATAL-level log entry.
     #[must_use]
     pub fn fatal(description: &str) -> Self {
         Self::build(LogLevel::FATAL, description)
     }
 
-    /// Starts building a new CRITICAL level log.
+    /// Build a CRITICAL-level log entry.
     #[must_use]
     pub fn critical(description: &str) -> Self {
         Self::build(LogLevel::CRITICAL, description)
     }
 
-    /// Starts building a new log with the given level and description.
+    /// Build a log entry with an explicit level and description.
     ///
-    /// Timestamp generation is deferred — only a monotonic session ID is
-    /// captured at the call site.  The flusher thread fills in the wall-clock
-    /// time just before formatting, keeping the hot path low-allocation.
+    /// Assigns a monotonic `session_id` and captures the current wall-clock
+    /// time. Defaults to `LogFormat::MCP` and component `"default"`.
     #[must_use]
     pub fn build(level: LogLevel, description: &str) -> Self {
         Self {
@@ -142,21 +143,21 @@ impl Log {
         }
     }
 
-    /// Sets the time for the log.
+    /// Override the timestamp for this entry.
     #[must_use]
     pub fn time(mut self, time: &str) -> Self {
         self.time = Cow::Owned(time.to_string());
         self
     }
 
-    /// Sets the session ID for the log.
+    /// Override the auto-assigned session ID.
     #[must_use]
     pub const fn session_id(mut self, session_id: u64) -> Self {
         self.session_id = session_id;
         self
     }
 
-    /// Adds a semantic context attribute.
+    /// Attach a key-value attribute. Accepts any `T: Serialize`.
     #[must_use]
     pub fn with<T: Serialize>(mut self, key: &str, value: T) -> Self {
         if let Ok(val) = serde_json::to_value(value) {
@@ -165,26 +166,24 @@ impl Log {
         self
     }
 
-    /// Sets the component for the log.
+    /// Tag the originating service or module.
     #[must_use]
     pub fn component(mut self, component: &str) -> Self {
         self.component = Cow::Owned(component.to_string());
         self
     }
 
-    /// Sets the format for the log.
+    /// Set the output format for this entry.
     #[must_use]
     pub const fn format(mut self, format: LogFormat) -> Self {
         self.format = format;
         self
     }
 
-    /// Fires the log into the lock-free background ingestion engine, consuming it.
+    /// Consume this entry and push it into the ring buffer.
     ///
-    /// Formatting is deferred to the background flusher thread — the caller
-    /// only pays for a `Log` move (~128-byte memcpy), not serialization.
-    ///
-    /// Automatically captures the call site (`file:line`) via `#[track_caller]`.
+    /// Cost: one `Log` move (~128 bytes). Serialization is deferred.
+    /// Automatically captures `file:line` via `#[track_caller]`.
     #[track_caller]
     pub fn fire(mut self) {
         let caller = std::panic::Location::caller();

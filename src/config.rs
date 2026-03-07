@@ -3,7 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Configuration module for RustLogs (RLG).
+//! TOML-based configuration: loading, validation, diffing, and hot-reload.
+//!
+//! Load from a file with [`Config::load`], or build programmatically via
+//! [`Config::default`] and [`Config::set`]. Serialize back to TOML with
+//! [`Config::save_to_file`].
+//!
+//! Enable the `tokio` feature for async loading and file-watcher hot-reload.
 
 use crate::LogLevel;
 use config::{
@@ -35,42 +41,42 @@ use tokio::sync::mpsc;
 
 const CURRENT_CONFIG_VERSION: &str = "1.0";
 
-/// Custom error types for configuration management.
+/// Configuration error variants.
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    /// Error occurred while parsing an environment variable.
+    /// Failed to parse an environment variable.
     #[error("Environment variable parse error: {0}")]
     EnvVarParseError(#[from] envy::Error),
 
-    /// Error occurred while parsing the configuration file.
+    /// Failed to parse the configuration file.
     #[error("Configuration parsing error: {0}")]
     ConfigParseError(#[from] SourceConfigError),
 
-    /// Invalid file path was provided for configuration.
+    /// The provided config file path is invalid or inaccessible.
     #[error("Invalid file path: {0}")]
     InvalidFilePath(String),
 
-    /// Error reading from a file.
+    /// File read failed.
     #[error("File read error: {0}")]
     FileReadError(String),
 
-    /// Error writing to a file.
+    /// File write failed.
     #[error("File write error: {0}")]
     FileWriteError(String),
 
-    /// Error validating the configuration settings.
+    /// Validation failed for a configuration field.
     #[error("Configuration validation error: {0}")]
     ValidationError(String),
 
-    /// Configuration version mismatch.
+    /// Config file version does not match the expected version.
     #[error("Configuration version error: {0}")]
     VersionError(String),
 
-    /// Required field is missing in the configuration.
+    /// A required field is missing from the configuration.
     #[error("Missing required field: {0}")]
     MissingFieldError(String),
 
-    /// Error setting up the file watcher.
+    /// File watcher setup failed (requires `tokio` feature).
     #[cfg(feature = "tokio")]
     #[error("Watcher error: {0}")]
     WatcherError(#[from] notify::Error),
@@ -82,7 +88,7 @@ impl From<crate::commons::config::ConfigError> for ConfigError {
     }
 }
 
-/// Enum representing log rotation options.
+/// Log rotation policy variants.
 #[derive(
     Clone,
     Copy,

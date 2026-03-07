@@ -5,7 +5,7 @@
 <h1 align="center">RustLogs (RLG)</h1>
 
 <p align="center">
-  <strong>Stop blocking your threads with slow I/O. Get brutalist, low-allocation observability and AI-native telemetry with deferred formatting across any platform in microseconds.</strong>
+  <strong>Near-lock-free structured logging with deferred formatting, native OS sinks, and AI-native telemetry. Sub-microsecond ingestion. Zero blocking I/O on your threads.</strong>
 </p>
 
 <p align="center">
@@ -23,86 +23,101 @@
   </a>
 </p>
 
-<p align="center">
-  <em><strong>Sublime Aesthetics & Brutal Speed</strong>: Lock-free LMAX Disruptor + Fluent API — Battle-tested in high-compliance environments.</em>
-</p>
-
 ---
 
-## ✨ Overview
+## Overview
 
-RustLogs (RLG) is a high-performance, lock-free observability engine designed for systems engineers who demand mechanical sympathy, memory safety, and uncompromising speed. Architected for the 2026 industry standards, it provides a curated telemetry infrastructure that integrates natively across macOS, Linux, and WSL2.
+RLG decouples log emission from formatting and I/O using a near-lock-free ring buffer ([LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) pattern). Your application threads push events in ~1.4 µs. A dedicated flusher thread handles serialization and platform-native dispatch.
 
-## 🛡️ Why "Brutalist Observability"?
+**Key properties:**
 
-Unlike standard logging crates that rely on heavy async runtimes or blocking mutexes, `rlg` is built for Enterprise-Grade reliability and zero-latency ingestion.
+- **~1.4 µs ingestion** via a 65k-slot `crossbeam::ArrayQueue` — no Mutex on the hot path
+- **Deferred formatting** — serialization happens on the flusher thread, not yours
+- **14 output formats** — JSON, MCP, OTLP, ECS, CEF, GELF, Logfmt, CLF, and more
+- **Native OS sinks** — direct `os_log` (macOS) and `journald` (Linux) FFI
+- **MIRI-verified** — zero undefined behaviour under strict provenance checks
 
-| Feature | Standard Ecosystems (tracing/log) | RustLogs (RLG) |
+### How RLG Compares
+
+| Metric | `tracing` / `log` | RLG |
 | :--- | :--- | :--- |
-| **Ingestion Latency** | ~20-30µs (Mutex / Blocking) | **~1.4µs (Near-Lock-Free Ring Buffer)** |
-| **Serialization** | High Heap Allocation | **Low-Alloc with Deferred Formatting** |
-| **Native OS Sinks** | Standard stdout / Files | **Direct os_log & journald FFI** |
-| **AI Integration** | Requires Custom Adapters | **Native MCP & OTLP Formats** |
-| **Memory Safety** | Standard Rust | **Strictly MIRI-Compliant** |
+| **Ingestion latency** | ~20–30 µs (Mutex) | **~1.4 µs (atomic-only)** |
+| **Serialization** | Inline, high-alloc | **Deferred, low-alloc** |
+| **OS integration** | stdout / files | **`os_log` + `journald` FFI** |
+| **AI formats** | Requires adapters | **Native MCP + OTLP** |
+| **Safety** | Standard Rust | **MIRI-compliant** |
 
-## 🚀 The 2026 Next-Gen Frontier
-
-While others are still parsing scrolling walls of JSON text, we are building the future of telemetry.
-
-- 🏎️ **Low-Allocation Critical Path**: Ingestion pushes events via a near-lock-free ring buffer, deferring all formatting to the background flusher thread.
-- ❄️ **Cross-Platform Invisibility**: Interfacing directly with Apple's Unified Logging (`os_log`) and Systemd (`journald`) means `rlg` operates entirely seamlessly within the host OS.
-- 🧠 **AI-First Context**: Natively structures data for Model Context Protocol (MCP) and OpenTelemetry (OTLP), allowing zero-parsing-overhead ingestion by LLM orchestrators and Grafana.
-- 🛡️ **Generative TUI Dashboard**: A live, non-clobbering 60FPS asynchronous dashboard that renders observability metrics locally without breaking your terminal flow.
-
-## 🏗️ Architecture
-
-Reliable by Design: Never drop a frame. Never block a thread.
+## Architecture
 
 ```mermaid
 graph TD
-    A[Application Thread] -->|Fluent API| B{Lock-Free ArrayQueue}
-    B -->|Near-Lock-Free Push ~1.4µs| C[Background Flush Thread]
-    C -->|Deferred Format| D{Platform Sinks}
-    D --> E[macOS: os_log / logd]
-    D --> F[Linux/WSL: journald socket]
-    D --> G[Generative TUI / Stdout]
+    A[Application Thread] -->|Fluent API| B{ArrayQueue · 65k slots}
+    B -->|Near-lock-free push ~1.4µs| C[Background Flusher Thread]
+    C -->|Deferred format| D{Platform Sinks}
+    D --> E[macOS: os_log]
+    D --> F[Linux/WSL: journald]
+    D --> G[TUI Dashboard / Stdout]
     D --> H[AI Agents: MCP / OTLP]
 ```
 
-## 🛠️ Getting Started
+## Getting Started
 
-### ✅ Pre-flight Checklist
+### Requirements
 
-Before installing, ensure your systems engineering environment meets these minimal requirements:
+- Rust **1.88.0+** (`rustc --version`)
+- Cargo package manager
 
-- [ ] Rust 1.88.0+ installed (`rustc --version`)
-- [ ] Cargo package manager ready
-- [ ] Debcargo (Optional, for Debian/Ubuntu packaging)
-
-### ⚡ Instant Install
-
-Add `rlg` to your project via Cargo:
+### Install
 
 ```bash
 cargo add rlg@0.0.7
 ```
 
-## ⌨️ The "Liquid" API Showcase
+### Initialize
 
-| Command | Action | Why you'll love it |
-| :--- | :--- | :--- |
-| `Log::info("...")` | Semantic Initialization | Clean, builder-pattern start to any log. |
-| `.with("key", val)` | High-Cardinality Spans | Populates BTreeMap for instant JSON/MCP mapping. |
-| `.format(...)` | AI-Native Structuring | Switch instantly between Logfmt, OTLP, or ECS. |
-| `.fire()` | Atomic Dispatch | Drops the payload into the lock-free queue in nanoseconds. |
+Call `rlg::init()` at the top of `main`. Hold the returned [`FlushGuard`](https://docs.rs/rlg/latest/rlg/init/struct.FlushGuard.html) — it flushes pending events when dropped.
 
-### Example:
+```rust
+fn main() {
+    let _guard = rlg::init().unwrap();
+
+    rlg::log::Log::info("Service started")
+        .component("main")
+        .fire();
+}
+```
+
+**Returns `Err`** if a `log` or `tracing` global was already registered, or if `init()` was already called.
+
+For custom configuration, use the builder:
+
+```rust
+let _guard = rlg::builder()
+    .level(rlg::LogLevel::DEBUG)
+    .format(rlg::LogFormat::JSON)
+    .init()
+    .unwrap();
+```
+
+## The Fluent API
+
+Build structured log entries with a chainable builder. Each method returns `Self`, so chain freely.
+
+| Method | Effect |
+| :--- | :--- |
+| `Log::info("…")` | Create a builder at INFO level. Also: `warn`, `error`, `debug`, `trace`, `fatal`, `critical`, `verbose`. |
+| `.component("name")` | Tag the originating service or module. |
+| `.with("key", value)` | Attach a key-value attribute. Accepts any `T: Serialize`. |
+| `.format(LogFormat::X)` | Override the output format for this entry. |
+| `.fire()` | Consume the builder and push into the ring buffer. Captures `file:line` via `#[track_caller]`. |
+
+### Example
 
 ```rust
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 
-Log::info("Cloud instance scaled successfully")
+Log::info("Instance scaled")
     .component("orchestrator")
     .with("cpu_load", 0.85)
     .with("region", "us-east-1")
@@ -110,34 +125,50 @@ Log::info("Cloud instance scaled successfully")
     .fire();
 ```
 
-## 📦 Features & Details
+## Features
+
+Enable optional capabilities via Cargo features. **No features are enabled by default.**
+
+| Feature | Description |
+| :--- | :--- |
+| `tokio` | Async config loading, hot-reload file watcher (`notify`). |
+| `tui` | Terminal UI dashboard with live metrics (`terminal_size`). |
+| `miette` | Pretty diagnostic error reports. |
+| `tracing-layer` | Composable `tracing_subscriber::Layer` via `RlgLayer`. |
+| `debug_enabled` | Verbose internal engine diagnostics. |
+
+```toml
+[dependencies]
+rlg = { version = "0.0.7", features = ["tokio", "tui"] }
+```
 
 <details>
-<summary><b>🚀 Performance & Sinks</b></summary>
+<summary><b>Performance and Sinks</b></summary>
 
-- **LMAX Disruptor Pattern**: Crossbeam-backed 65k capacity ring buffer.
-- **Low-Allocation Serialization**: Integrates `itoa` and `ryu` for numeric formatting; uses `Cow<str>` and `u64` session IDs to minimize heap allocations.
-- **Platform-Native FFI**: Interfaces directly with macOS `os_log` and Linux `journald` for zero-copy OS integration.
-- **Offline Reliability**: Fully compatible with Debian/Ubuntu chroot builds via `debcargo.toml`.
+- **Ring buffer**: Crossbeam `ArrayQueue` with 65,536 slots.
+- **Low-alloc serialization**: `u64` session IDs, `Cow<str>` fields, `itoa`/`ryu` for numerics.
+- **Platform FFI**: Direct `os_log` (macOS) and `journald` socket (Linux). Falls back to stdout when unavailable.
+- **Log rotation**: Size, time, date, or count-based policies via `RotatingFile`.
 </details>
 
 <details>
-<summary><b>🤖 AI & Data Formats</b></summary>
+<summary><b>Supported Formats</b></summary>
 
-- **Model Context Protocol (MCP)**: JSON-RPC 2.0 notification pattern for AI agents.
-- **OpenTelemetry (OTLP)**: Native mapping for distributed tracing.
-- **Elastic Common Schema (ECS)**: Enterprise security compliance.
-- **Logfmt**: Brutally fast, human-readable key-value pairs.
-- **Legacy Formats**: CLF, CEF, GELF, W3C, Apache, Logstash, NDJSON.
+- **MCP** — JSON-RPC 2.0 notifications for AI agent orchestration.
+- **OTLP** — OpenTelemetry-native for distributed tracing pipelines.
+- **ECS** — Elastic Common Schema for security and compliance.
+- **Logfmt** — Human-readable key-value pairs.
+- **JSON / NDJSON** — Standard structured output.
+- **Legacy** — CLF, CEF, GELF, W3C, Apache Access, Logstash, Log4j XML, ELF.
 </details>
 
 <details>
-<summary><b>🔐 Safety & Compliance</b></summary>
+<summary><b>Safety and Compliance</b></summary>
 
-- **MIRI-Verified**: Zero undefined behavior, strict aliasing, or pointer provenance issues.
-- **95%+ Code Coverage**: Mathematically verified data pipelines.
-- **Pedantic Linting**: Survives `#![deny(clippy::pedantic)]` and `rust_2018_idioms`.
-- **Safe Fallbacks**: Graceful degradation to standard I/O if native OS sockets are unavailable.
+- **MIRI-verified**: Passes strict provenance, aliasing, and UB checks.
+- **95%+ code coverage** across all modules.
+- **Pedantic linting**: `#![deny(clippy::all, clippy::pedantic, clippy::nursery)]`.
+- **Graceful fallback**: Degrades to stdout if native sinks are unavailable.
 </details>
 
 ---
@@ -147,8 +178,8 @@ Log::info("Cloud instance scaled successfully")
   THE ENGINE ᛞ <a href="https://euxis.com">EUXIS</a> ᛫ Enterprise Unified Execution Intelligence System
 </p>
 
-## 📜 License
+## License
 
-Licensed under the MIT License or Apache-2.0, at your option. See [LICENSE-MIT](LICENSE-MIT) or [LICENSE-APACHE](LICENSE-APACHE) for details.
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
 
 <p align="right"><a href="#rustlogs-rlg">↑ Back to Top</a></p>

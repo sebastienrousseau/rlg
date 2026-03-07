@@ -12,7 +12,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 #[cfg_attr(feature = "miette", derive(Diagnostic))]
-/// Errors that can occur during the logging process
+/// Error variants for the RLG logging pipeline.
 pub enum RlgError {
     #[error("I/O error: {0}")]
     #[cfg_attr(
@@ -153,14 +153,14 @@ impl From<crate::commons::error::CommonError> for RlgError {
 }
 
 impl RlgError {
-    /// Create a new custom error with a given message.
+    /// Create a custom error with the given message.
     #[must_use]
     pub fn custom<T: fmt::Display>(msg: T) -> Self {
         Self::Custom(msg.to_string())
     }
 }
 
-/// Type alias for a Result with `RlgError` as the error type.
+/// Convenience alias: `Result<T, RlgError>`.
 pub type RlgResult<T> = Result<T, RlgError>;
 
 #[cfg(test)]

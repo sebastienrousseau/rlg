@@ -1,53 +1,63 @@
-# How-To: Using the Liquid Fluent API
+# How-To: The Fluent API
 
-The "Liquid" API in `rlg` is designed to feel effortless. Inspired by Apple's Human Interface Guidelines, it prioritizes the developer's intent and minimizes boilerplate.
+Build structured log entries with a chainable builder. Every method returns `Self` — chain freely, then dispatch with `.fire()`.
 
-## 1. Basic Semantic Entry
-Every log starts with a severity level. This creates a builder that defaults to standard settings.
+## 1. Start with a Severity Level
+
+Every log begins with a level shortcut. This returns a builder with sensible defaults.
 
 ```rust
 use rlg::log::Log;
 
-// Minimal
 Log::info("Connection established").fire();
 ```
 
-## 2. Chainable Context
-Logging is only useful if it's structured. Add context using the `.with()` method. It accepts any type that implements `serde::Serialize`.
+Available shortcuts: `info`, `warn`, `error`, `debug`, `trace`, `fatal`, `critical`, `verbose`.
+
+## 2. Attach Structured Context
+
+Add key-value attributes with `.with()`. Accepts any `T: Serialize`.
 
 ```rust
-Log::warn("Potential security breach")
+Log::warn("Potential breach detected")
     .with("ip_address", "192.168.1.100")
     .with("attempts", 5)
     .with("target_resource", "/admin/login")
     .fire();
 ```
 
-## 3. Component & Format Overrides
-You can override defaults on a per-log basis. This is particularly useful for multi-service binaries or when certain logs need to be OTLP-compliant while others remain in simple Logfmt.
+Attributes are stored in a `BTreeMap<String, serde_json::Value>` and serialized in sorted order.
+
+## 3. Override Component and Format
+
+Tag the originating module with `.component()`. Switch the output format per-entry with `.format()`.
 
 ```rust
 use rlg::log_format::LogFormat;
 
 Log::error("Database query failed")
     .component("db-client-pool")
-    .format(LogFormat::OTLP) // Ensure this log is AI-readable
+    .format(LogFormat::OTLP)
     .with("query_time_ms", 1250)
     .fire();
 ```
 
-## 4. Manual Control (Advanced)
-While `.fire()` is the recommended way to interact with the lock-free engine, you can also control the exact timing of the handoff if you need to perform additional processing.
+## 4. Manual Control
+
+`.fire()` consumes the builder and pushes it into the ring buffer. For deferred dispatch, store the builder and fire later.
 
 ```rust
-let log_entry = Log::info("Ready")
+let entry = Log::info("Ready")
     .session_id(42)
     .time("2026-03-05T12:00:00Z");
 
-// ... do something else ...
+// ... additional processing ...
 
-log_entry.fire();
+entry.fire();
 ```
 
-## AI-Readability Tip
-When using `LogFormat::MCP` or `LogFormat::OTLP`, ensure your keys in `.with(key, value)` are descriptive. AI orchestrators use these keys to automatically map your application's state and detect anomalies. Use `snake_case` for maximum compatibility.
+**`.fire()` vs `.log()`**: `.fire()` consumes `self` (no clone). `.log()` borrows and clones — use it only when you need to retain the entry.
+
+## AI Format Guidelines
+
+For `LogFormat::MCP` and `LogFormat::OTLP`, use descriptive `snake_case` keys in `.with()`. AI orchestrators map these keys automatically for anomaly detection and state tracking.

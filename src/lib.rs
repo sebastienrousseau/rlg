@@ -3,38 +3,30 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! # RLG (`RustLogs`) — High-Performance Near-Lock-Free Logging Engine
+//! # RLG — Near-Lock-Free Structured Logging for Rust
 //!
-//! `rlg` is a structured logging library built on a near-lock-free ring buffer
-//! (LMAX Disruptor pattern). It delivers sub-microsecond ingestion latency
-//! (~1.4µs) with deferred formatting on a background flusher thread, and native
-//! platform sinks for macOS `os_log` and Linux `journald`.
+//! `rlg` pushes structured log events through a 65k-slot ring buffer
+//! ([LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) pattern)
+//! in ~1.4 µs. A background flusher thread handles serialization and
+//! dispatch to platform-native sinks (`os_log`, `journald`, files, stdout).
 //!
-//! ## Design Principles
-//! - **Fluent API:** Chainable builder pattern for ergonomic log construction.
-//! - **14 structured formats:** JSON, OTLP, MCP, ECS, CEF, GELF, Logfmt, and more.
-//! - **Near-lock-free concurrency:** MIRI-compliant safety. The hot path
-//!   (`ingest()`) uses only atomic operations; the Mutex is reserved for
-//!   shutdown only.
+//! ## Why RLG
 //!
-//! ## Feature Matrix
+//! - **No Mutex on the hot path.** `ingest()` uses atomic operations only.
+//! - **Deferred formatting.** Serialization runs on the flusher thread.
+//! - **14 output formats.** JSON, MCP, OTLP, ECS, CEF, GELF, Logfmt, and more.
+//! - **MIRI-verified.** Zero undefined behaviour under strict provenance.
 //!
-//! | Feature | Default | Description |
-//! |---------|:-------:|-------------|
-//! | `default` | &mdash; | No default features. |
-//! | `debug_enabled` | No | Enables verbose internal engine diagnostics. |
-//! | `miette` | No | Pretty diagnostic error reports via `miette`. |
-//! | `tokio` | No | Async config loading, hot-reload, `notify` file watcher. |
-//! | `tui` | No | Terminal UI dashboard with `terminal_size` detection. |
-//! | `tracing-layer` | No | Composable `tracing_subscriber::Layer` via `RlgLayer`. |
-//!
-//! ## Quick Start: The Liquid Fluent API
+//! ## Quick Start
 //!
 //! ```rust,no_run
+//! // Initialize once at the top of main. Hold the guard.
+//! let _guard = rlg::init().unwrap();
+//!
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //!
-//! Log::info("User successfully authenticated")
+//! Log::info("User authenticated")
 //!     .component("auth-service")
 //!     .with("user_id", 42)
 //!     .with("session_uuid", "a1b2c3d4")
@@ -42,11 +34,30 @@
 //!     .fire();
 //! ```
 //!
-//! ## Architectural Overview
-//! The heart of `rlg` is a near-lock-free ring buffer (65k capacity) that
-//! decouples log emission from formatting and I/O. Serialization is performed
-//! on a dedicated background flusher thread, keeping the hot path
-//! low-allocation (uses `Cow<str>`, `u64` session IDs, and deferred timestamps).
+//! ## Features
+//!
+//! No features are enabled by default.
+//!
+//! | Feature | Effect |
+//! |---------|--------|
+//! | `tokio` | Async config loading, hot-reload via `notify`. |
+//! | `tui` | Live terminal dashboard via `terminal_size`. |
+//! | `miette` | Pretty diagnostic error reports. |
+//! | `tracing-layer` | Composable `tracing_subscriber::Layer`. |
+//! | `debug_enabled` | Verbose internal engine diagnostics. |
+//!
+//! ## Architecture
+//!
+//! ```text
+//! Application Thread → Log::fire() → ArrayQueue (65k)
+//!                                         ↓
+//!                              Background Flusher Thread
+//!                                         ↓
+//!                              PlatformSink (os_log / journald / file / stdout)
+//! ```
+//!
+//! The flusher drains events in batches of 64. Fields use `Cow<str>` and
+//! `u64` session IDs to minimize heap allocations on the hot path.
 
 #![deny(
     clippy::all,
@@ -57,39 +68,39 @@
 #![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
 
-/// Configuration management for the logging engine.
+/// TOML-based configuration, validation, and hot-reload.
 pub mod config;
-/// The core lock-free ingestion and flushing engine.
+/// Ring buffer engine: ingestion, flushing, and the global `ENGINE`.
 pub mod engine;
-/// Custom error types for the RLG ecosystem.
+/// Error types and the `RlgResult` alias.
 pub mod error;
-/// Zero-config initialization API.
+/// Zero-config `init()`, builder API, and `FlushGuard`.
 pub mod init;
-/// Log entry structures and the Liquid Fluent API.
+/// `Log` struct, fluent builder, and per-format `Display` impls.
 pub mod log;
-/// Exhaustive support for industry-standard log formats.
+/// 14 structured output formats (JSON, MCP, OTLP, ECS, CEF, ...).
 pub mod log_format;
-/// Severity level definitions and parsing.
+/// Severity levels: `ALL` through `DISABLED`, with `FromStr` parsing.
 pub mod log_level;
 /// Bridge from the `log` crate facade into the RLG engine.
 pub mod logger;
-/// Convenience macros for ergonomic logging.
+/// Macros: `rlg_span!`, `rlg_time_it!`, `rlg_mcp_notify!`.
 pub mod macros;
-/// Log rotation policies for file sinks.
+/// Log rotation policies: size, time, date, and count-based.
 pub mod rotation;
-/// Native platform-specific logging sinks.
+/// Platform-native sinks: `os_log` (macOS), `journald` (Linux), file, stdout.
 pub mod sink;
-/// Integration with the `tracing` ecosystem.
+/// `tracing` integration: `RlgSubscriber` and optional `RlgLayer`.
 pub mod tracing;
-/// Terminal UI dashboard for real-time metrics during local development.
+/// Opt-in terminal dashboard for live metrics (`RLG_TUI=1`).
 pub mod tui;
-/// Utility functions for timestamps, file operations, and sanitization.
+/// Timestamps, file I/O helpers, and input sanitization.
 pub mod utils;
 
-/// Shared ecosystem utilities from euxis-commons.
+/// Shared utilities from `euxis-commons`.
 pub use euxis_commons as commons;
 
-// Re-exports for a flattened, intuitive API.
+// --- Flattened re-exports ---
 pub use crate::error::{RlgError, RlgResult};
 pub use crate::init::{
     FlushGuard, InitError, RlgBuilder, builder, init,
@@ -104,5 +115,5 @@ pub use crate::tracing::RlgSubscriber;
 #[cfg(feature = "tracing-layer")]
 pub use crate::tracing::RlgLayer;
 
-/// The version of the `rlg` crate.
+/// Crate version, injected at compile time.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

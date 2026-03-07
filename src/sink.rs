@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Platform-native logging sinks (macOS `os_log`, Linux `journald`, stdout).
+//! Platform-native logging sinks.
+//!
+//! [`PlatformSink`] routes formatted log payloads to the best available
+//! output: `os_log` on macOS, `journald` on Linux, or stdout/file as fallback.
+//! Construct via [`PlatformSink::native()`] or [`PlatformSink::from_config()`].
 
 use std::io::Write;
 
@@ -23,7 +27,7 @@ impl UnixDatagram {
     }
 }
 
-/// A unified interface for platform-native logging.
+/// Unified interface for platform-native log output.
 #[derive(Debug)]
 #[allow(variant_size_differences)]
 pub enum PlatformSink {
@@ -82,14 +86,14 @@ mod macos_ffi {
 }
 
 impl PlatformSink {
-    /// Creates a sink from the given configuration.
+    /// Build a sink from the given [`Config`](crate::config::Config).
     ///
-    /// Inspects `logging_destinations` to decide where to send output:
-    /// - `File(path)` → opens the file for appending
-    /// - `Stdout` → uses stdout
-    /// - `Network(_)` → falls back to native (network sinks are not yet implemented)
+    /// Inspects `logging_destinations` in order:
+    /// - `File(path)` → open for append
+    /// - `Stdout` → stdout
+    /// - `Network(_)` → skipped (not yet implemented)
     ///
-    /// Falls back to [`PlatformSink::native`] if no suitable destination is found.
+    /// Falls back to [`PlatformSink::native()`] if no destination matches.
     #[must_use]
     pub fn from_config(config: &crate::config::Config) -> Self {
         for dest in &config.logging_destinations {
@@ -114,7 +118,7 @@ impl PlatformSink {
         Self::native()
     }
 
-    /// Creates a native sink based on the OS.
+    /// Detect and return the best native sink for the current OS.
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]
     pub fn native() -> Self {
@@ -139,13 +143,13 @@ impl PlatformSink {
         }
     }
 
-    /// Detects the journald socket on Linux.
+    /// Detect the `journald` socket on Linux.
     #[cfg(target_os = "linux")]
     fn detect_journald() -> Self {
         Self::try_journald_socket("/run/systemd/journal/socket")
     }
 
-    /// Attempts to connect a `UnixDatagram` to the given socket path.
+    /// Connect a `UnixDatagram` to the given socket path.
     #[cfg(target_os = "linux")]
     fn try_journald_socket(path: &str) -> Self {
         UnixDatagram::unbound()
@@ -156,7 +160,7 @@ impl PlatformSink {
             .map_or(Self::Journald(None), |s| Self::Journald(Some(s)))
     }
 
-    /// Emits a log payload via the native sink mechanism.
+    /// Write a formatted log payload to this sink.
     #[allow(unused_variables)]
     #[allow(clippy::too_many_lines)]
     pub fn emit(&mut self, level: &str, payload: &[u8]) {

@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Log rotation policies that wrap a file sink.
+//! Log rotation policies: size, time, date, and count-based.
+//!
+//! Wrap a file sink with [`RotatingFile`] to enforce automatic rotation.
+//! On rotation, the current file is renamed with a timestamp suffix and
+//! a fresh file is opened at the original path.
 
 use crate::config::LogRotation;
 use std::fs::{self, File, OpenOptions};
@@ -11,7 +15,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-/// A file writer that enforces a rotation policy.
+/// File writer that enforces a [`LogRotation`] policy.
 #[derive(Debug)]
 pub struct RotatingFile {
     /// Current open file handle.
@@ -31,11 +35,11 @@ pub struct RotatingFile {
 }
 
 impl RotatingFile {
-    /// Opens a new rotating file writer.
+    /// Open (or create) a log file with the given rotation policy.
     ///
     /// # Errors
     ///
-    /// Returns an I/O error if the file cannot be opened.
+    /// Returns `io::Error` if the file cannot be opened or created.
     pub fn open(path: &Path, policy: LogRotation) -> io::Result<Self> {
         let file =
             OpenOptions::new().create(true).append(true).open(path)?;
@@ -52,11 +56,11 @@ impl RotatingFile {
         })
     }
 
-    /// Writes a batch of bytes and checks if rotation is needed.
+    /// Write a batch of bytes, then rotate if the policy threshold is met.
     ///
     /// # Errors
     ///
-    /// Returns an I/O error if the write or rotation fails.
+    /// Returns `io::Error` if the write or file rotation fails.
     pub fn write_batch(
         &mut self,
         data: &[u8],

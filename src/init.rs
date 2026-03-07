@@ -3,14 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Zero-config initialization for the RLG observability engine.
+//! One-call initialization for the RLG engine.
 //!
 //! ```rust,no_run
-//! // Sensible defaults (INFO level, MCP format)
-//! rlg::init().unwrap();
+//! // Sensible defaults — auto-detects format (TTY → Logfmt, pipe → JSON).
+//! let _guard = rlg::init().unwrap();
 //!
-//! // Custom configuration
-//! rlg::builder()
+//! // Custom configuration via builder.
+//! let _guard = rlg::builder()
 //!     .level(rlg::LogLevel::DEBUG)
 //!     .format(rlg::LogFormat::JSON)
 //!     .init()
@@ -24,10 +24,10 @@ use crate::logger::{RlgLogger, to_log_level_filter};
 use std::fmt;
 use std::sync::OnceLock;
 
-/// Detects the default log format based on output context.
+/// Auto-detect the output format from the execution context.
 ///
 /// - **TTY** → `Logfmt` (human-readable key=value)
-/// - **Pipe/file/CI** → `JSON` (structured, machine-parseable)
+/// - **Pipe / file / CI** → `JSON` (machine-parseable)
 /// - **`RLG_ENV=production`** → `JSON`
 fn detect_default_format() -> LogFormat {
     if std::env::var("RLG_ENV")
@@ -49,10 +49,10 @@ fn atty_stdout() -> bool {
     std::io::stdout().is_terminal()
 }
 
-/// Parses `RUST_LOG` for a simple level filter (e.g., `RUST_LOG=debug`).
+/// Parse `RUST_LOG` for a level filter (e.g., `RUST_LOG=debug`).
 ///
-/// Supports `RUST_LOG=<level>` and `RUST_LOG=<crate>=<level>` (the crate
-/// filter is ignored for now — we apply the most permissive level found).
+/// Accepts `RUST_LOG=<level>` and `RUST_LOG=<crate>=<level>`.
+/// Returns the most permissive level found. Returns `None` if unset.
 fn parse_rust_log() -> Option<LogLevel> {
     let val = std::env::var("RUST_LOG").ok()?;
     let mut most_permissive: Option<LogLevel> = None;
@@ -77,20 +77,20 @@ fn parse_rust_log() -> Option<LogLevel> {
     most_permissive
 }
 
-/// Guard to prevent double initialization.
+/// Prevents double initialization via `OnceLock` (set-once semantics).
 static INIT_GUARD: OnceLock<()> = OnceLock::new();
 
-/// Static logger instance providing `&'static` lifetime for `log::set_logger`.
+/// `&'static` logger instance required by `log::set_logger`.
 static LOGGER: OnceLock<RlgLogger> = OnceLock::new();
 
-/// Errors that can occur during initialization.
+/// Initialization failures.
 #[derive(Debug, Clone, Copy)]
 pub enum InitError {
-    /// The `log` crate global logger was already set.
+    /// A `log` crate logger was already registered globally.
     LoggerAlreadySet,
-    /// The `tracing` global subscriber was already set.
+    /// A `tracing` subscriber was already registered globally.
     SubscriberAlreadySet,
-    /// `rlg::init()` or `rlg::builder().init()` was already called.
+    /// `rlg::init()` or `builder().init()` was called more than once.
     AlreadyInitialized,
 }
 
@@ -112,7 +112,7 @@ impl fmt::Display for InitError {
 
 impl std::error::Error for InitError {}
 
-/// Builder for customizing the RLG initialization.
+/// Builder for customizing RLG initialization.
 #[derive(Debug, Clone, Copy)]
 pub struct RlgBuilder {
     level: LogLevel,
@@ -133,39 +133,39 @@ impl Default for RlgBuilder {
 }
 
 impl RlgBuilder {
-    /// Sets the minimum log level.
+    /// Set the minimum severity level. Events below this are dropped.
     #[must_use]
     pub const fn level(mut self, level: LogLevel) -> Self {
         self.level = level;
         self
     }
 
-    /// Sets the default log output format.
+    /// Set the default output format. Overrides auto-detection.
     #[must_use]
     pub const fn format(mut self, format: LogFormat) -> Self {
         self.format = format;
         self
     }
 
-    /// Disables the `log` crate facade integration.
+    /// Skip installing the `log` crate facade bridge.
     #[must_use]
     pub const fn without_log(mut self) -> Self {
         self.install_log = false;
         self
     }
 
-    /// Disables the `tracing` subscriber installation.
+    /// Skip installing the `tracing` global subscriber.
     #[must_use]
     pub const fn without_tracing(mut self) -> Self {
         self.install_tracing = false;
         self
     }
 
-    /// Installs the `log` crate facade bridge.
+    /// Register `RlgLogger` as the global `log` facade.
     ///
     /// # Errors
     ///
-    /// Returns `InitError::LoggerAlreadySet` if a logger was already registered.
+    /// Returns `InitError::LoggerAlreadySet` if another logger was already registered.
     pub(crate) fn install_log_facade(
         format: LogFormat,
         level: LogLevel,
@@ -177,11 +177,11 @@ impl RlgBuilder {
         Ok(())
     }
 
-    /// Installs the `tracing` global subscriber.
+    /// Register `RlgSubscriber` as the global `tracing` dispatcher.
     ///
     /// # Errors
     ///
-    /// Returns `InitError::SubscriberAlreadySet` if a subscriber was already registered.
+    /// Returns `InitError::SubscriberAlreadySet` if another subscriber was already registered.
     pub(crate) fn install_tracing_subscriber() -> Result<(), InitError>
     {
         let subscriber = crate::tracing::RlgSubscriber::new();
@@ -192,15 +192,15 @@ impl RlgBuilder {
         Ok(())
     }
 
-    /// Finalizes the builder and installs RLG as the global logger/subscriber.
+    /// Finalize and install RLG as the global logger and subscriber.
     ///
-    /// Respects `RUST_LOG` for level overrides and auto-detects the output
-    /// format when no explicit format was set (TTY → Logfmt, pipe → JSON).
+    /// Applies `RUST_LOG` overrides and auto-detects the format
+    /// (TTY → Logfmt, pipe → JSON) when none was explicitly set.
     ///
     /// # Errors
     ///
-    /// Returns an error if a logger or subscriber was already installed, or
-    /// if RLG was already initialized.
+    /// Returns `InitError` if a global logger/subscriber already exists
+    /// or if `init()` was already called.
     pub fn init(mut self) -> Result<FlushGuard, InitError> {
         if INIT_GUARD.set(()).is_err() {
             return Err(InitError::AlreadyInitialized);
@@ -228,21 +228,21 @@ impl RlgBuilder {
     }
 }
 
-/// Creates a new [`RlgBuilder`] for custom initialization.
+/// Create a new [`RlgBuilder`] for custom initialization.
 #[must_use]
 pub fn builder() -> RlgBuilder {
     RlgBuilder::default()
 }
 
-/// A guard that calls [`ENGINE.shutdown()`](crate::engine::LockFreeEngine::shutdown)
-/// when dropped, ensuring buffered events are flushed before process exit.
+/// RAII guard (resource-cleanup-on-drop) that flushes pending events on drop.
 ///
-/// Returned by [`init`] and [`RlgBuilder::init`]. Hold it in `main()`:
+/// Returned by [`init`] and [`RlgBuilder::init`]. **Hold it in `main`** —
+/// dropping it calls [`ENGINE.shutdown()`](crate::engine::LockFreeEngine::shutdown).
 ///
 /// ```rust,no_run
 /// let _guard = rlg::init().unwrap();
 /// // … application code …
-/// // guard drops here, flushing all pending logs
+/// // ← guard drops here, flushing all pending logs
 /// ```
 #[derive(Debug)]
 pub struct FlushGuard {
@@ -255,16 +255,13 @@ impl Drop for FlushGuard {
     }
 }
 
-/// Initializes RLG with sensible defaults.
+/// Initialize RLG with sensible defaults.
 ///
-/// Auto-detects the output format (TTY → Logfmt, pipe → JSON) and respects
-/// `RUST_LOG` for level overrides.
-///
-/// Returns a [`FlushGuard`] that flushes pending events on drop.
+/// Auto-detects format (TTY → Logfmt, pipe → JSON) and respects `RUST_LOG`.
 ///
 /// # Errors
 ///
-/// Returns an error if a logger or subscriber was already installed.
+/// Returns `InitError` if a global logger or subscriber already exists.
 pub fn init() -> Result<FlushGuard, InitError> {
     builder().init()
 }

@@ -4,13 +4,16 @@
 // SPDX-License-Identifier: MIT
 
 //! Bridge from the [`log`](https://docs.rs/log) crate facade into the RLG engine.
+//!
+//! Installed automatically by [`rlg::init()`](crate::init::init) unless
+//! you call `.without_log()` on the builder.
 
 use crate::engine::ENGINE;
 use crate::log::Log;
 use crate::log_format::LogFormat;
 use crate::log_level::LogLevel;
 
-/// Maps a [`log::Level`] to an RLG [`LogLevel`].
+/// Convert a [`log::Level`] to the corresponding [`LogLevel`].
 #[must_use]
 pub const fn map_log_level(level: log::Level) -> LogLevel {
     match level {
@@ -22,7 +25,7 @@ pub const fn map_log_level(level: log::Level) -> LogLevel {
     }
 }
 
-/// Converts an RLG [`LogLevel`] to a [`log::LevelFilter`].
+/// Convert an RLG [`LogLevel`] to a [`log::LevelFilter`].
 #[must_use]
 pub const fn to_log_level_filter(level: LogLevel) -> log::LevelFilter {
     match level {
@@ -37,14 +40,14 @@ pub const fn to_log_level_filter(level: LogLevel) -> log::LevelFilter {
     }
 }
 
-/// A [`log::Log`] implementation that routes messages into the RLG lock-free engine.
+/// [`log::Log`] implementation that routes records into the RLG ring buffer.
 #[derive(Debug, Clone, Copy)]
 pub struct RlgLogger {
     format: LogFormat,
 }
 
 impl RlgLogger {
-    /// Creates a new `RlgLogger` with the given output format.
+    /// Create an `RlgLogger` that formats output in the given format.
     #[must_use]
     pub const fn new(format: LogFormat) -> Self {
         Self { format }
