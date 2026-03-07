@@ -155,7 +155,7 @@ impl LockFreeEngine {
         };
 
         #[cfg(miri)]
-        let flusher_handle = None;
+        let flusher_handle: Option<thread::JoinHandle<()>> = None;
 
         let flusher_thread_handle =
             flusher_handle.as_ref().map(|h| h.thread().clone());
