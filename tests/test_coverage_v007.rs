@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_rlg_result_type_alias() {
         let ok_result: rlg::RlgResult<i32> = Ok(42);
-        assert_eq!(ok_result.unwrap(), 42);
+        assert!(matches!(ok_result, Ok(42)));
 
         let err_result: rlg::RlgResult<i32> =
             Err(rlg::RlgError::custom("fail"));

@@ -7,11 +7,11 @@ mod tests {
     use rlg::utils::generate_timestamp;
     #[cfg(all(feature = "tokio", not(windows)))]
     use rlg::utils::{is_directory_writable, is_file_writable};
-    #[cfg(all(feature = "tokio", not(windows)))]
+    #[cfg(feature = "tokio")]
     use std::fs;
     #[cfg(all(feature = "tokio", not(windows)))]
     use std::path::Path;
-    #[cfg(all(feature = "tokio", not(windows)))]
+    #[cfg(feature = "tokio")]
     use tempfile::tempdir;
 
     #[test]

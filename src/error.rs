@@ -266,10 +266,7 @@ mod tests {
     #[test]
     fn test_error_debug_all_variants() {
         let variants: Vec<RlgError> = vec![
-            RlgError::IoError(io::Error::new(
-                io::ErrorKind::Other,
-                "test",
-            )),
+            RlgError::IoError(io::Error::other("test")),
             RlgError::ConfigError(ConfigError::ValidationError(
                 "v".into(),
             )),
@@ -298,7 +295,7 @@ mod tests {
     #[test]
     fn test_rlg_result_ok() {
         let r: RlgResult<i32> = Ok(42);
-        assert_eq!(r.unwrap(), 42);
+        assert!(matches!(r, Ok(42)));
     }
 
     #[test]

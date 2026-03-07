@@ -857,8 +857,10 @@ mod tests {
 
     #[test]
     fn test_config_validate_empty_path() {
-        let mut config = Config::default();
-        config.log_file_path = PathBuf::from("");
+        let config = Config {
+            log_file_path: PathBuf::from(""),
+            ..Config::default()
+        };
         assert!(config.validate().is_err());
     }
 
@@ -871,29 +873,35 @@ mod tests {
 
     #[test]
     fn test_config_validate_empty_version() {
-        let mut config = Config::default();
-        config.version = "  ".to_string();
+        let config = Config {
+            version: "  ".to_string(),
+            ..Config::default()
+        };
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_config_validate_empty_profile() {
-        let mut config = Config::default();
-        config.profile = "  ".to_string();
+        let config = Config {
+            profile: "  ".to_string(),
+            ..Config::default()
+        };
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_config_validate_empty_log_format() {
-        let mut config = Config::default();
-        config.log_format = "  ".to_string();
+        let config = Config {
+            log_format: "  ".to_string(),
+            ..Config::default()
+        };
         assert!(config.validate().is_err());
     }
 
     #[test]
     fn test_config_validate_empty_env_var() {
         let mut config = Config::default();
-        config.env_vars.insert("".to_string(), "val".to_string());
+        config.env_vars.insert(String::new(), "val".to_string());
         assert!(config.validate().is_err());
     }
 
@@ -935,12 +943,14 @@ mod tests {
     #[test]
     fn test_config_diff_with_changes() {
         let c1 = Config::default();
-        let mut c2 = Config::default();
-        c2.version = "2.0".to_string();
-        c2.profile = "prod".to_string();
-        c2.log_format = "%msg".to_string();
-        c2.log_level = LogLevel::DEBUG;
-        c2.log_file_path = PathBuf::from("/var/log/app.log");
+        let c2 = Config {
+            version: "2.0".to_string(),
+            profile: "prod".to_string(),
+            log_format: "%msg".to_string(),
+            log_level: LogLevel::DEBUG,
+            log_file_path: PathBuf::from("/var/log/app.log"),
+            ..Config::default()
+        };
         let diffs = Config::diff(&c1, &c2);
         assert!(diffs.contains_key("version"));
         assert!(diffs.contains_key("profile"));
@@ -952,9 +962,11 @@ mod tests {
     #[test]
     fn test_config_override_with() {
         let c1 = Config::default();
-        let mut c2 = Config::default();
-        c2.version = "2.0".to_string();
-        c2.profile = "prod".to_string();
+        let mut c2 = Config {
+            version: "2.0".to_string(),
+            profile: "prod".to_string(),
+            ..Config::default()
+        };
         c2.env_vars
             .insert("NEW_KEY".to_string(), "new_val".to_string());
         let merged = c1.override_with(&c2);
@@ -1059,6 +1071,7 @@ value = "test.log"
         let c = config.read();
         assert_eq!(c.version, "1.0");
         assert_eq!(c.profile, "test");
+        drop(c);
     }
 
     #[cfg(feature = "tokio")]
@@ -1123,6 +1136,7 @@ value = "test.log"
         let c = config.read();
         assert_eq!(c.version, "1.0");
         assert_eq!(c.profile, "test");
+        drop(c);
     }
 
     #[test]

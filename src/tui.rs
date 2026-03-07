@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_tui_metrics_start_epoch() {
         let m = TuiMetrics::default();
-        m.start_epoch_secs.store(1234567890, Ordering::Relaxed);
+        m.start_epoch_secs.store(1_234_567_890, Ordering::Relaxed);
         assert_eq!(
             m.start_epoch_secs.load(Ordering::Relaxed),
             1_234_567_890
