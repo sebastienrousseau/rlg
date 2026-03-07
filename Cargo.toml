@@ -13,7 +13,6 @@ description = """
 """
 documentation = "https://docs.rs/rlg"
 edition = "2024"
-exclude = ["/.git/*", "/.github/*", "/.gitignore", "/.vscode/*"]
 homepage = "https://rustlogs.com/"
 keywords = ["debugging", "log", "rlg", "logging", "tracing"]
 license = "MIT OR Apache-2.0"
@@ -66,17 +65,13 @@ parking_lot = "0.12.5"
 regex = "1.12.3"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tempfile = "3.26.0"
 thiserror = "2.0.18"
 miette = { version = "7.5.0", features = ["fancy"], optional = true }
 tokio = { version = "1.50.0", features = ["full"]}
-toml = "1.0.4"
+toml = "1.0.6"
 euxis-commons = { version = "0.0.2", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env"], package = "euxis-commons" }
 vrd = "0.0.8"
-tracing-core = "0.1.33"
-
-# Optional dependencies for feature flags
-reqwest = { version = "0.13.2", optional = true }
+tracing-core = "0.1.36"
 itoa = "1.0.17"
 ryu = "1.0.23"
 crossbeam-queue = "0.3.12"
@@ -88,6 +83,7 @@ version_check = "0.9.5"
 [dev-dependencies]
 # Development dependencies are only used for testing and building.
 criterion = "0.8.2"
+tempfile = "3.26.0"
 divan = "0.1.21"
 serial_test = "3"
 tokio-test = "0.4.5"

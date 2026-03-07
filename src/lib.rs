@@ -18,9 +18,9 @@
 //!
 //! | Feature | Default | Description |
 //! |---------|:-------:|-------------|
-//! | `default` | Yes | Core engine, standard sinks, and terminal dashboard. |
-//! | `reqwest` | No | Enables OTLP/HTTP exports for remote observability. |
+//! | `default` | &mdash; | No default features; all modules are always compiled. |
 //! | `debug_enabled` | No | Enables verbose internal engine diagnostics. |
+//! | `miette` | No | Pretty diagnostic error reports via `miette`. |
 //!
 //! ## Quick Start: The Liquid Fluent API
 //!

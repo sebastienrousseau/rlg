@@ -75,7 +75,7 @@ graph TD
 
 Before installing, ensure your systems engineering environment meets these minimal requirements:
 
-- [ ] Rust 1.87.0+ installed (`rustc --version`)
+- [ ] Rust 1.88.0+ installed (`rustc --version`)
 - [ ] Cargo package manager ready
 - [ ] Debcargo (Optional, for Debian/Ubuntu packaging)
 
