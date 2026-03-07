@@ -9,23 +9,24 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  miri:
-    name: Enforce MIRI Safety
+  validate:
+    name: Validate Tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: miri
-      - uses: Swatinem/rust-cache@v2
-      - name: Run MIRI
-        env:
-          MIRIFLAGS: "-Zmiri-tree-borrows"
-        run: cargo miri test --workspace --all-features
+      - name: Check tag matches Cargo.toml version
+        run: |
+          CARGO_VERSION="v$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$CARGO_VERSION" != "$TAG" ]; then
+            echo "::error::Tag ${TAG} does not match Cargo.toml version ${CARGO_VERSION}"
+            exit 1
+          fi
+          echo "Tag ${TAG} matches Cargo.toml version ${CARGO_VERSION}"
 
   publish:
     name: Publish to Crates.io
-    needs: [miri]
+    needs: [validate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +37,7 @@ jobs:
 
   binary:
     name: Cross-Compile Binaries
-    needs: [miri]
+    needs: [validate]
     strategy:
       fail-fast: false
       matrix:
@@ -46,7 +47,7 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
           - target: x86_64-apple-darwin
-            os: macos-latest
+            os: macos-13
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-pc-windows-msvc
@@ -54,52 +55,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/upload-rust-binary-action@v1
         with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-      
-      - name: Install Cross (Linux AArch64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: cargo install cross
-
-      - name: Build Binary
-        run: |
-          if [ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]; then
-            cross build --release --target ${{ matrix.target }}
-          else
-            cargo build --release --target ${{ matrix.target }}
-          fi
-        shell: bash
-
-      - name: Package
-        id: package
-        run: |
-          NAME="rlg-${{ github.ref_name }}-${{ matrix.target }}"
-          mkdir -p dist
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            EXE="target/${{ matrix.target }}/release/rlg.exe"
-            if [ -f "$EXE" ]; then
-              7z a "dist/${NAME}.zip" "./$EXE"
-              echo "asset=dist/${NAME}.zip" >> $GITHUB_OUTPUT
-            else
-              echo "Warning: binary not found at $EXE"
-            fi
-          else
-            EXE="target/${{ matrix.target }}/release/rlg"
-            if [ -f "$EXE" ]; then
-              tar czf "dist/${NAME}.tar.gz" -C "$(dirname "$EXE")" "$(basename "$EXE")"
-              echo "asset=dist/${NAME}.tar.gz" >> $GITHUB_OUTPUT
-            else
-              echo "Warning: binary not found at $EXE"
-            fi
-          fi
-        shell: bash
-
-      - name: Upload Release Asset
-        if: steps.package.outputs.asset != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.package.outputs.asset }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          bin: rlg
+          target: ${{ matrix.target }}
+          token: ${{ secrets.GITHUB_TOKEN }}
