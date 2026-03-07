@@ -1,5 +1,5 @@
 # Rust edition to use
-edition = "2021"
+edition = "2024"
 
 # Maximum width of each line
 max_width = 72

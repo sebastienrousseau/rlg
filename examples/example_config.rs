@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
@@ -79,8 +79,8 @@ fn log_level_parsing_example() {
 /// # Errors
 ///
 /// Returns an error if the configuration loading fails.
-async fn config_loading_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn config_loading_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Config Loading Example**");
     println!("---------------------------------------------");
 
@@ -107,12 +107,14 @@ async fn config_loading_example(
 /// # Errors
 ///
 /// Returns an error if the environment variable handling fails.
-fn config_env_var_expansion_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+#[allow(unsafe_code)]
+fn config_env_var_expansion_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Config Environment Variable Expansion Example**");
     println!("---------------------------------------------");
 
-    env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log");
+    // SAFETY: Example-only; no other threads depend on this env var at this point.
+    unsafe { env::set_var("RLG_LOG_PATH", "/tmp/env_test_RLG.log") };
 
     let mut config = Config::default();
     config.env_vars.insert(
@@ -126,7 +128,8 @@ fn config_env_var_expansion_example(
         expanded_config
     );
 
-    env::remove_var("RLG_LOG_PATH");
+    // SAFETY: Example-only cleanup.
+    unsafe { env::remove_var("RLG_LOG_PATH") };
 
     Ok(())
 }
@@ -153,15 +156,27 @@ fn config_validation_example() -> Result<(), Box<dyn std::error::Error>>
 
     // Valid configuration
     match config.validate() {
-        Ok(_) => println!("    ✅  Validation passed with valid config: {:#?}", config),
-        Err(e) => println!("    ❌  Validation failed with valid config: {:#?}\n    Error: {}", config, e),
+        Ok(_) => println!(
+            "    ✅  Validation passed with valid config: {:#?}",
+            config
+        ),
+        Err(e) => println!(
+            "    ❌  Validation failed with valid config: {:#?}\n    Error: {}",
+            config, e
+        ),
     }
 
     // Invalid configuration (empty log file path)
     config.log_file_path = PathBuf::new();
     match config.validate() {
-        Ok(_) => println!("    ❌  Validation unexpectedly passed with invalid config: {:#?}", config),
-        Err(e) => println!("    ✅  Validation failed as expected with invalid config: {:#?}\n    Error: {}", config, e),
+        Ok(_) => println!(
+            "    ❌  Validation unexpectedly passed with invalid config: {:#?}",
+            config
+        ),
+        Err(e) => println!(
+            "    ✅  Validation failed as expected with invalid config: {:#?}\n    Error: {}",
+            config, e
+        ),
     }
 
     Ok(())
@@ -182,7 +197,7 @@ fn config_merging_example() -> Result<(), Box<dyn std::error::Error>> {
         ..Default::default()
     };
 
-    let merged_config = config1.merge(&config2);
+    let merged_config = config1.override_with(&config2);
     println!("    ✅  Merged config:\n    {:#?}", merged_config);
 
     Ok(())

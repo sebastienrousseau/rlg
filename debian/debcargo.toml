@@ -1,0 +1,14 @@
+overlay = "."
+uploaders = ["RustLogs Contributors <maintainers@rustlogs.com>"]
+
+[source]
+section = "rust"
+build-depends = ["librust-libc-dev", "librust-tokio-dev"]
+
+[packages.lib]
+depends = ["librust-libc-dev"]
+test_is_broken = false
+
+# Exclude macOS specific C-FFI abstractions from being strictly required on Linux architectures
+[packages."lib+macos_ffi"]
+depends = []

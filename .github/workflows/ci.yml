@@ -1,0 +1,12 @@
+name: 🧪 CI
+
+on:
+  push:
+    branches: [main, "feat/*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  call-commons-ci:
+    name: Run Master CI
+    uses: sebastienrousseau/commons/.github/workflows/ci.yml@main

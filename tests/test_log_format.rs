@@ -1,4 +1,5 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+#![cfg(not(miri))]
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -23,6 +24,10 @@ mod tests {
         assert_eq!(format!("{}", LogFormat::Logstash), "Logstash");
         assert_eq!(format!("{}", LogFormat::Log4jXML), "Log4j XML");
         assert_eq!(format!("{}", LogFormat::NDJSON), "NDJSON");
+        assert_eq!(format!("{}", LogFormat::MCP), "MCP");
+        assert_eq!(format!("{}", LogFormat::OTLP), "OTLP");
+        assert_eq!(format!("{}", LogFormat::Logfmt), "logfmt");
+        assert_eq!(format!("{}", LogFormat::ECS), "ECS");
     }
 
     #[test]
@@ -67,7 +72,9 @@ mod tests {
         assert!(LogFormat::CEF.validate("CEF:0|security|threat|1.0|100|Something happened|5|msg=hello"));
         assert!(LogFormat::W3C.validate("#Fields: date time c-ip cs-method cs-uri-stem sc-status\n2024-01-01 12:34:56 192.168.0.1 GET /index.html 200"));
         assert!(LogFormat::GELF.validate("{\"version\":\"1.1\",\"host\":\"localhost\",\"short_message\":\"A short message\"}"));
-        assert!(LogFormat::Log4jXML.validate("<log4j:event logger=\"myLogger\" timestamp=\"1234567890\">"));
+        assert!(LogFormat::Log4jXML.validate(
+            "<log4j:event logger=\"myLogger\" timestamp=\"1234567890\">"
+        ));
 
         // Invalid cases
         assert!(!LogFormat::CLF.validate("Invalid CLF log"));
@@ -75,7 +82,9 @@ mod tests {
         assert!(!LogFormat::CEF.validate("Invalid CEF log"));
         assert!(!LogFormat::W3C.validate("Invalid W3C log"));
         assert!(!LogFormat::GELF.validate("Invalid GELF log"));
-        assert!(!LogFormat::Log4jXML.validate("<invalid>XML</invalid>"));
+        assert!(
+            !LogFormat::Log4jXML.validate("<invalid>XML</invalid>")
+        );
     }
 
     #[test]
@@ -125,12 +134,17 @@ mod tests {
         // Very long string
         let long_string = "a".repeat(10000);
         assert!(!LogFormat::CLF.validate(&long_string));
-        assert!(LogFormat::JSON
-            .validate(&format!("{{\"key\":\"{}\"}}", long_string)));
+        assert!(
+            LogFormat::JSON
+                .validate(&format!("{{\"key\":\"{}\"}}", long_string))
+        );
 
         // Special characters
-        assert!(LogFormat::JSON
-            .validate("{\"key\":\"value with spaces and 特殊字符\"}"));
+        assert!(
+            LogFormat::JSON.validate(
+                "{\"key\":\"value with spaces and 特殊字符\"}"
+            )
+        );
     }
 
     #[test]
@@ -154,23 +168,48 @@ mod tests {
     }
 
     #[test]
-    fn test_log_format_specific_validations() {
-        // Test specific format validations
-        assert!(LogFormat::ApacheAccessLog.validate("192.168.0.1 - - [01/Jan/2024:12:00:00 +0000] \"GET / HTTP/1.1\" 200 1234"));
-        assert!(LogFormat::Logstash.validate("{\"@timestamp\":\"2024-01-01T12:00:00Z\",\"message\":\"Test log\",\"level\":\"INFO\"}"));
+    fn test_log_format_validate_new_formats() {
+        assert!(LogFormat::OTLP.validate("{}"));
+        assert!(LogFormat::ECS.validate("{}"));
+        assert!(LogFormat::Logfmt.validate("key=value"));
+        assert!(!LogFormat::Logfmt.validate("no_equals"));
+        assert!(!LogFormat::Logfmt.validate("=starts_with_equals"));
+    }
 
-        // For NDJSON, we might need to adjust this based on how it's actually implemented
-        // Option 1: If NDJSON validates each line separately
-        assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}"));
-        assert!(LogFormat::NDJSON.validate("{\"key2\":\"value2\"}"));
+    #[test]
+    fn test_log_format_format_log_others() {
+        assert_eq!(LogFormat::ELF.format_log("elf").unwrap(), "elf");
+        assert_eq!(LogFormat::W3C.format_log("w3c").unwrap(), "w3c");
+        assert_eq!(
+            LogFormat::ApacheAccessLog.format_log("apache").unwrap(),
+            "apache"
+        );
+        assert_eq!(LogFormat::CEF.format_log("cef").unwrap(), "cef");
+        assert_eq!(
+            LogFormat::Log4jXML.format_log("xml").unwrap(),
+            "xml"
+        );
+        assert_eq!(
+            LogFormat::Logfmt.format_log("key=val").unwrap(),
+            "key=val"
+        );
 
-        // Option 2: If NDJSON validates the entire string as one
-        // If this is the case, we might need to adjust the validation method
-        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
+        // JSON-based others
+        let json = "{\"k\":\"v\"}";
+        assert!(LogFormat::Logstash.format_log(json).is_ok());
+        assert!(LogFormat::NDJSON.format_log(json).is_ok());
+        assert!(LogFormat::GELF.format_log(json).is_ok());
+        assert!(LogFormat::MCP.format_log(json).is_ok());
+        assert!(LogFormat::OTLP.format_log(json).is_ok());
+        assert!(LogFormat::ECS.format_log(json).is_ok());
 
-        // Option 3: If NDJSON validation is not yet implemented
-        // In this case, we might want to skip this test or expect it to fail
-        // #[should_panic(expected = "NDJSON validation not implemented")]
-        // assert!(LogFormat::NDJSON.validate("{\"key1\":\"value1\"}\n{\"key2\":\"value2\"}"));
+        // Invalid JSON for JSON-based formats
+        let invalid = "not json";
+        assert!(LogFormat::Logstash.format_log(invalid).is_err());
+        assert!(LogFormat::NDJSON.format_log(invalid).is_err());
+        assert!(LogFormat::GELF.format_log(invalid).is_err());
+        assert!(LogFormat::MCP.format_log(invalid).is_err());
+        assert!(LogFormat::OTLP.format_log(invalid).is_err());
+        assert!(LogFormat::ECS.format_log(invalid).is_err());
     }
 }

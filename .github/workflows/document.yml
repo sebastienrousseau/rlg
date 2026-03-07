@@ -2,59 +2,51 @@ name: 🧪 Document
 
 on:
   push:
-    branches:
-      - main
-      - feat/rlg
-  pull_request:
-    branches:
-      - feat/rlg
-  release:
-    types: [created]
+    branches: [main]
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
-  all:
-    name: Document
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  doc:
+    name: Generate Documentation
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: hecrj/setup-rust-action@v2.0.1
-        with:
-          rust-version: nightly
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
 
-      - uses: actions/checkout@v4.1.7
+      - name: Install mdBook
+        run: cargo install mdbook --locked
 
-      - name: Update libssl
+      - name: Build mdBook
+        run: mdbook build
+
+      - name: Build Rustdoc
+        run: RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+
+      - name: Combine outputs
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl1.1
+          # mdBook output is the site root
+          cp -r target/book _site
+          # Rustdoc goes under /api/
+          cp -r target/doc _site/api
+          # Redirect /api/ to /api/rlg/
+          echo '<html><head><meta http-equiv="refresh" content="0; url=rlg/index.html"></head><body></body></html>' > _site/api/index.html
 
-      - name: Generate documentation for all features and publish it
-        run: |
-          RUSTDOCFLAGS="--cfg docsrs" \
-            cargo doc --no-deps --all-features --workspace
-            # Write index.html with redirect
-            echo '<html><head><meta http-equiv="refresh" content="0; url=/rlg/"></head><body></body></html>' > ./target/doc/index.html
-
-      - name: Deploy
-        uses: actions/upload-artifact@v4.3.6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: documentation
-          path: target/doc
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Write CNAME file
-        run: echo 'doc.rustlogs.com' > ./target/doc/CNAME
+          path: ./_site
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
-          publish_branch: gh-pages
-          cname: true
-          commit_message: Deploy documentation at ${{ github.sha }}
-          user_name: github-actions
-          user_email: actions@users.noreply.github.com
+        id: deployment
+        uses: actions/deploy-pages@v4

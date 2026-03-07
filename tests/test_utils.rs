@@ -1,9 +1,16 @@
+#![cfg(not(miri))]
+#![allow(missing_docs)]
 #[cfg(test)]
 mod tests {
     use rlg::utils::*;
+    #[cfg(feature = "tokio")]
+    use std::path::Path;
+    #[cfg(feature = "tokio")]
     use tokio::fs::{self, File};
 
+    #[cfg(feature = "tokio")]
     use tempfile::tempdir;
+    #[cfg(feature = "tokio")]
     use tokio::io::AsyncWriteExt;
 
     #[test]
@@ -21,6 +28,7 @@ mod tests {
         assert_eq!(format_file_size(1024 * 1024 * 1024), "1.00 GB");
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_file_writable() {
         let temp_dir = tempdir().unwrap();
@@ -41,6 +49,7 @@ mod tests {
         assert!(!is_file_writable(&file_path).await.unwrap());
     }
 
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_truncate_file() {
         let temp_dir = tempdir().unwrap();
@@ -71,14 +80,69 @@ mod tests {
         assert!(parse_datetime("invalid datetime").is_err());
     }
 
+    #[test]
+    fn test_generate_timestamp_coverage() {
+        let ts = generate_timestamp();
+        assert!(!ts.is_empty());
+    }
+
+    #[cfg(feature = "tokio")]
+    #[tokio::test]
+    async fn test_is_file_writable_not_file() {
+        let temp_dir = tempdir().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+        // A directory is not a file
+        assert!(!is_file_writable(&dir_path).await.unwrap());
+    }
+
+    #[cfg(feature = "tokio")]
+    #[tokio::test]
+    async fn test_truncate_file_no_op() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("test_no_op.log");
+        fs::write(&file_path, "12345").await.unwrap();
+        // Truncate to same size should be essentially no-op or just set_len
+        truncate_file(&file_path, 5).await.unwrap();
+        assert_eq!(
+            fs::read_to_string(&file_path).await.unwrap(),
+            "12345"
+        );
+    }
+
+    #[cfg(feature = "tokio")]
+    #[tokio::test]
+    async fn test_is_file_writable_invalid_path() {
+        let invalid_path = Path::new("/root/no_access_123.log");
+        // This might return false or Ok(false) depending on OS, but should be handled
+        let _ = is_file_writable(invalid_path).await;
+
+        let empty_path = Path::new("");
+        assert!(is_file_writable(empty_path).await.is_ok()); // exists() is false
+    }
+
+    #[cfg(feature = "tokio")]
+    #[tokio::test]
+    async fn test_truncate_file_not_found() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("does_not_exist.log");
+        // truncate_file uses OpenOptions with create(true) so it should actually create it
+        truncate_file(&file_path, 1024).await.unwrap();
+        assert!(file_path.exists());
+
+        // Test with a path that definitely fails
+        let invalid_path = Path::new("/root/no_access_truncate.log");
+        assert!(truncate_file(invalid_path, 1024).await.is_err());
+    }
+
+    #[cfg(feature = "tokio")]
     #[tokio::test]
     async fn test_is_directory_writable() {
         let temp_dir = tempdir().unwrap();
         assert!(is_directory_writable(temp_dir.path()).await.unwrap());
 
         let non_existent_dir = temp_dir.path().join("non_existent");
-        assert!(!is_directory_writable(&non_existent_dir)
-            .await
-            .unwrap());
+        assert!(
+            !is_directory_writable(&non_existent_dir).await.unwrap()
+        );
     }
 }

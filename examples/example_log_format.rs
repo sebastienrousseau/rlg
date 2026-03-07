@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
@@ -157,8 +157,8 @@ fn log_format_validation_example() {
 /// # Errors
 ///
 /// Returns an error if the log formatting fails (e.g., for invalid JSON).
-fn log_format_format_log_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn log_format_format_log_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Log Format Formatting Example**");
     println!("---------------------------------------------");
 

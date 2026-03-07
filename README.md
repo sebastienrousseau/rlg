@@ -1,224 +1,185 @@
-<!-- markdownlint-disable MD033 MD041 -->
+<p align="center">
+  <img src="https://kura.pro/rlg/images/logos/rlg.svg" alt="RustLogs (RLG) logo" width="128" />
+</p>
 
-<img src="https://kura.pro/rlg/images/logos/rlg.svg"
-alt="RustLogs (RLG) logo" height="66" align="right" />
+<h1 align="center">RustLogs (RLG)</h1>
 
-<!-- markdownlint-enable MD033 MD041 -->
+<p align="center">
+  <strong>Near-lock-free structured logging with deferred formatting, native OS sinks, and AI-native telemetry. Sub-microsecond ingestion. Zero blocking I/O on your threads.</strong>
+</p>
 
-# RustLogs (RLG)
+<p align="center">
+  <a href="https://github.com/sebastienrousseau/rlg/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/release.yml?style=for-the-badge&logo=github" alt="Build" />
+  </a>
+  <a href="https://crates.io/crates/rlg">
+    <img src="https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" />
+  </a>
+  <a href="https://docs.rs/rlg">
+    <img src="https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs" />
+  </a>
+  <a href="https://codecov.io/gh/sebastienrousseau/rlg">
+    <img src="https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&token=Q9KJ6XXL67&logo=codecov" alt="Coverage" />
+  </a>
+</p>
 
-A robust and flexible Rust library for application-level logging with support for multiple formats and asynchronous operations.
-
-[![Made With Love][made-with-rust]][00] [![Crates.io][crates-badge]][07] [![lib.rs][libs-badge]][03] [![Docs.rs][docs-badge]][08] [![Codecov][codecov-badge]][09] [![Build Status][build-badge]][10] [![GitHub][github-badge]][06]
+---
 
 ## Overview
 
-[`RustLogs (RLG)`][00] is a comprehensive Rust library that provides advanced application-level logging capabilities. It offers a wide range of logging APIs, helper macros, and flexible configuration options to simplify common logging tasks and meet diverse logging requirements.
+RLG decouples log emission from formatting and I/O using a near-lock-free ring buffer ([LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) pattern). Your application threads push events in ~1.4 µs. A dedicated flusher thread handles serialization and platform-native dispatch.
+
+**Key properties:**
+
+- **~1.4 µs ingestion** via a 65k-slot `crossbeam::ArrayQueue` — no Mutex on the hot path
+- **Deferred formatting** — serialization happens on the flusher thread, not yours
+- **14 output formats** — JSON, MCP, OTLP, ECS, CEF, GELF, Logfmt, CLF, and more
+- **Native OS sinks** — direct `os_log` (macOS) and `journald` (Linux) FFI
+- **MIRI-verified** — zero undefined behaviour under strict provenance checks
+
+### How RLG Compares
+
+| Metric | `tracing` / `log` | RLG |
+| :--- | :--- | :--- |
+| **Ingestion latency** | ~20–30 µs (Mutex) | **~1.4 µs (atomic-only)** |
+| **Serialization** | Inline, high-alloc | **Deferred, low-alloc** |
+| **OS integration** | stdout / files | **`os_log` + `journald` FFI** |
+| **AI formats** | Requires adapters | **Native MCP + OTLP** |
+| **Safety** | Standard Rust | **MIRI-compliant** |
+
+## Architecture
+
+```mermaid
+graph TD
+    A[Application Thread] -->|Fluent API| B{ArrayQueue · 65k slots}
+    B -->|Near-lock-free push ~1.4µs| C[Background Flusher Thread]
+    C -->|Deferred format| D{Platform Sinks}
+    D --> E[macOS: os_log]
+    D --> F[Linux/WSL: journald]
+    D --> G[TUI Dashboard / Stdout]
+    D --> H[AI Agents: MCP / OTLP]
+```
+
+## Getting Started
+
+### Requirements
+
+- Rust **1.88.0+** (`rustc --version`)
+- Cargo package manager
+
+### Install
+
+```bash
+cargo add rlg@0.0.7
+```
+
+### Initialize
+
+Call `rlg::init()` at the top of `main`. Hold the returned [`FlushGuard`](https://docs.rs/rlg/latest/rlg/init/struct.FlushGuard.html) — it flushes pending events when dropped.
+
+```rust
+fn main() {
+    let _guard = rlg::init().unwrap();
+
+    rlg::log::Log::info("Service started")
+        .component("main")
+        .fire();
+}
+```
+
+**Returns `Err`** if a `log` or `tracing` global was already registered, or if `init()` was already called.
+
+For custom configuration, use the builder:
+
+```rust
+let _guard = rlg::builder()
+    .level(rlg::LogLevel::DEBUG)
+    .format(rlg::LogFormat::JSON)
+    .init()
+    .unwrap();
+```
+
+## The Fluent API
+
+Build structured log entries with a chainable builder. Each method returns `Self`, so chain freely.
+
+| Method | Effect |
+| :--- | :--- |
+| `Log::info("…")` | Create a builder at INFO level. Also: `warn`, `error`, `debug`, `trace`, `fatal`, `critical`, `verbose`. |
+| `.component("name")` | Tag the originating service or module. |
+| `.with("key", value)` | Attach a key-value attribute. Accepts any `T: Serialize`. |
+| `.format(LogFormat::X)` | Override the output format for this entry. |
+| `.fire()` | Consume the builder and push into the ring buffer. Captures `file:line` via `#[track_caller]`. |
+
+### Example
+
+```rust
+use rlg::log::Log;
+use rlg::log_format::LogFormat;
+
+Log::info("Instance scaled")
+    .component("orchestrator")
+    .with("cpu_load", 0.85)
+    .with("region", "us-east-1")
+    .format(LogFormat::OTLP)
+    .fire();
+```
 
 ## Features
 
-- Multiple log levels: `ALL`, `DEBUG`, `DISABLED`, `ERROR`, `FATAL`, `INFO`, `NONE`, `TRACE`, `VERBOSE`, and `WARN`
-- Structured log formats for easy parsing and filtering
-- Support for multiple output formats including:
-  - Common Log Format (CLF)
-  - JavaScript Object Notation (JSON)
-  - Common Event Format (CEF)
-  - Extended Log Format (ELF)
-  - W3C Extended Log File Format
-  - Graylog Extended Log Format (GELF)
-  - Apache Access Log Format
-  - Logstash Format
-  - Log4j XML Format
-  - NDJSON (Newline Delimited JSON)
-- Configurable logging destinations (file, stdout, network)
-- Asynchronous logging for improved performance
-- Log rotation support (size-based, time-based, date-based, count-based)
-- Environment variable expansion in configuration
-- Hot-reloading of configuration
-- Comprehensive error handling and custom error types
+Enable optional capabilities via Cargo features. **No features are enabled by default.**
 
-## Installation
-
-Add this to your `Cargo.toml`:
+| Feature | Description |
+| :--- | :--- |
+| `tokio` | Async config loading, hot-reload file watcher (`notify`). |
+| `tui` | Terminal UI dashboard with live metrics (`terminal_size`). |
+| `miette` | Pretty diagnostic error reports. |
+| `tracing-layer` | Composable `tracing_subscriber::Layer` via `RlgLayer`. |
+| `debug_enabled` | Verbose internal engine diagnostics. |
 
 ```toml
 [dependencies]
-rlg = "0.0.6"
+rlg = { version = "0.0.7", features = ["tokio", "tui"] }
 ```
 
-## Documentation
+<details>
+<summary><b>Performance and Sinks</b></summary>
 
-For full API documentation, please visit [https://doc.rustlogs.com/][04] or [https://docs.rs/rlg][08].
+- **Ring buffer**: Crossbeam `ArrayQueue` with 65,536 slots.
+- **Low-alloc serialization**: `u64` session IDs, `Cow<str>` fields, `itoa`/`ryu` for numerics.
+- **Platform FFI**: Direct `os_log` (macOS) and `journald` socket (Linux). Falls back to stdout when unavailable.
+- **Log rotation**: Size, time, date, or count-based policies via `RotatingFile`.
+</details>
 
-## Rust Version Compatibility
+<details>
+<summary><b>Supported Formats</b></summary>
 
-Compiler support: requires rustc 1.56.0+
+- **MCP** — JSON-RPC 2.0 notifications for AI agent orchestration.
+- **OTLP** — OpenTelemetry-native for distributed tracing pipelines.
+- **ECS** — Elastic Common Schema for security and compliance.
+- **Logfmt** — Human-readable key-value pairs.
+- **JSON / NDJSON** — Standard structured output.
+- **Legacy** — CLF, CEF, GELF, W3C, Apache Access, Logstash, Log4j XML, ELF.
+</details>
 
-## Usage
+<details>
+<summary><b>Safety and Compliance</b></summary>
 
-### Basic Logging
+- **MIRI-verified**: Passes strict provenance, aliasing, and UB checks.
+- **95%+ code coverage** across all modules.
+- **Pedantic linting**: `#![deny(clippy::all, clippy::pedantic, clippy::nursery)]`.
+- **Graceful fallback**: Degrades to stdout if native sinks are unavailable.
+</details>
 
-```rust
-use rlg::log::Log;
-use rlg::log_format::LogFormat;
-use rlg::log_level::LogLevel;
-use rlg::utils::generate_timestamp;
+---
 
-// Create a new log entry
-let log_entry = Log::new(
-    &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
-    &generate_timestamp(),
-    &LogLevel::INFO,
-    "MyComponent",
-    "This is a sample log message",
-    &LogFormat::JSON,
-);
-
-// Log the entry asynchronously
-tokio::runtime::Runtime::new().unwrap().block_on(async {
-    log_entry.log().await.unwrap();
-});
-```
-
-### Custom Log Configuration
-
-```rust
-use rlg::config::{Config, LogRotation, LoggingDestination};
-use rlg::log::Log;
-use rlg::log_format::LogFormat;
-use rlg::log_level::LogLevel;
-use std::path::PathBuf;
-use std::num::NonZeroU64;
-
-// Create a custom configuration
-let mut config = Config::default();
-config.log_file_path = PathBuf::from("/path/to/log/file.log");
-config.log_level = LogLevel::DEBUG;
-config.log_rotation = Some(LogRotation::Size(NonZeroU64::new(10_000_000).unwrap())); // 10 MB
-config.logging_destinations = vec![
-    LoggingDestination::File(PathBuf::from("/path/to/log/file.log")),
-    LoggingDestination::Stdout,
-];
-
-// Create a new log entry with custom configuration
-let log_entry = Log::new(
-    &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
-    &generate_timestamp(),
-    &LogLevel::INFO,
-    "MyComponent",
-    "This is a sample log message",
-    &LogFormat::JSON,
-);
-
-// Log the entry asynchronously
-tokio::runtime::Runtime::new().unwrap().block_on(async {
-    log_entry.log().await.unwrap();
-});
-```
-
-## Configuration
-
-RustLogs (RLG) provides a flexible configuration system. You can customize various aspects of logging behavior, including:
-
-- Log file path
-- Log level
-- Log rotation settings
-- Log format
-- Logging destinations
-- Environment variables
-
-You can load configuration from a file or environment variables using the `Config::load_async` method.
-
-## Error Handling
-
-RustLogs (RLG) provides comprehensive error handling through the `RlgError` type. This allows for more specific error handling in your application:
-
-```rust
-use rlg::log::Log;
-use rlg::log_format::LogFormat;
-use rlg::log_level::LogLevel;
-use rlg::error::RlgError;
-
-// Create a new log entry
-let log_entry = Log::new(
-    &vrd::random::Random::default().int(0, 1_000_000_000).to_string(),
-    &generate_timestamp(),
-    &LogLevel::INFO,
-    "MyComponent",
-    "This is a sample log message",
-    &LogFormat::JSON,
-);
-
-// Log the entry asynchronously and handle potential errors
-tokio::runtime::Runtime::new().unwrap().block_on(async {
-    match log_entry.log().await {
-        Ok(_) => println!("Log entry successfully written"),
-        Err(RlgError::IoError(err)) => eprintln!("I/O error when logging: {}", err),
-        Err(RlgError::FormattingError(err)) => eprintln!("Formatting error: {}", err),
-        Err(err) => eprintln!("Error logging entry: {}", err),
-    }
-});
-```
-
-## Macros
-
-RustLogs (RLG) provides a set of convenient macros to simplify logging tasks:
-
-- `macro_log!`: Creates a new log entry with specified parameters.
-- `macro_info_log!`: Creates an info log with default session ID and format.
-- `macro_warn_log!`: Creates a warning log.
-- `macro_error_log!`: Creates an error log.
-- `macro_trace_log!`: Creates a trace log.
-- `macro_fatal_log!`: Creates a fatal log.
-- `macro_log_to_file!`: Asynchronously logs a message to a file.
-- `macro_print_log!`: Prints a log to stdout.
-- `macro_set_log_format_clf!`: Sets the log format to CLF if not already defined.
-- `macro_log_if!`: Conditionally logs a message based on a predicate.
-- `macro_debug_log!`: Conditionally logs a debug message based on the `debug_enabled` feature flag.
-- `macro_log_with_metadata!`: Logs a message with additional metadata.
-
-Refer to the [documentation][08] for more details on how to use these macros.
-
-## Examples
-
-To run the examples, clone the repository and use the following command:
-
-```shell
-cargo run --example example_name
-```
-
-Replace `example_name` with the name of the example you want to run.
+<p align="center">
+  THE ARCHITECT ᛫ <a href="https://sebastien.sh">Sebastien Rousseau</a><br/>
+  THE ENGINE ᛞ <a href="https://euxis.com">EUXIS</a> ᛫ Enterprise Unified Execution Intelligence System
+</p>
 
 ## License
 
-The project is dual-licensed under the terms of both the MIT license and the Apache License (Version 2.0).
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
 
-- [Apache License, Version 2.0][01]
-- [MIT license][02]
-
-## Contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
-
-## Acknowledgements
-
-A special thank you goes to the [Rust Reddit](https://www.reddit.com/r/rust/) community for providing a lot of useful knowledge and expertise.
-
-[00]: https://rustlogs.com
-[01]: http://www.apache.org/licenses/LICENSE-2.0
-[02]: http://opensource.org/licenses/MIT
-[03]: https://lib.rs/crates/rlg
-[04]: https://doc.rustlogs.com/
-[06]: https://github.com/sebastienrousseau/rlg
-[07]: https://crates.io/crates/rlg
-[08]: https://docs.rs/rlg
-[09]: https://codecov.io/gh/sebastienrousseau/rlg
-[10]: https://github.com/sebastienrousseau/rlg/actions?query=branch%3Amaster
-
-[build-badge]: https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/release.yml?branch=master&style=for-the-badge&logo=github "Build Status"
-[codecov-badge]: https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&token=Q9KJ6XXL67&logo=codecov "Codecov"
-[crates-badge]: https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust "Crates.io"
-[libs-badge]: https://img.shields.io/badge/lib.rs-v0.0.6-orange.svg?style=for-the-badge "View on lib.rs"
-[docs-badge]: https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs "Docs.rs"
-[github-badge]: https://img.shields.io/badge/github-sebastienrousseau/rlg-8da0cb?style=for-the-badge&labelColor=555555&logo=github "GitHub"
-[made-with-rust]: https://img.shields.io/badge/rust-f04041?style=for-the-badge&labelColor=c0282d&logo=rust 'Made With Rust'
+<p align="right"><a href="#rustlogs-rlg">↑ Back to Top</a></p>

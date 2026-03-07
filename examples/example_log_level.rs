@@ -1,4 +1,4 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 // See LICENSE-APACHE.md and LICENSE-MIT.md in the repository root for full license information.
@@ -186,8 +186,8 @@ fn log_level_includes_example() {
 /// # Errors
 ///
 /// Returns an error if parsing fails for valid log level strings (with mixed case).
-fn log_level_case_insensitivity_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn log_level_case_insensitivity_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Log Level Case Insensitivity Example**");
     println!("---------------------------------------------");
 
@@ -225,8 +225,8 @@ fn log_level_error_handling_example() {
 /// Demonstrates numeric conversions for log levels.
 ///
 /// This function converts log levels to their numeric representations and back.
-fn log_level_numeric_conversion_example(
-) -> Result<(), Box<dyn std::error::Error>> {
+fn log_level_numeric_conversion_example()
+-> Result<(), Box<dyn std::error::Error>> {
     println!("\n🦀  **Log Level Numeric Conversion Example**");
     println!("---------------------------------------------");
 

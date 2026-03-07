@@ -1,4 +1,5 @@
-// Copyright © 2024 RustLogs (RLG). All rights reserved.
+#![cfg(not(miri))]
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
@@ -287,17 +288,19 @@ mod tests {
                 if a == LogLevel::ALL {
                     // ALL should include all levels
                     assert!(
-                    a.includes(b),
-                    "LogLevel::ALL should include {:?}, but failed for b = {:?}",
-                    a, b
-                );
+                        a.includes(b),
+                        "LogLevel::ALL should include {:?}, but failed for b = {:?}",
+                        a,
+                        b
+                    );
                 } else if a == LogLevel::NONE {
                     // NONE should not include any level
                     assert!(
-                    !a.includes(b),
-                    "LogLevel::NONE should not include {:?}, but passed for b = {:?}",
-                    a, b
-                );
+                        !a.includes(b),
+                        "LogLevel::NONE should not include {:?}, but passed for b = {:?}",
+                        a,
+                        b
+                    );
                 } else {
                     // For other levels, includes should follow numeric precedence
                     assert_eq!(
@@ -421,8 +424,8 @@ mod tests {
         assert_eq!(LogLevel::from_numeric(0), Some(LogLevel::ALL));
         assert_eq!(LogLevel::from_numeric(1), Some(LogLevel::NONE));
         assert_eq!(LogLevel::from_numeric(2), Some(LogLevel::DISABLED));
-        assert_eq!(LogLevel::from_numeric(3), Some(LogLevel::DEBUG));
-        assert_eq!(LogLevel::from_numeric(4), Some(LogLevel::TRACE));
+        assert_eq!(LogLevel::from_numeric(3), Some(LogLevel::TRACE));
+        assert_eq!(LogLevel::from_numeric(4), Some(LogLevel::DEBUG));
         assert_eq!(LogLevel::from_numeric(5), Some(LogLevel::VERBOSE));
         assert_eq!(LogLevel::from_numeric(6), Some(LogLevel::INFO));
         assert_eq!(LogLevel::from_numeric(7), Some(LogLevel::WARN));
