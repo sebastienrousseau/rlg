@@ -71,6 +71,7 @@ pub enum ConfigError {
     MissingFieldError(String),
 
     /// Error setting up the file watcher.
+    #[cfg(feature = "tokio")]
     #[error("Watcher error: {0}")]
     WatcherError(#[from] notify::Error),
 }
@@ -325,21 +326,24 @@ impl Config {
         Ok(Arc::new(RwLock::new(config)))
     }
 
-    /// Saves the current configuration to a file.
+    /// Saves the current configuration to a file in TOML format.
+    ///
+    /// This matches the TOML format expected by [`Config::load`].
     ///
     /// # Errors
     ///
-    /// This function returns an error if the file cannot be written.
-    ///
-    /// # Panics
-    ///
-    /// This function panics if serialization to JSON fails (unreachable for this struct).
+    /// This function returns an error if the file cannot be written or
+    /// if serialization fails.
     pub fn save_to_file<P: AsRef<Path>>(
         &self,
         path: P,
     ) -> Result<(), ConfigError> {
-        let config_string = serde_json::to_string_pretty(self)
-            .expect("Failed to serialize config");
+        let config_string =
+            toml::to_string_pretty(self).map_err(|e| {
+                ConfigError::FileWriteError(format!(
+                    "Failed to serialize config to TOML: {e}"
+                ))
+            })?;
         fs::write(path, config_string).map_err(|e| {
             ConfigError::FileWriteError(format!(
                 "Failed to write config file: {e}"
@@ -1042,7 +1046,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn test_config_save_and_load() {
         let temp_dir = tempfile::tempdir().unwrap();
-        let path = temp_dir.path().join("test_config.json");
+        let path = temp_dir.path().join("test_config.toml");
         let config = Config::default();
         config.save_to_file(&path).unwrap();
         assert!(path.exists());
@@ -1178,10 +1182,28 @@ value = "test.log"
     #[test]
     fn test_config_save_to_file_success() {
         let temp_dir = tempfile::tempdir().unwrap();
-        let path = temp_dir.path().join("save_test_config.json");
+        let path = temp_dir.path().join("save_test_config.toml");
         let config = Config::default();
         assert!(config.save_to_file(&path).is_ok());
         let contents = fs::read_to_string(&path).unwrap();
-        assert!(contents.contains("\"version\""));
+        assert!(contents.contains("version"));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_config_save_and_load_roundtrip() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path().join("roundtrip.toml");
+        let config = Config::default();
+        config.save_to_file(&path).unwrap();
+        let loaded = Config::load(Some(&path)).unwrap();
+        let guard = loaded.read();
+        let version = guard.version.clone();
+        let profile = guard.profile.clone();
+        let log_level = guard.log_level;
+        drop(guard);
+        assert_eq!(version, config.version);
+        assert_eq!(profile, config.profile);
+        assert_eq!(log_level, config.log_level);
     }
 }

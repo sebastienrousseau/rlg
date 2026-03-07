@@ -23,7 +23,7 @@ fn new_benchmark(c: &mut Criterion) {
     c.bench_function("new", |b| {
         b.iter(|| {
             let log = Log::build(LogLevel::INFO, "test log message")
-                .session_id("123")
+                .session_id(123)
                 .time("2023-01-23 14:04:09.881393 +00:00:00")
                 .component("test")
                 .format(LogFormat::CLF);
@@ -35,13 +35,13 @@ fn new_benchmark(c: &mut Criterion) {
 // Benchmark formatting Log structs to string
 fn format_benchmark(c: &mut Criterion) {
     let clf_log = Log::build(LogLevel::INFO, "test log message")
-        .session_id("123")
+        .session_id(123)
         .time("2023-01-23 14:04:09.881393 +00:00:00")
         .component("test")
         .format(LogFormat::CLF);
 
     let json_log = Log::build(LogLevel::INFO, "test log message")
-        .session_id("123")
+        .session_id(123)
         .time("2023-01-23 14:04:09.881393 +00:00:00")
         .component("test")
         .format(LogFormat::JSON);
@@ -56,7 +56,7 @@ fn format_benchmark(c: &mut Criterion) {
 fn write_benchmark(c: &mut Criterion) {
     // Create test CLF log
     let clf_log = Log::build(LogLevel::INFO, "test log message")
-        .session_id("123")
+        .session_id(123)
         .time("2023-01-23 14:04:09.881393 +00:00:00")
         .component("test")
         .format(LogFormat::CLF);

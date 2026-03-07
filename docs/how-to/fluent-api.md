@@ -41,7 +41,7 @@ While `.fire()` is the recommended way to interact with the lock-free engine, yo
 
 ```rust
 let log_entry = Log::info("Ready")
-    .session_id("CUSTOM-ID")
+    .session_id(42)
     .time("2026-03-05T12:00:00Z");
 
 // ... do something else ...

@@ -29,7 +29,7 @@ mod tests {
         let result = b.init();
         // Either Ok (first call) or Err(AlreadyInitialized)
         match result {
-            Ok(()) => {} // First init in this process
+            Ok(_guard) => {} // First init in this process
             Err(rlg::InitError::AlreadyInitialized) => {} // Already initialized
             Err(e) => panic!("unexpected error: {e}"),
         }
@@ -53,7 +53,7 @@ mod tests {
         // It may succeed or fail depending on test ordering
         let result = rlg::init();
         match result {
-            Ok(()) | Err(rlg::InitError::AlreadyInitialized) => {}
+            Ok(_) | Err(rlg::InitError::AlreadyInitialized) => {}
             Err(rlg::InitError::LoggerAlreadySet) => {}
             Err(rlg::InitError::SubscriberAlreadySet) => {}
         }

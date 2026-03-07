@@ -64,7 +64,8 @@ impl log::Log for RlgLogger {
 
         let level = map_log_level(record.level());
         let mut entry = Log::build(level, &record.args().to_string());
-        entry.component = record.target().to_string();
+        entry.component =
+            std::borrow::Cow::Owned(record.target().to_string());
         entry.format = self.format;
 
         if let Some(file) = record.file() {

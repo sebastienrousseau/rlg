@@ -52,7 +52,7 @@ fn log_common_format_example() {
             LogLevel::INFO,
             &format!("Log message in {} format", format),
         )
-        .session_id("12345")
+        .session_id(12345)
         .time("2023-01-01T12:00:00Z")
         .component("system")
         .format(format);
@@ -66,7 +66,7 @@ fn log_display_example() {
     println!("---------------------------------------------");
 
     let log = Log::build(LogLevel::DEBUG, "This is a debug message")
-        .session_id("67890")
+        .session_id(67890)
         .time("2023-01-01T13:00:00Z")
         .component("app")
         .format(LogFormat::CLF);
@@ -113,7 +113,7 @@ fn log_format_example() {
     println!("Parsed Log Format: {}", log_format);
 
     let log = Log::build(LogLevel::INFO, "User logged in")
-        .session_id("54321")
+        .session_id(54321)
         .time("2023-01-01T14:00:00Z")
         .component("auth")
         .format(log_format);

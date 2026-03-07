@@ -2,91 +2,77 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! Divan benchmark suite for the Config, LogRotation, and diff/override APIs.
-//!
-//! Proves zero performance regressions from the macro-driven refactoring by
-//! measuring allocation counts, throughput for config operations, and the cost
-//! of macro-generated `Config::diff()`.
+//! Criterion benchmark suite for the Config, LogRotation, and diff/override APIs.
 //!
 //! Run:  `cargo bench --bench config_bench`
-//! Alloc report:  every benchmark row shows `alloc:` and `dealloc:` columns.
 
 #![allow(missing_docs)]
 
-use divan::AllocProfiler;
-
-#[global_allocator]
-static ALLOC: AllocProfiler = AllocProfiler::system();
-
-fn main() {
-    divan::main();
-}
+use criterion::{Criterion, criterion_group, criterion_main};
+use rlg::config::{Config, LogRotation, LoggingDestination};
+use rlg::log_level::LogLevel;
+use std::collections::HashMap;
+use std::hint::black_box;
+use std::num::NonZeroU64;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 // ===========================================================================
-// Module: Config default construction — allocation tracking
+// Config default construction
 // ===========================================================================
 
-mod config_default {
-    use divan::{Bencher, black_box};
-    use rlg::config::Config;
+fn bench_config_default(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_default");
 
-    #[divan::bench]
-    fn default_config(bencher: Bencher) {
-        bencher.bench(|| {
+    g.bench_function("default_config", |b| {
+        b.iter(|| {
             black_box(Config::default());
         });
-    }
+    });
 
-    #[divan::bench]
-    fn clone_config(bencher: Bencher) {
+    g.bench_function("clone_config", |b| {
         let config = Config::default();
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(config.clone());
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: Config::diff() — macro-generated field comparison
+// Config::diff() — macro-generated field comparison
 // ===========================================================================
 
-mod config_diff {
-    use divan::{Bencher, black_box};
-    use rlg::config::{Config, LoggingDestination};
-    use rlg::log_level::LogLevel;
-    use std::collections::HashMap;
-    use std::num::NonZeroU64;
-    use std::path::PathBuf;
+fn bench_config_diff(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_diff");
 
-    #[divan::bench]
-    fn diff_identical(bencher: Bencher) {
+    g.bench_function("diff_identical", |b| {
         let config1 = Config::default();
         let config2 = Config::default();
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(Config::diff(
                 black_box(&config1),
                 black_box(&config2),
             ));
         });
-    }
+    });
 
-    #[divan::bench]
-    fn diff_one_field_changed(bencher: Bencher) {
+    g.bench_function("diff_one_field_changed", |b| {
         let config1 = Config::default();
         let config2 = Config {
             profile: "production".to_string(),
             ..Config::default()
         };
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(Config::diff(
                 black_box(&config1),
                 black_box(&config2),
             ));
         });
-    }
+    });
 
-    #[divan::bench]
-    fn diff_all_fields_changed(bencher: Bencher) {
+    g.bench_function("diff_all_fields_changed", |b| {
         let config1 = Config::default();
         let mut env_vars = HashMap::new();
         env_vars.insert("KEY".to_string(), "value".to_string());
@@ -95,8 +81,7 @@ mod config_diff {
             profile: "production".to_string(),
             log_file_path: PathBuf::from("/var/log/app.log"),
             log_level: LogLevel::ERROR,
-            log_rotation: NonZeroU64::new(1024)
-                .map(rlg::config::LogRotation::Size),
+            log_rotation: NonZeroU64::new(1024).map(LogRotation::Size),
             log_format: "%time - %level - %message".to_string(),
             logging_destinations: vec![
                 LoggingDestination::Stdout,
@@ -106,39 +91,35 @@ mod config_diff {
             ],
             env_vars,
         };
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(Config::diff(
                 black_box(&config1),
                 black_box(&config2),
             ));
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: Config::override_with() — field merging throughput
+// Config::override_with() — field merging throughput
 // ===========================================================================
 
-mod config_override {
-    use divan::{Bencher, black_box};
-    use rlg::config::{Config, LoggingDestination};
-    use rlg::log_level::LogLevel;
-    use std::collections::HashMap;
-    use std::path::PathBuf;
+fn bench_config_override(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_override");
 
-    #[divan::bench]
-    fn override_empty(bencher: Bencher) {
+    g.bench_function("override_empty", |b| {
         let base = Config::default();
         let overlay = Config::default();
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(
                 black_box(&base).override_with(black_box(&overlay)),
             );
         });
-    }
+    });
 
-    #[divan::bench]
-    fn override_with_env_vars(bencher: Bencher) {
+    g.bench_function("override_with_env_vars", |b| {
         let base = Config::default();
         let mut env_vars = HashMap::new();
         for i in 0..10 {
@@ -148,15 +129,14 @@ mod config_override {
             env_vars,
             ..Config::default()
         };
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(
                 black_box(&base).override_with(black_box(&overlay)),
             );
         });
-    }
+    });
 
-    #[divan::bench]
-    fn override_full(bencher: Bencher) {
+    g.bench_function("override_full", |b| {
         let base = Config::default();
         let mut env_vars = HashMap::new();
         env_vars
@@ -171,125 +151,128 @@ mod config_override {
             logging_destinations: vec![LoggingDestination::Stdout],
             env_vars,
         };
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(
                 black_box(&base).override_with(black_box(&overlay)),
             );
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: Config::validate() — validation throughput
+// Config::validate() — validation throughput
 // ===========================================================================
 
-mod config_validate {
-    use divan::{Bencher, black_box};
-    use rlg::config::Config;
+fn bench_config_validate(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_validate");
 
-    #[divan::bench]
-    fn validate_default(bencher: Bencher) {
+    g.bench_function("validate_default", |b| {
         let config = Config::default();
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(black_box(&config).validate()).unwrap();
         });
-    }
+    });
 
-    #[divan::bench]
-    fn validate_with_env_vars(bencher: Bencher) {
+    g.bench_function("validate_with_env_vars", |b| {
         let mut config = Config::default();
         for i in 0..20 {
             config
                 .env_vars
                 .insert(format!("VAR_{i}"), format!("value_{i}"));
         }
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(black_box(&config).validate()).unwrap();
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: Config::set() — dynamic field assignment
+// Config::set() — dynamic field assignment
 // ===========================================================================
 
-mod config_set {
-    use divan::{Bencher, black_box};
-    use rlg::config::Config;
+fn bench_config_set(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_set");
 
-    const KEYS: &[&str] = &["version", "profile", "log_format"];
-
-    #[divan::bench(args = KEYS)]
-    fn set_string_field(bencher: Bencher, key: &&str) {
-        bencher.bench(|| {
-            let mut config = Config::default();
-            config.set(black_box(key), black_box("new_value")).unwrap();
-            black_box(&config);
+    for key in &["version", "profile", "log_format"] {
+        g.bench_function(format!("set_{key}"), |b| {
+            b.iter(|| {
+                let mut config = Config::default();
+                config
+                    .set(black_box(key), black_box("new_value"))
+                    .unwrap();
+                black_box(&config);
+            });
         });
     }
 
-    #[divan::bench]
-    fn set_log_level(bencher: Bencher) {
-        bencher.bench(|| {
+    g.bench_function("set_log_level", |b| {
+        b.iter(|| {
             let mut config = Config::default();
             config
                 .set(black_box("log_level"), black_box("ERROR"))
                 .unwrap();
             black_box(&config);
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: Config::expand_env_vars() — environment expansion
+// Config::expand_env_vars() — environment expansion
 // ===========================================================================
 
-mod config_expand {
-    use divan::{Bencher, black_box};
-    use rlg::config::Config;
+fn bench_config_expand(c: &mut Criterion) {
+    let mut g = c.benchmark_group("config_expand");
 
-    #[divan::bench]
-    fn expand_empty_env(bencher: Bencher) {
+    g.bench_function("expand_empty_env", |b| {
         let config = Config::default();
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(black_box(&config).expand_env_vars());
         });
-    }
+    });
 
-    #[divan::bench]
-    fn expand_with_vars(bencher: Bencher) {
+    g.bench_function("expand_with_vars", |b| {
         let mut config = Config::default();
         for i in 0..5 {
             config
                 .env_vars
                 .insert(format!("BENCH_VAR_{i}"), format!("val_{i}"));
         }
-        bencher.bench(|| {
+        b.iter(|| {
             black_box(black_box(&config).expand_env_vars());
         });
-    }
+    });
+
+    g.finish();
 }
 
 // ===========================================================================
-// Module: LogRotation — FromStr parsing throughput
+// LogRotation — FromStr parsing throughput
 // ===========================================================================
 
-mod log_rotation_parse {
-    use divan::{Bencher, black_box};
-    use rlg::config::LogRotation;
-    use std::str::FromStr;
+fn bench_log_rotation_parse(c: &mut Criterion) {
+    let mut g = c.benchmark_group("log_rotation_parse");
 
-    const ROTATION_STRINGS: &[&str] =
-        &["size:1048576", "time:3600", "date", "count:10"];
-
-    #[divan::bench(args = ROTATION_STRINGS)]
-    fn from_str(bencher: Bencher, s: &&str) {
-        bencher.bench(|| {
-            black_box(LogRotation::from_str(black_box(s)).unwrap());
+    for s in &["size:1048576", "time:3600", "date", "count:10"] {
+        g.bench_function(format!("from_str_{s}"), |b| {
+            b.iter(|| {
+                black_box(LogRotation::from_str(black_box(s)).unwrap());
+            });
         });
     }
 
-    const ALL_ROTATIONS: &[&str] = &[
+    g.finish();
+}
+
+fn bench_log_rotation_display(c: &mut Criterion) {
+    let mut g = c.benchmark_group("log_rotation_display");
+
+    for s in &[
         "size:1024",
         "size:10485760",
         "time:60",
@@ -297,13 +280,27 @@ mod log_rotation_parse {
         "date",
         "count:5",
         "count:100",
-    ];
-
-    #[divan::bench(args = ALL_ROTATIONS)]
-    fn display(bencher: Bencher, s: &&str) {
+    ] {
         let rotation = LogRotation::from_str(s).unwrap();
-        bencher.bench(|| {
-            black_box(format!("{}", black_box(&rotation)));
+        g.bench_function(format!("display_{s}"), |b| {
+            b.iter(|| {
+                black_box(format!("{}", black_box(&rotation)));
+            });
         });
     }
+
+    g.finish();
 }
+
+criterion_group!(
+    benches,
+    bench_config_default,
+    bench_config_diff,
+    bench_config_override,
+    bench_config_validate,
+    bench_config_set,
+    bench_config_expand,
+    bench_log_rotation_parse,
+    bench_log_rotation_display,
+);
+criterion_main!(benches);

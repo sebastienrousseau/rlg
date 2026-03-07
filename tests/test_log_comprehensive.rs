@@ -11,7 +11,7 @@ mod tests {
     #[tokio::test]
     async fn log_default_values_are_correct() {
         let log = Log::default();
-        assert_eq!(log.session_id, "");
+        assert_eq!(log.session_id, 0);
         assert_eq!(log.time, "");
         assert_eq!(log.level, LogLevel::INFO);
         assert_eq!(log.component, "");
@@ -22,11 +22,11 @@ mod tests {
     #[tokio::test]
     async fn log_new_creates_correct_instance() {
         let log = Log::build(LogLevel::DEBUG, "descriptionB")
-            .session_id("session123")
+            .session_id(123)
             .time("2023-10-27T10:00:00Z")
             .component("componentA")
             .format(LogFormat::JSON);
-        assert_eq!(log.session_id, "session123");
+        assert_eq!(log.session_id, 123);
         assert_eq!(log.time, "2023-10-27T10:00:00Z");
         assert_eq!(log.level, LogLevel::DEBUG);
         assert_eq!(log.component, "componentA");
@@ -57,7 +57,7 @@ mod tests {
 
         for format in formats {
             let log = Log::build(LogLevel::INFO, "desc")
-                .session_id("session")
+                .session_id(1)
                 .time("time")
                 .component("comp")
                 .format(format);
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_log_display_all_variants() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::CLF);
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn log_display_gelf_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::GELF);
@@ -124,7 +124,7 @@ mod tests {
     #[test]
     fn log_display_logstash_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::Logstash);
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn log_display_log4jxml_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::Log4jXML);
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn log_display_apache_access_log_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::ApacheAccessLog);

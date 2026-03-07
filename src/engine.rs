@@ -50,8 +50,10 @@ pub struct LockFreeEngine {
     metrics: Arc<TuiMetrics>,
     /// Global log level filter.
     filter_level: AtomicU8,
-    /// Handle to the background flusher thread.
-    flusher_thread: Mutex<Option<thread::JoinHandle<()>>>,
+    /// Thread handle for lock-free unpark (no Mutex on hot path).
+    flusher_thread_handle: Option<thread::Thread>,
+    /// `JoinHandle` held only for shutdown (behind Mutex, never locked on hot path).
+    flusher_join: Mutex<Option<thread::JoinHandle<()>>>,
 }
 
 impl fmt::Debug for LockFreeEngine {
@@ -62,14 +64,13 @@ impl fmt::Debug for LockFreeEngine {
             .field("metrics", &self.metrics)
             .field("filter_level", &self.filter_level)
             .field(
-                "flusher_thread",
+                "flusher_thread_handle",
                 &self
-                    .flusher_thread
-                    .lock()
-                    .ok()
-                    .and_then(|g| g.as_ref().map(|h| h.thread().id())),
+                    .flusher_thread_handle
+                    .as_ref()
+                    .map(thread::Thread::id),
             )
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -156,12 +157,16 @@ impl LockFreeEngine {
         #[cfg(miri)]
         let flusher_handle = None;
 
+        let flusher_thread_handle =
+            flusher_handle.as_ref().map(|h| h.thread().clone());
+
         Self {
             queue,
             shutdown_flag,
             metrics,
             filter_level,
-            flusher_thread: Mutex::new(flusher_handle),
+            flusher_thread_handle,
+            flusher_join: Mutex::new(flusher_handle),
         }
     }
 
@@ -181,18 +186,22 @@ impl LockFreeEngine {
             self.metrics.inc_errors();
         }
 
-        // If the buffer is full, evict the oldest event and retry.
-        if let Err(err) = self.queue.push(event) {
-            let _ = self.queue.pop();
+        // If the buffer is full, evict and retry with bounded retries.
+        if let Err(rejected) = self.queue.push(event) {
             self.metrics.inc_dropped();
-            let _ = self.queue.push(err);
+            let mut to_push = rejected;
+            for _ in 0..3 {
+                let _ = self.queue.pop();
+                match self.queue.push(to_push) {
+                    Ok(()) => break,
+                    Err(e) => to_push = e,
+                }
+            }
         }
 
-        // Wake the flusher thread for sub-microsecond latency.
-        if let Ok(guard) = self.flusher_thread.lock()
-            && let Some(handle) = guard.as_ref()
-        {
-            handle.thread().unpark();
+        // Wake the flusher thread — no Mutex on the hot path.
+        if let Some(thread) = &self.flusher_thread_handle {
+            thread.unpark();
         }
     }
 
@@ -229,6 +238,10 @@ impl LockFreeEngine {
     }
 
     /// Applies configuration settings to the engine.
+    ///
+    /// Sets the log level filter from the config. File sink construction
+    /// and rotation are handled by the flusher thread at startup via
+    /// [`PlatformSink::from_config`](crate::sink::PlatformSink::from_config).
     pub fn apply_config(&self, config: &crate::config::Config) {
         self.set_filter(config.log_level.to_numeric());
     }
@@ -239,10 +252,13 @@ impl LockFreeEngine {
     /// draining any remaining events from the queue.
     pub fn shutdown(&self) {
         self.shutdown_flag.store(true, Ordering::SeqCst);
-        if let Ok(mut guard) = self.flusher_thread.lock()
+        // Wake the flusher so it can drain and exit.
+        if let Some(thread) = &self.flusher_thread_handle {
+            thread.unpark();
+        }
+        if let Ok(mut guard) = self.flusher_join.lock()
             && let Some(handle) = guard.take()
         {
-            handle.thread().unpark();
             let _ = handle.join();
         }
     }

@@ -24,6 +24,59 @@ use crate::logger::{RlgLogger, to_log_level_filter};
 use std::fmt;
 use std::sync::OnceLock;
 
+/// Detects the default log format based on output context.
+///
+/// - **TTY** → `Logfmt` (human-readable key=value)
+/// - **Pipe/file/CI** → `JSON` (structured, machine-parseable)
+/// - **`RLG_ENV=production`** → `JSON`
+fn detect_default_format() -> LogFormat {
+    if std::env::var("RLG_ENV")
+        .map(|v| v == "production")
+        .unwrap_or(false)
+    {
+        return LogFormat::JSON;
+    }
+    if atty_stdout() {
+        LogFormat::Logfmt
+    } else {
+        LogFormat::JSON
+    }
+}
+
+/// Returns `true` if stdout is connected to a terminal.
+fn atty_stdout() -> bool {
+    use std::io::IsTerminal;
+    std::io::stdout().is_terminal()
+}
+
+/// Parses `RUST_LOG` for a simple level filter (e.g., `RUST_LOG=debug`).
+///
+/// Supports `RUST_LOG=<level>` and `RUST_LOG=<crate>=<level>` (the crate
+/// filter is ignored for now — we apply the most permissive level found).
+fn parse_rust_log() -> Option<LogLevel> {
+    let val = std::env::var("RUST_LOG").ok()?;
+    let mut most_permissive: Option<LogLevel> = None;
+    for directive in val.split(',') {
+        let level_str = directive
+            .split('=')
+            .next_back()
+            .unwrap_or(directive)
+            .trim();
+        if let Ok(level) = level_str.parse::<LogLevel>() {
+            match most_permissive {
+                None => most_permissive = Some(level),
+                Some(current)
+                    if level.to_numeric() < current.to_numeric() =>
+                {
+                    most_permissive = Some(level);
+                }
+                _ => {}
+            }
+        }
+    }
+    most_permissive
+}
+
 /// Guard to prevent double initialization.
 static INIT_GUARD: OnceLock<()> = OnceLock::new();
 
@@ -72,7 +125,7 @@ impl Default for RlgBuilder {
     fn default() -> Self {
         Self {
             level: LogLevel::INFO,
-            format: LogFormat::MCP,
+            format: detect_default_format(),
             install_log: true,
             install_tracing: true,
         }
@@ -141,13 +194,21 @@ impl RlgBuilder {
 
     /// Finalizes the builder and installs RLG as the global logger/subscriber.
     ///
+    /// Respects `RUST_LOG` for level overrides and auto-detects the output
+    /// format when no explicit format was set (TTY → Logfmt, pipe → JSON).
+    ///
     /// # Errors
     ///
     /// Returns an error if a logger or subscriber was already installed, or
     /// if RLG was already initialized.
-    pub fn init(self) -> Result<(), InitError> {
+    pub fn init(mut self) -> Result<FlushGuard, InitError> {
         if INIT_GUARD.set(()).is_err() {
             return Err(InitError::AlreadyInitialized);
+        }
+
+        // Apply RUST_LOG level override.
+        if let Some(env_level) = parse_rust_log() {
+            self.level = env_level;
         }
 
         // Set engine filter level
@@ -163,7 +224,7 @@ impl RlgBuilder {
             Self::install_tracing_subscriber()?;
         }
 
-        Ok(())
+        Ok(FlushGuard { _private: () })
     }
 }
 
@@ -173,14 +234,38 @@ pub fn builder() -> RlgBuilder {
     RlgBuilder::default()
 }
 
-/// Initializes RLG with sensible defaults (INFO level, MCP format).
+/// A guard that calls [`ENGINE.shutdown()`](crate::engine::LockFreeEngine::shutdown)
+/// when dropped, ensuring buffered events are flushed before process exit.
 ///
-/// Installs RLG as the global `log` logger and `tracing` subscriber.
+/// Returned by [`init`] and [`RlgBuilder::init`]. Hold it in `main()`:
+///
+/// ```rust,no_run
+/// let _guard = rlg::init().unwrap();
+/// // … application code …
+/// // guard drops here, flushing all pending logs
+/// ```
+#[derive(Debug)]
+pub struct FlushGuard {
+    _private: (),
+}
+
+impl Drop for FlushGuard {
+    fn drop(&mut self) {
+        ENGINE.shutdown();
+    }
+}
+
+/// Initializes RLG with sensible defaults.
+///
+/// Auto-detects the output format (TTY → Logfmt, pipe → JSON) and respects
+/// `RUST_LOG` for level overrides.
+///
+/// Returns a [`FlushGuard`] that flushes pending events on drop.
 ///
 /// # Errors
 ///
 /// Returns an error if a logger or subscriber was already installed.
-pub fn init() -> Result<(), InitError> {
+pub fn init() -> Result<FlushGuard, InitError> {
     builder().init()
 }
 
@@ -235,9 +320,13 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let b = RlgBuilder::default();
-        assert_eq!(
-            format!("{b:?}"),
-            "RlgBuilder { level: INFO, format: MCP, install_log: true, install_tracing: true }"
+        assert_eq!(b.level, LogLevel::INFO);
+        assert!(b.install_log);
+        assert!(b.install_tracing);
+        // Format is auto-detected (Logfmt for TTY, JSON for pipe/CI)
+        assert!(
+            b.format == LogFormat::JSON
+                || b.format == LogFormat::Logfmt
         );
     }
 
@@ -300,7 +389,11 @@ mod tests {
     fn test_builder_fn() {
         let b = builder();
         assert_eq!(b.level, LogLevel::INFO);
-        assert_eq!(b.format, LogFormat::MCP);
+        // Format is auto-detected based on output context
+        assert!(
+            b.format == LogFormat::JSON
+                || b.format == LogFormat::Logfmt
+        );
         assert!(b.install_log);
         assert!(b.install_tracing);
     }

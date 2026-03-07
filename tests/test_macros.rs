@@ -98,10 +98,10 @@ mod tests {
     #[test]
     fn test_fluent_api_with_empty_fields() {
         let log = Log::build(LogLevel::INFO, "")
-            .session_id("")
+            .session_id(0)
             .time("")
             .component("");
-        assert_eq!(log.session_id, "");
+        assert_eq!(log.session_id, 0);
         assert_eq!(log.time, "");
         assert_eq!(log.component, "");
         assert_eq!(log.description, "");
@@ -156,7 +156,7 @@ mod tests {
     fn test_fluent_api_session_id_auto() {
         let log = Log::info("message");
         assert!(
-            !log.session_id.is_empty(),
+            log.session_id > 0,
             "Session ID should be automatically generated"
         );
     }
@@ -165,9 +165,9 @@ mod tests {
     fn test_fluent_api_with_long_strings() {
         let long_string = "a".repeat(1000);
         let log = Log::build(LogLevel::INFO, &long_string)
-            .session_id("long_id")
+            .session_id(999)
             .component("long_component");
-        assert_eq!(log.session_id, "long_id");
+        assert_eq!(log.session_id, 999);
         assert_eq!(log.component, "long_component");
         assert_eq!(log.description, long_string);
     }
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_fluent_api_build_with_metadata() {
         let log = Log::build(LogLevel::INFO, "message")
-            .session_id("id")
+            .session_id(1)
             .time("2022-01-01")
             .component("app")
             .format(LogFormat::JSON);

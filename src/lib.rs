@@ -3,25 +3,29 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-//! # RLG (`RustLogs`) — High-Performance Lock-Free Logging Engine
+//! # RLG (`RustLogs`) — High-Performance Near-Lock-Free Logging Engine
 //!
-//! `rlg` is a structured logging library built on a lock-free ring buffer (LMAX Disruptor pattern).
-//! It delivers sub-microsecond ingestion latency (~1.4µs) with deferred formatting on a background
-//! flusher thread, and native platform sinks for macOS `os_log` and Linux `journald`.
+//! `rlg` is a structured logging library built on a near-lock-free ring buffer
+//! (LMAX Disruptor pattern). It delivers sub-microsecond ingestion latency
+//! (~1.4µs) with deferred formatting on a background flusher thread, and native
+//! platform sinks for macOS `os_log` and Linux `journald`.
 //!
 //! ## Design Principles
 //! - **Fluent API:** Chainable builder pattern for ergonomic log construction.
 //! - **14 structured formats:** JSON, OTLP, MCP, ECS, CEF, GELF, Logfmt, and more.
-//! - **Lock-free concurrency:** MIRI-compliant safety, no mutex contention on the hot path.
+//! - **Near-lock-free concurrency:** MIRI-compliant safety. The hot path
+//!   (`ingest()`) uses only atomic operations; the Mutex is reserved for
+//!   shutdown only.
 //!
 //! ## Feature Matrix
 //!
 //! | Feature | Default | Description |
 //! |---------|:-------:|-------------|
-//! | `default` | &mdash; | No default features; all modules are always compiled. |
+//! | `default` | &mdash; | No default features. |
 //! | `debug_enabled` | No | Enables verbose internal engine diagnostics. |
 //! | `miette` | No | Pretty diagnostic error reports via `miette`. |
-//! | `tokio` | No | Async config loading, async file utilities (`load_async`, `hot_reload_async`). |
+//! | `tokio` | No | Async config loading, hot-reload, `notify` file watcher. |
+//! | `tui` | No | Terminal UI dashboard with `terminal_size` detection. |
 //! | `tracing-layer` | No | Composable `tracing_subscriber::Layer` via `RlgLayer`. |
 //!
 //! ## Quick Start: The Liquid Fluent API
@@ -30,7 +34,6 @@
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //!
-//! // Fire-and-forget logging with sub-10ns handoff to the background engine.
 //! Log::info("User successfully authenticated")
 //!     .component("auth-service")
 //!     .with("user_id", 42)
@@ -40,9 +43,10 @@
 //! ```
 //!
 //! ## Architectural Overview
-//! The heart of `rlg` is a lock-free ring buffer (65k capacity) that decouples log emission from
-//! formatting and I/O. Serialization is performed on a dedicated background flusher thread
-//! using stack-based buffers, ensuring that the critical path remains allocation-free.
+//! The heart of `rlg` is a near-lock-free ring buffer (65k capacity) that
+//! decouples log emission from formatting and I/O. Serialization is performed
+//! on a dedicated background flusher thread, keeping the hot path
+//! low-allocation (uses `Cow<str>`, `u64` session IDs, and deferred timestamps).
 
 #![deny(
     clippy::all,
@@ -71,6 +75,8 @@ pub mod log_level;
 pub mod logger;
 /// Convenience macros for ergonomic logging.
 pub mod macros;
+/// Log rotation policies for file sinks.
+pub mod rotation;
 /// Native platform-specific logging sinks.
 pub mod sink;
 /// Integration with the `tracing` ecosystem.
@@ -85,7 +91,9 @@ pub use euxis_commons as commons;
 
 // Re-exports for a flattened, intuitive API.
 pub use crate::error::{RlgError, RlgResult};
-pub use crate::init::{InitError, RlgBuilder, builder, init};
+pub use crate::init::{
+    FlushGuard, InitError, RlgBuilder, builder, init,
+};
 pub use crate::log::Log;
 pub use crate::log_format::LogFormat;
 pub use crate::log_level::LogLevel;

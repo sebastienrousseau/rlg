@@ -14,29 +14,29 @@ mod tests {
     #[test]
     fn test_log_new() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("123")
+            .session_id(123)
             .time("ts")
             .component("comp")
             .format(LogFormat::CLF);
-        assert_eq!(log.session_id, "123");
+        assert_eq!(log.session_id, 123);
     }
 
     #[test]
     fn test_log_json_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("123")
+            .session_id(123)
             .time("ts")
             .component("comp")
             .format(LogFormat::JSON);
         let output = format!("{}", log);
-        assert!(output.contains("\"SessionID\":\"123\""));
+        assert!(output.contains("\"SessionID\":123"));
         assert!(output.contains("\"Attributes\":{}"));
     }
 
     #[test]
     fn test_log_mcp_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::MCP);
@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn test_log_gelf_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::GELF);
@@ -59,7 +59,7 @@ mod tests {
     #[test]
     fn test_log_ndjson_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::NDJSON);
@@ -70,7 +70,7 @@ mod tests {
     #[test]
     fn test_log_otlp_format() {
         let mut log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::OTLP);
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn test_log_logfmt_format() {
         let mut log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::Logfmt);
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_log_ecs_format() {
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::ECS);
@@ -187,7 +187,7 @@ mod tests {
         ];
         for f in formats {
             let log = Log::build(LogLevel::INFO, "desc")
-                .session_id("sid")
+                .session_id(1)
                 .time("ts")
                 .component("comp")
                 .format(f);

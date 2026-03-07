@@ -26,7 +26,7 @@ const DEFAULT_TERMINAL_WIDTH: u16 = 80;
 /// Width of level-distribution bar charts (in block characters).
 const LEVEL_BAR_WIDTH: usize = 10;
 
-#[cfg(not(windows))]
+#[cfg(all(not(windows), feature = "tui"))]
 /// Returns the terminal height for the given handle, or 24 as fallback.
 ///
 /// # Panics
@@ -40,11 +40,17 @@ pub fn get_terminal_height_of(handle: &impl std::os::fd::AsFd) -> u16 {
     )
 }
 
+#[cfg(feature = "tui")]
 fn get_terminal_height() -> u16 {
     terminal_size::terminal_size().map_or(
         DEFAULT_TERMINAL_HEIGHT,
         |(_, terminal_size::Height(h))| h,
     )
+}
+
+#[cfg(not(feature = "tui"))]
+fn get_terminal_height() -> u16 {
+    DEFAULT_TERMINAL_HEIGHT
 }
 
 /// Live metrics tracked by the lock-free engine.
@@ -219,11 +225,18 @@ impl TuiMetrics {
 }
 
 /// Returns the terminal width, or `DEFAULT_TERMINAL_WIDTH` as fallback.
+#[cfg(feature = "tui")]
 fn get_terminal_width() -> u16 {
     terminal_size::terminal_size().map_or(
         DEFAULT_TERMINAL_WIDTH,
         |(terminal_size::Width(w), _)| w,
     )
+}
+
+/// Returns the default terminal width when the `tui` feature is disabled.
+#[cfg(not(feature = "tui"))]
+fn get_terminal_width() -> u16 {
+    DEFAULT_TERMINAL_WIDTH
 }
 
 /// Sparkline characters indexed by intensity (0..=7).

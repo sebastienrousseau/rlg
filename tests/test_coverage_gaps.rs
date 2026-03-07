@@ -318,7 +318,7 @@ mod tests {
 
         // Create a log with description containing special chars that need escaping
         let log = Log::build(LogLevel::INFO, "desc with \"quotes\" and \\backslash and \nnewline and \rcarriage and \ttab")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::JSON);
@@ -353,7 +353,7 @@ mod tests {
 
         // Test escaping in the component field too
         let log = Log::build(LogLevel::INFO, "normal desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp\twith\ttabs")
             .format(LogFormat::JSON);
@@ -364,16 +364,16 @@ mod tests {
             "Should escape tabs in component"
         );
 
-        // Also test in session_id field
+        // Also test session_id field (now u64, no escaping needed)
         let log2 = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid\"with\"quotes")
+            .session_id(42)
             .time("ts")
             .component("comp")
             .format(LogFormat::JSON);
         let output2 = format!("{log2}");
         assert!(
-            output2.contains("\\\""),
-            "Should escape quotes in session_id"
+            output2.contains("\"SessionID\":42"),
+            "Should contain numeric session_id"
         );
     }
 
@@ -455,7 +455,7 @@ mod tests {
         use rlg::log_level::LogLevel;
 
         let log = Log::build(LogLevel::INFO, "desc with \"quotes\"")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::Logfmt);
@@ -754,7 +754,7 @@ mod tests {
 
         // Test logfmt with all attribute value types to cover every branch
         let log = Log::build(LogLevel::INFO, "logfmt test")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .with("simple_str", "nospaces") // unquoted string
@@ -777,7 +777,7 @@ mod tests {
             "Should contain quoted msg"
         );
         assert!(
-            output.contains("session_id=sid"),
+            output.contains("session_id=1"),
             "Should contain session_id"
         );
         assert!(
@@ -914,7 +914,7 @@ mod tests {
         use rlg::log_level::LogLevel;
 
         let log = Log::build(LogLevel::WARN, "simple warning")
-            .session_id("s1")
+            .session_id(1)
             .time("2025-01-01")
             .component("api")
             .format(LogFormat::Logfmt);
@@ -922,7 +922,7 @@ mod tests {
         let output = format!("{log}");
         assert!(output.starts_with("level=warn "));
         assert!(output.contains("msg=\"simple warning\""));
-        assert!(output.contains("session_id=s1"));
+        assert!(output.contains("session_id=1"));
         assert!(output.contains("component=\"api\""));
     }
 

@@ -81,7 +81,8 @@ impl Subscriber for RlgSubscriber {
         event.record(&mut visitor);
 
         let mut log = Log::build(level, &visitor.message);
-        log.component = metadata.target().to_string();
+        log.component =
+            std::borrow::Cow::Owned(metadata.target().to_string());
 
         for (key, value) in visitor.fields {
             log = log.with(&key, value);
@@ -246,7 +247,8 @@ where
         event.record(&mut visitor);
 
         let mut log = Log::build(level, &visitor.message);
-        log.component = metadata.target().to_string();
+        log.component =
+            std::borrow::Cow::Owned(metadata.target().to_string());
         log.format = self.format;
 
         for (key, value) in visitor.fields {

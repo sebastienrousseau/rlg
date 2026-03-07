@@ -82,6 +82,38 @@ mod macos_ffi {
 }
 
 impl PlatformSink {
+    /// Creates a sink from the given configuration.
+    ///
+    /// Inspects `logging_destinations` to decide where to send output:
+    /// - `File(path)` → opens the file for appending
+    /// - `Stdout` → uses stdout
+    /// - `Network(_)` → falls back to native (network sinks are not yet implemented)
+    ///
+    /// Falls back to [`PlatformSink::native`] if no suitable destination is found.
+    #[must_use]
+    pub fn from_config(config: &crate::config::Config) -> Self {
+        for dest in &config.logging_destinations {
+            match dest {
+                crate::config::LoggingDestination::File(path) => {
+                    if let Ok(file) = std::fs::OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(path)
+                    {
+                        return Self::File(file);
+                    }
+                }
+                crate::config::LoggingDestination::Stdout => {
+                    return Self::Stdout;
+                }
+                crate::config::LoggingDestination::Network(_) => {
+                    // Network sinks not yet implemented — fall through.
+                }
+            }
+        }
+        Self::native()
+    }
+
     /// Creates a native sink based on the OS.
     #[must_use]
     #[allow(clippy::missing_const_for_fn)]

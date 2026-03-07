@@ -5,7 +5,7 @@
 <h1 align="center">RustLogs (RLG)</h1>
 
 <p align="center">
-  <strong>Stop blocking your threads with slow I/O. Get brutalist, zero-allocation observability and AI-native telemetry across any platform in microseconds.</strong>
+  <strong>Stop blocking your threads with slow I/O. Get brutalist, low-allocation observability and AI-native telemetry with deferred formatting across any platform in microseconds.</strong>
 </p>
 
 <p align="center">
@@ -39,8 +39,8 @@ Unlike standard logging crates that rely on heavy async runtimes or blocking mut
 
 | Feature | Standard Ecosystems (tracing/log) | RustLogs (RLG) |
 | :--- | :--- | :--- |
-| **Ingestion Latency** | ~20-30µs (Mutex / Blocking) | **~1.4µs (Lock-Free Disruptor)** |
-| **Serialization** | High Heap Allocation | **Zero-Alloc (itoa & ryu)** |
+| **Ingestion Latency** | ~20-30µs (Mutex / Blocking) | **~1.4µs (Near-Lock-Free Ring Buffer)** |
+| **Serialization** | High Heap Allocation | **Low-Alloc with Deferred Formatting** |
 | **Native OS Sinks** | Standard stdout / Files | **Direct os_log & journald FFI** |
 | **AI Integration** | Requires Custom Adapters | **Native MCP & OTLP Formats** |
 | **Memory Safety** | Standard Rust | **Strictly MIRI-Compliant** |
@@ -49,7 +49,7 @@ Unlike standard logging crates that rely on heavy async runtimes or blocking mut
 
 While others are still parsing scrolling walls of JSON text, we are building the future of telemetry.
 
-- 🏎️ **Zero-Cost Critical Path**: Ingestion occurs purely via atomic memory operations, pushing all formatting overhead out of the application's execution thread.
+- 🏎️ **Low-Allocation Critical Path**: Ingestion pushes events via a near-lock-free ring buffer, deferring all formatting to the background flusher thread.
 - ❄️ **Cross-Platform Invisibility**: Interfacing directly with Apple's Unified Logging (`os_log`) and Systemd (`journald`) means `rlg` operates entirely seamlessly within the host OS.
 - 🧠 **AI-First Context**: Natively structures data for Model Context Protocol (MCP) and OpenTelemetry (OTLP), allowing zero-parsing-overhead ingestion by LLM orchestrators and Grafana.
 - 🛡️ **Generative TUI Dashboard**: A live, non-clobbering 60FPS asynchronous dashboard that renders observability metrics locally without breaking your terminal flow.
@@ -61,8 +61,8 @@ Reliable by Design: Never drop a frame. Never block a thread.
 ```mermaid
 graph TD
     A[Application Thread] -->|Fluent API| B{Lock-Free ArrayQueue}
-    B -->|Atomic Push <1.5µs| C[Background Flush Thread]
-    C -->|Zero-Alloc Format| D{Platform Sinks}
+    B -->|Near-Lock-Free Push ~1.4µs| C[Background Flush Thread]
+    C -->|Deferred Format| D{Platform Sinks}
     D --> E[macOS: os_log / logd]
     D --> F[Linux/WSL: journald socket]
     D --> G[Generative TUI / Stdout]
@@ -116,8 +116,8 @@ Log::info("Cloud instance scaled successfully")
 <summary><b>🚀 Performance & Sinks</b></summary>
 
 - **LMAX Disruptor Pattern**: Crossbeam-backed 65k capacity ring buffer.
-- **Stack-based Serialization**: Integrates `itoa` and `ryu` to bypass the system allocator entirely.
-- **Platform-Native FFI**: Bypasses `std::time` bottlenecks using VDSO and Mach kernel hooks.
+- **Low-Allocation Serialization**: Integrates `itoa` and `ryu` for numeric formatting; uses `Cow<str>` and `u64` session IDs to minimize heap allocations.
+- **Platform-Native FFI**: Interfaces directly with macOS `os_log` and Linux `journald` for zero-copy OS integration.
 - **Offline Reliability**: Fully compatible with Debian/Ubuntu chroot builds via `debcargo.toml`.
 </details>
 

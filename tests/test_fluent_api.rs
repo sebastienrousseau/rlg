@@ -32,13 +32,13 @@ fn test_fluent_api_fire() {
 #[test]
 fn test_fluent_api_session_and_time() {
     let log = Log::info("test")
-        .session_id("sid")
+        .session_id(1)
         .time("now")
         .with("int", 1)
         .with("float", 1.5)
         .with("bool", true)
         .with("str", "val");
-    assert_eq!(log.session_id, "sid");
+    assert_eq!(log.session_id, 1);
     assert_eq!(log.time, "now");
     assert_eq!(
         log.attributes.get("int").unwrap(),

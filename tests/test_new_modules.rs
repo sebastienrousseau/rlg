@@ -245,7 +245,8 @@ mod tests {
         let b = rlg::builder();
         let dbg = format!("{b:?}");
         assert!(dbg.contains("INFO"));
-        assert!(dbg.contains("MCP"));
+        // Format is auto-detected (Logfmt for TTY, JSON for pipe/CI)
+        assert!(dbg.contains("JSON") || dbg.contains("Logfmt"));
         assert!(dbg.contains("install_log: true"));
         assert!(dbg.contains("install_tracing: true"));
     }

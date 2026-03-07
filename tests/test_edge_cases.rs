@@ -75,7 +75,7 @@ mod tests {
     fn test_log_semantic_context_tagging() {
         use rlg::log::Log;
         let log = Log::build(LogLevel::INFO, "desc")
-            .session_id("sid")
+            .session_id(1)
             .time("ts")
             .component("comp")
             .format(LogFormat::JSON)
