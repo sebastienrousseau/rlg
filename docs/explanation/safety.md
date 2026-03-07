@@ -1,46 +1,59 @@
-# Safety: MIRI and Native FFI Guarantees
+# Safety: MIRI and FFI Guarantees
 
-In the pursuit of brutalist performance, `rlg` interfaces directly with operating system kernels via C-FFI. This page explains the rigorous safety boundaries and verification processes that ensure `rlg` remains "Rust-Safe" even at the binary edge.
+RLG interfaces with OS kernels via C-FFI for `os_log` (macOS) and `journald` (Linux). This page documents the verification strategy and safety boundaries.
 
-## 1. The Zero-Race Guarantee
-`rlg` uses a lock-free architecture. Traditional `Mutex<T>` structures are susceptible to priority inversion and deadlocks. By using `crossbeam-queue::ArrayQueue`, we ensure:
-- **Single-Producer, Single-Consumer (at the flusher):** Log events are ingested by multiple application threads but are strictly formatted and emitted by a single background OS thread.
-- **Atomic Pointer Swapping:** Memory visibility is managed through atomic acquire/release semantics, ensuring that log payloads are never read before they are fully initialized.
+---
+
+## 1. Lock-Free Concurrency
+
+The engine uses `crossbeam::ArrayQueue` instead of `Mutex<T>`. Multiple application threads push events concurrently; a single flusher thread drains them. Memory visibility relies on atomic acquire/release semantics — no locks on the hot path.
 
 ## 2. MIRI Verification
-We don't just "hope" our `unsafe` code is correct. Every release of `rlg` is mathematically validated using **MIRI**, the Rust MIR interpreter.
 
-We run tests with:
+Every CI run executes the full test suite under [MIRI](https://github.com/rust-lang/miri), the Rust MIR interpreter:
+
 ```bash
 MIRIFLAGS="-Zmiri-tree-borrows" cargo miri test
 ```
 
-### What MIRI Checks:
-- **Pointer Provenance:** Ensures that pointers passed to macOS `os_log` or Linux sockets never "leak" into unauthorized memory regions.
-- **Alignment:** Validates that stack-allocated `itoa` buffers are correctly aligned for CPU-native integer formatting.
-- **Data Races:** Interprets the code through a strict execution model to prove that no two threads are accessing mutable memory simultaneously without proper atomic synchronization.
+MIRI checks for:
 
-## 3. The FFI Boundary: `os_log` and `journald`
-When we cross from Rust to C (the OS), we apply **IBM-Standard Enterprise Rigor**:
+- **Pointer provenance violations** — pointers passed to `os_log` or socket calls never escape their valid region.
+- **Alignment errors** — stack-allocated `itoa` buffers meet CPU-native alignment requirements.
+- **Data races** — no two threads access mutable memory without proper synchronisation.
 
-### macOS `os_log` Safety:
+Tests that spawn OS threads or touch real sockets are `#[cfg_attr(miri, ignore)]` — MIRI cannot emulate kernel syscalls.
+
+## 3. FFI Boundaries
+
+### macOS `os_log`
+
 ```rust
-// SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
-// valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
+// SAFETY: `subsystem` and `category` are valid, null-terminated CStrings.
+// Their lifetimes outlive the FFI call.
 unsafe {
-    let log_handle = os_log_create(subsystem.as_ptr(), category.as_ptr());
-    // ... emission logic ...
+    let handle = os_log_create(subsystem.as_ptr(), category.as_ptr());
 }
 ```
-We ensure that the lifetime of the `CString` always outlives the FFI call, preventing use-after-free vulnerabilities.
 
-### Linux `journald` Safety:
-Our Linux sink uses `UnixDatagram`. While this is safe Rust, the way we construct the binary payload follows the **Systemd Native Protocol** specification exactly, ensuring that systemd never rejects a malformed packet which could lead to observability "blind spots."
+Every `unsafe` block carries a `// SAFETY:` comment documenting the invariant it relies on.
 
-## 4. Stack vs. Heap: Minimizing the Surface Area
-By prioritizing stack-based formatting (using `itoa` and `ryu`), we drastically reduce the surface area for memory errors. Heap-based logging is the number one cause of "Out of Memory" (OOM) crashes in high-throughput microservices. `rlg`'s strategy of reusable buffers and stack-locality makes it uniquely resilient to memory pressure.
+### Linux `journald`
 
----
+The Linux sink uses safe Rust (`UnixDatagram`). The binary payload follows the systemd native protocol specification. No `unsafe` is required.
 
-## Technical Summary
-`rlg` treats `unsafe` as a precision tool, not a convenience. By combining strict **Diátaxis Reference** documentation with **MIRI-validated** binaries, we provide enterprise users with the performance of C and the safety of Rust.
+## 4. Stack-Based Formatting
+
+The flusher formats numeric values with `itoa` (integers) and `ryu` (floats) — both write to stack buffers, avoiding heap allocation. The format buffer itself is a reusable `String` that grows once and persists across flush cycles.
+
+This reduces the surface area for OOM conditions under sustained high throughput.
+
+## 5. Summary
+
+| Guarantee | Mechanism |
+|-----------|-----------|
+| No data races | `crossbeam::ArrayQueue` + atomics |
+| No use-after-free in FFI | `CString` lifetime outlives every call |
+| No provenance violations | MIRI `-Zmiri-tree-borrows` on every CI run |
+| No alignment faults | `itoa`/`ryu` stack buffers verified by MIRI |
+| No lock contention | Flusher thread unparked via cached `Thread` handle |

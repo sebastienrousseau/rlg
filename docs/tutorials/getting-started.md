@@ -1,70 +1,69 @@
-# Getting Started with RLG
+# Getting Started
 
-Welcome to the future of high-performance observability. This tutorial will take you from a blank terminal to a fully functioning, lock-free logging pipeline in under 5 minutes.
+Install RLG, emit your first log, and verify output — all in under five minutes.
 
-## 1. Installation
-
-Add `rlg` to your `Cargo.toml`. For the 2026 standards, we recommend enabling the `reqwest` feature if you plan on streaming to OTLP collectors.
+## 1. Add the Dependency
 
 ```toml
 [dependencies]
+rlg = "0.0.7"
+```
+
+For OTLP streaming to Grafana Loki or similar collectors, enable the `reqwest` feature:
+
+```toml
 rlg = { version = "0.0.7", features = ["reqwest"] }
 ```
 
-## 2. Your First "Liquid" Log
+## 2. Initialise and Log
 
-`rlg` uses a Fluent API designed for speed and ergonomics. Unlike traditional loggers, `rlg` never blocks your main thread.
-
-Create a `main.rs` file:
+Call `init::init()` once at startup. Store the returned `FlushGuard` — dropping it flushes all buffered events and shuts down the background thread.
 
 ```rust
+use rlg::init;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 
 fn main() {
-    // 1. Initialize a simple log entry
-    // 2. Add semantic context
-    // 3. Fire it into the background engine
-    Log::info("System initialization complete")
+    let _guard = init::init().expect("failed to initialise RLG");
+
+    Log::info("System initialisation complete")
         .component("kernel")
         .with("version", "0.0.7")
-        .with("mode", "production")
-        .format(LogFormat::MCP)
+        .format(LogFormat::JSON)
         .fire();
-
-    println!("Log has been handed off to the engine in <10ns.");
 }
 ```
 
-## 3. The Generative TUI Dashboard
+`fire()` pushes the event into a ring buffer and returns immediately. The background flusher thread handles formatting and I/O.
 
-During development, you don't want to tail flat files. `rlg` includes a built-in "Liquid Glass" dashboard.
+## 3. Enable the TUI Dashboard
 
-To enable it, set the `RLG_TUI` environment variable:
-
-```bash
-export RLG_TUI=1
-cargo run
-```
-
-You will see a 60FPS real-time dashboard at the bottom of your terminal showing throughput, error rates, and active spans.
-
-## 4. Platform-Native Sinks
-
-One of the unique powers of `rlg` is its ability to talk directly to your OS:
-
-- **On macOS:** Your logs automatically flow into the **Console.app** via `os_log`.
-- **On Linux:** Your logs are injected directly into the **Systemd Journal** via binary socket.
-
-Try viewing your logs with the native tools:
+Set `RLG_TUI=1` to display a live metrics dashboard in your terminal:
 
 ```bash
-# macOS
-log show --predicate 'subsystem == "com.rlg.logger"' --last 1m
-
-# Linux
-journalctl -t rlg --since "1 min ago"
+RLG_TUI=1 cargo run
 ```
+
+The dashboard shows throughput, error rates, active spans, and format distribution at 60 FPS.
+
+## 4. Verify Platform-Native Output
+
+RLG routes logs to your OS-native sink automatically:
+
+- **macOS** — appears in Console.app via `os_log`:
+  ```bash
+  log show --predicate 'subsystem == "com.rlg.logger"' --last 1m
+  ```
+
+- **Linux** — appears in the systemd journal via `journald`:
+  ```bash
+  journalctl -t rlg --since "1 min ago"
+  ```
+
+If neither sink is available, RLG falls back to the configured file path or stdout.
 
 ## Next Steps
-Now that you have the basics running, dive into the [How-To: Streaming OTLP to Grafana Loki](../how-to/otlp-loki.md) or explore the [Architecture Deep-Dive](../explanation/engine-design.md).
+
+- [Fluent API](../how-to/fluent-api.md) — chain `.with()`, `.component()`, `.format()`, then `.fire()`
+- [Engine Design](../explanation/engine-design.md) — how the ring buffer and flusher thread work

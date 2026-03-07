@@ -23,14 +23,30 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
-      - name: Generate docs
+
+      - name: Install mdBook
+        run: cargo install mdbook --locked
+
+      - name: Build mdBook
+        run: mdbook build
+
+      - name: Build Rustdoc
+        run: RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
+
+      - name: Combine outputs
         run: |
-          RUSTDOCFLAGS="--cfg docsrs" cargo doc --no-deps --all-features --workspace
-          echo '<html><head><meta http-equiv="refresh" content="0; url=rlg/index.html"></head><body></body></html>' > target/doc/index.html
+          # mdBook output is the site root
+          cp -r target/book _site
+          # Rustdoc goes under /api/
+          cp -r target/doc _site/api
+          # Redirect /api/ to /api/rlg/
+          echo '<html><head><meta http-equiv="refresh" content="0; url=rlg/index.html"></head><body></body></html>' > _site/api/index.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./target/doc
+          path: ./_site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
