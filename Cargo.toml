@@ -88,7 +88,7 @@ version_check = "0.9.5"
 [dev-dependencies]
 # Development dependencies are only used for testing and building.
 criterion = "0.8.2"
-tempfile = "3.26.0"
+tempfile = "3.27.0"
 serial_test = "3"
 tokio = { version = "1.50.0", features = ["full"] }
 tokio-test = "0.4.5"
