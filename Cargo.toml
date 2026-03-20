@@ -77,7 +77,7 @@ toml = "1.0.6"
 euxis-commons = { version = "0.0.2", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env"], package = "euxis-commons" }
 tracing-core = "0.1.36"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
-itoa = "1.0.17"
+itoa = "1.0.18"
 ryu = "1.0.23"
 crossbeam-queue = "0.3.12"
 terminal_size = { version = "0.4", optional = true }
