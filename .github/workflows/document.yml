@@ -43,7 +43,7 @@ jobs:
           echo '<html><head><meta http-equiv="refresh" content="0; url=rlg/index.html"></head><body></body></html>' > _site/api/index.html
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./_site
 
