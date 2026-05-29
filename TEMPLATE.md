@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 MD041 -->
 
-<img src="https://kura.pro/rlg/images/logos/rlg.svg"
+<img src="https://cloudcdn.pro/rlg/v1/logos/rlg.svg"
 alt="RustLogs (RLG) logo" height="66" align="right" />
 
 <!-- markdownlint-enable MD033 MD041 -->
