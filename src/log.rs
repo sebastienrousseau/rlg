@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use crate::datetime;
 use crate::{LogFormat, LogLevel};
-use dtt::datetime::DateTime;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
@@ -134,7 +134,7 @@ impl Log {
     pub fn build(level: LogLevel, description: &str) -> Self {
         Self {
             session_id: SESSION_COUNTER.fetch_add(1, Ordering::Relaxed),
-            time: Cow::Owned(DateTime::new().to_string()),
+            time: Cow::Owned(datetime::now_iso8601()),
             level,
             component: Cow::Borrowed("default"),
             description: description.to_string(),

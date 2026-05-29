@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
+use crate::datetime;
 use crate::error::RlgResult;
-use dtt::datetime::DateTime;
 
 #[cfg(feature = "tokio")]
 use std::path::Path;
@@ -30,7 +30,7 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 /// ```
 #[must_use]
 pub fn generate_timestamp() -> String {
-    DateTime::new().to_string()
+    datetime::now_iso8601()
 }
 
 /// Sanitizes a string for use in log messages.
@@ -208,7 +208,7 @@ pub fn format_file_size(size: u64) -> String {
     format!("{size_f:.2} {unit}", unit = UNITS[unit_index])
 }
 
-/// Parses a datetime string in ISO 8601 format.
+/// Validate a datetime string in ISO 8601 / RFC 3339 form and return it.
 ///
 /// # Arguments
 ///
@@ -216,12 +216,12 @@ pub fn format_file_size(size: u64) -> String {
 ///
 /// # Returns
 ///
-/// A `RlgResult<DateTime>` which is `Ok(DateTime)` if parsing succeeds,
-/// or an error if parsing fails.
+/// `Ok(String)` containing the original input on success.
 ///
 /// # Errors
 ///
-/// This function returns an error if the datetime string cannot be parsed.
+/// Returns [`crate::error::RlgError::DateTimeParseError`] if the input is
+/// not a recognisable ISO 8601 / RFC 3339 timestamp.
 ///
 /// # Examples
 ///
@@ -234,9 +234,8 @@ pub fn format_file_size(size: u64) -> String {
 ///     Err(e) => eprintln!("Failed to parse datetime: {}", e),
 /// }
 /// ```
-pub fn parse_datetime(datetime_str: &str) -> RlgResult<DateTime> {
-    DateTime::parse(datetime_str)
-        .map_err(|e| crate::error::RlgError::custom(e.to_string()))
+pub fn parse_datetime(datetime_str: &str) -> RlgResult<String> {
+    datetime::parse_iso8601(datetime_str)
 }
 
 /// Generates a highly unique, 16-character pseudo-random hex string suitable for OTLP span IDs.

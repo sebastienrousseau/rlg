@@ -70,6 +70,8 @@
 
 /// TOML-based configuration, validation, and hot-reload.
 pub mod config;
+/// Internal ISO 8601 timestamp helpers (replaces the historical `dtt` dep).
+pub mod datetime;
 /// Ring buffer engine: ingestion, flushing, and the global `ENGINE`.
 pub mod engine;
 /// Error types and the `RlgResult` alias.
