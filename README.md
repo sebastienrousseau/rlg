@@ -1,11 +1,14 @@
+<!-- SPDX-License-Identifier: Apache-2.0 OR MIT -->
+
 <p align="center">
   <img src="https://cloudcdn.pro/rlg/v1/logos/rlg.svg" alt="RLG logo" width="128" />
 </p>
 
-<h1 align="center">RLG</h1>
+<h1 align="center">rlg — RustLogs</h1>
 
 <p align="center">
-  <strong>A Rust library for application-level logging with log rotation, network logging, and structured formats.</strong>
+  Near-lock-free structured logging for Rust. Sub-microsecond ingestion
+  via a 65k-slot ring buffer, deferred formatting, and native OS sinks.
 </p>
 
 <p align="center">
@@ -13,93 +16,52 @@
   <a href="https://crates.io/crates/rlg"><img src="https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/rlg"><img src="https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/rlg"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
-  <a href="https://lib.rs/crates/rlg"><img src="https://img.shields.io/badge/lib.rs-v0.0.9-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://lib.rs/crates/rlg"><img src="https://img.shields.io/badge/lib.rs-rlg-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
 </p>
 
 ---
 
-## Install
+This is the Cargo workspace root. The library crate lives at
+[`crates/rlg`](crates/rlg) — see [`crates/rlg/README.md`](crates/rlg/README.md)
+for installation, the fluent API, the 14 supported output
+formats, platform-sink details, configuration, and the security
+posture.
 
-```bash
-cargo add rlg
+## Workspace layout
+
+```text
+.
+├── Cargo.toml            # workspace manifest (profiles, members)
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── LICENSE-APACHE
+├── LICENSE-MIT
+├── README.md             # ← you are here
+├── crates/
+│   └── rlg/              # the library crate
+│       ├── Cargo.toml
+│       ├── README.md     # crate-focused documentation (docs.rs root)
+│       ├── LICENSE-APACHE
+│       ├── LICENSE-MIT
+│       ├── build.rs
+│       ├── src/
+│       ├── tests/
+│       ├── benches/
+│       ├── examples/
+│       └── doc/          # mdBook-style long-form docs
+└── .github/
+    └── workflows/
+        └── ci.yml        # delegates to sebastienrousseau/pipelines
 ```
 
-Or add to `Cargo.toml`:
+## Quick links
 
-```toml
-[dependencies]
-rlg = "0.0.9"
-```
-
-You need [Rust](https://rustup.rs/) 1.88.0 or later. Works on macOS, Linux, and Windows.
-
----
-
-## Overview
-
-RLG implements application-level logging with a simple, readable output format. It supports log rotation, network logging, and multiple structured formats.
-
-- **Standard log levels** from TRACE to CRITICAL
-- **File rotation** by size or time interval
-- **Network logging** to remote collectors
-- **Structured formats** — JSON, CEF, CLF, GELF, and more
-
----
-
-## Features
-
-| | |
-| :--- | :--- |
-| **Log levels** | Standard log levels (TRACE through CRITICAL) |
-| **Log rotation** | File-based rotation by size or time |
-| **Network logging** | Send logs to remote collectors |
-| **Structured formats** | JSON, CEF, CLF, GELF, and more |
-| **Async support** | Non-blocking log writing |
-| **Macros** | Convenient logging macros |
-
----
-
-## Usage
-
-```rust
-use rlg::log::Log;
-use rlg::log_level::LogLevel;
-
-fn main() {
-    let log = Log::new(
-        "session-id",
-        "2024-01-15T10:30:00Z",
-        &LogLevel::INFO,
-        "app",
-        "Server started on port 8080",
-        "AppLog",
-    );
-    println!("{}", log);
-}
-```
-
----
-
-## Development
-
-```bash
-cargo build        # Build the project
-cargo test         # Run all tests
-cargo clippy       # Lint with Clippy
-cargo fmt          # Format with rustfmt
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, signed commits, and PR guidelines.
-
----
-
-**THE ARCHITECT** \u00b7 [Sebastien Rousseau](https://sebastienrousseau.com)
-**THE ENGINE** \u00b7 [EUXIS](https://euxis.co) \u00b7 Enterprise Unified Execution Intelligence System
-
----
+- **Crate documentation:** [`crates/rlg/README.md`](crates/rlg/README.md) · [docs.rs/rlg](https://docs.rs/rlg)
+- **Contributing & signing policy:** [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- **Security policy:** [`SECURITY.md`](SECURITY.md)
+- **Release notes:** [`CHANGELOG.md`](CHANGELOG.md)
 
 ## License
 
 Dual-licensed under [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) or [MIT](https://opensource.org/licenses/MIT), at your option.
-
-<p align="right"><a href="#rlg">Back to Top</a></p>
