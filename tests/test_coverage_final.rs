@@ -3,8 +3,14 @@
 // line/region total for `src/`.
 //
 // Each block is named after the source file it targets.
+//
+// Skipped under MIRI because the integration paths drive FFI
+// (`hostname::get()` via `CACHED_HOSTNAME`, `syslog(3)` via the macOS
+// sink, the `notify` watcher in config tests), which MIRI flags as
+// foreign-memory leaks even though stable runs are clean.
 
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 
 use rlg::error::{RlgError, RlgResult};
 use rlg::log::Log;

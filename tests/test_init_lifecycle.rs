@@ -2,8 +2,12 @@
 // can exercise the full `RlgBuilder::init()` body. Each integration
 // test file runs in its own process — `OnceLock` resets between
 // binaries even though it can't reset within one.
+//
+// Skipped under MIRI: `init()` spawns the flusher thread and registers
+// the log/tracing facades, both of which MIRI cannot meaningfully run.
 
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 
 use rlg::init;
 use rlg::log_format::LogFormat;
