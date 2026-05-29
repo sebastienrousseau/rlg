@@ -301,6 +301,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn parse_rust_log_returns_most_permissive() {
         set_env("RUST_LOG", "warn,my_crate=debug,other=info");
         let level = parse_rust_log();
@@ -310,6 +311,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn parse_rust_log_simple_level() {
         set_env("RUST_LOG", "trace");
         assert_eq!(parse_rust_log(), Some(LogLevel::TRACE));
@@ -318,6 +320,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn parse_rust_log_ignores_unparseable_directives() {
         set_env("RUST_LOG", "garbage_xyz,info");
         assert_eq!(parse_rust_log(), Some(LogLevel::INFO));
@@ -326,6 +329,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn parse_rust_log_returns_none_when_unset() {
         unset_env("RUST_LOG");
         assert!(parse_rust_log().is_none());
@@ -333,6 +337,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn detect_default_format_production_env_forces_json() {
         set_env("RLG_ENV", "production");
         assert_eq!(detect_default_format(), LogFormat::JSON);
@@ -341,6 +346,7 @@ mod tests {
 
     #[test]
     #[serial]
+    #[cfg_attr(miri, ignore)]
     fn detect_default_format_outside_production_picks_via_tty() {
         unset_env("RLG_ENV");
         // Outside production the answer depends on stdout being a TTY.

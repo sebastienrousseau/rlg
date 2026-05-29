@@ -919,6 +919,7 @@ mod tests {
 
     #[test]
     #[allow(unsafe_code)]
+    #[cfg_attr(miri, ignore)]
     fn test_config_expand_env_vars() {
         // SAFETY: this test owns the value for the duration of the
         // expand_env_vars call; no other thread reads it.
