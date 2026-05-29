@@ -16,12 +16,19 @@ use std::sync::atomic::{AtomicU64, Ordering};
 static SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 /// Hostname, resolved once and cached for the process lifetime.
-static CACHED_HOSTNAME: LazyLock<String> = LazyLock::new(|| {
-    hostname::get().map_or_else(
+static CACHED_HOSTNAME: LazyLock<String> =
+    LazyLock::new(|| resolve_hostname(hostname::get()));
+
+/// Pure helper for [`CACHED_HOSTNAME`] — exposed so the `"localhost"`
+/// fallback branch can be unit-tested without injecting a syscall failure.
+fn resolve_hostname(
+    raw: std::io::Result<std::ffi::OsString>,
+) -> String {
+    raw.map_or_else(
         |_| "localhost".to_string(),
         |h| h.to_string_lossy().to_string(),
     )
-});
+}
 
 /// A structured log entry with a chainable builder API.
 ///
@@ -477,6 +484,18 @@ impl fmt::Display for Log {
 mod tests {
     use super::*;
     use crate::log_format::LogFormat;
+
+    #[test]
+    fn resolve_hostname_uses_localhost_on_error() {
+        let err = Err(std::io::Error::other("no hostname"));
+        assert_eq!(resolve_hostname(err), "localhost");
+    }
+
+    #[test]
+    fn resolve_hostname_returns_provided_value() {
+        let raw = Ok(std::ffi::OsString::from("test-host"));
+        assert_eq!(resolve_hostname(raw), "test-host");
+    }
 
     #[test]
     #[cfg_attr(miri, ignore)]

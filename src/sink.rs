@@ -247,7 +247,7 @@ impl PlatformSink {
 
     /// No-op on non-macOS targets.
     #[cfg(not(target_os = "macos"))]
-    fn emit_os_log(_level: &str, _payload: &[u8]) {}
+    const fn emit_os_log(_level: &str, _payload: &[u8]) {}
 
     /// Emit one record to the `journald` Unix-datagram socket.
     ///
@@ -364,5 +364,62 @@ mod tests {
 
         let mut sink_none = PlatformSink::Journald(None);
         sink_none.emit("INFO", b"test journald fallback");
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(unsafe_code)]
+    #[serial]
+    fn test_platform_sink_oslog_fallback_stdout() {
+        // Drive the `RLG_FALLBACK_STDOUT` branch in `emit_os_log`.
+        // SAFETY: serial test; sole writer of this env var.
+        unsafe { std::env::set_var("RLG_FALLBACK_STDOUT", "1") };
+        let mut sink = PlatformSink::OsLog;
+        sink.emit("INFO", b"fallback-test");
+        // SAFETY: restore for following tests.
+        unsafe { std::env::remove_var("RLG_FALLBACK_STDOUT") };
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[allow(unsafe_code)]
+    #[serial]
+    fn test_platform_sink_oslog_real_syslog_call() {
+        // Exercise the actual `syslog(3)` FFI path on macOS, once per
+        // process. The serial lock ensures no other test toggles
+        // RLG_FALLBACK_STDOUT mid-flight.
+        unsafe {
+            std::env::remove_var("RLG_FALLBACK_STDOUT");
+            std::env::remove_var("GITHUB_ACTIONS");
+        }
+        let mut sink = PlatformSink::OsLog;
+        // Every level branch must be exercised to cover the priority
+        // mapping match in `emit_os_log`.
+        for level in [
+            "FATAL",
+            "CRITICAL",
+            "ERROR",
+            "WARN",
+            "INFO",
+            "DEBUG",
+            "TRACE",
+            "VERBOSE",
+            "UNKNOWN_LEVEL",
+        ] {
+            sink.emit(level, b"rlg coverage test record");
+        }
+        // Restore fallback so later tests stay deterministic.
+        unsafe { std::env::set_var("RLG_FALLBACK_STDOUT", "1") };
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn test_platform_sink_oslog_with_embedded_nulls() {
+        // Drives the NUL-stripping branch in `emit_os_log` even on
+        // non-macOS targets (the path is a no-op there but the
+        // dispatch still exercises the match arm).
+        let mut sink = PlatformSink::OsLog;
+        sink.emit("INFO", b"with\0embedded\0nulls");
     }
 }

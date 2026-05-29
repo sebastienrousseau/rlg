@@ -5,7 +5,8 @@
 
 //! Log rotation policies: size, time, date, and count-based.
 //!
-//! Wrap a file sink with [`RotatingFile`] to enforce automatic rotation.
+//! Wrap a file sink with [`RotatingFile`][crate::rotation::RotatingFile]
+//! to enforce automatic rotation.
 //! On rotation, the current file is renamed with a timestamp suffix and
 //! a fresh file is opened at the original path.
 
@@ -237,5 +238,80 @@ mod tests {
             .filter_map(Result::ok)
             .collect();
         assert!(entries.len() >= 2, "expected rotated file");
+    }
+
+    #[test]
+    fn test_rotating_file_no_extension() {
+        // Drives the `else` branch in `rotate()` that handles a path
+        // without an extension (lines 112-114 in coverage report).
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("rawlogfile");
+        let policy = LogRotation::Size(NonZeroU64::new(10).unwrap());
+        let mut rf = RotatingFile::open(&path, policy).unwrap();
+        rf.write_batch(b"0123456789X", 1).unwrap(); // > 10 bytes → rotate
+        let entries: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        assert!(entries.len() >= 2);
+        // The rotated name must start with the original stem.
+        let names: Vec<_> = entries
+            .iter()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            names.iter().any(|n| n.starts_with("rawlogfile.")),
+            "no rotated file found in {names:?}"
+        );
+    }
+
+    #[test]
+    fn test_rotating_file_time_based_does_not_trigger_immediately() {
+        // Exercises the Time policy branch in `should_rotate()`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("time.log");
+        let policy = LogRotation::Time(NonZeroU64::new(3600).unwrap());
+        let mut rf = RotatingFile::open(&path, policy).unwrap();
+        rf.write_batch(b"data\n", 1).unwrap();
+        // Only the current file should exist; 3600s hasn't elapsed.
+        let entries: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        assert_eq!(entries.len(), 1);
+    }
+
+    #[test]
+    fn test_rotating_file_date_based_does_not_trigger_immediately() {
+        // Exercises the Date policy branch in `should_rotate()`.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("date.log");
+        let mut rf =
+            RotatingFile::open(&path, LogRotation::Date).unwrap();
+        rf.write_batch(b"data\n", 1).unwrap();
+        let entries: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        assert_eq!(entries.len(), 1);
+    }
+
+    #[test]
+    fn test_rotating_file_open_existing_picks_up_size() {
+        // Pre-create a file with known content, then `open()` it.
+        // Verifies `bytes_written` is populated from existing metadata.
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("existing.log");
+        fs::write(&path, b"already here\n").unwrap();
+        let policy = LogRotation::Size(NonZeroU64::new(5).unwrap());
+        let mut rf = RotatingFile::open(&path, policy).unwrap();
+        // First write should trigger rotation because preexisting bytes
+        // already exceed the threshold.
+        rf.write_batch(b"x", 1).unwrap();
+        let entries: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        assert!(entries.len() >= 2);
     }
 }

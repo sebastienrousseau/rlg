@@ -208,4 +208,46 @@ mod tests {
             "2023-11-14T22:13:20.000000000Z"
         );
     }
+
+    #[test]
+    fn rejects_dangling_fractional_dot() {
+        // Hits the `empty fractional seconds` branch.
+        let r = parse_iso8601("2024-08-29T12:00:00.Z");
+        let msg = r.unwrap_err().to_string();
+        assert!(msg.contains("empty fractional seconds"), "got: {msg}");
+    }
+
+    #[test]
+    fn rejects_invalid_timezone_offset() {
+        // Hits the `invalid timezone offset` branch (right length, bad digits).
+        let r = parse_iso8601("2024-08-29T12:00:00+99:99");
+        let msg = r.unwrap_err().to_string();
+        assert!(msg.contains("invalid timezone offset"), "got: {msg}");
+    }
+
+    #[test]
+    fn rejects_missing_timezone_designator() {
+        // Hits the `_` (catch-all) arm in the match — neither Z nor +/-.
+        let r = parse_iso8601("2024-08-29T12:00:00X");
+        let msg = r.unwrap_err().to_string();
+        assert!(
+            msg.contains("missing timezone designator"),
+            "got: {msg}"
+        );
+    }
+
+    #[test]
+    fn civil_from_days_handles_pre_epoch() {
+        // Exercises the negative-`z` branch in civil_from_days.
+        // The algorithm anchors at days = -719_468 → 0000-03-01, so
+        // -719_469 lands on 0000-02-29 (year 0 is a leap year in
+        // proleptic Gregorian). What matters here is hitting the
+        // `z < 0` arm in `civil_from_days`, not the exact value.
+        let (y, m, d) = civil_from_days(-719_469);
+        assert_eq!((y, m, d), (0, 2, 29));
+
+        // Also exercise a deeply negative input so era != 0.
+        let (y2, _, _) = civil_from_days(-1_000_000);
+        assert!(y2 < 0);
+    }
 }
