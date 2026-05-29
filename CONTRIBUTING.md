@@ -1,58 +1,87 @@
-# Contributing to `RustLogs (RLG)`
+# Contributing to RustLogs (RLG)
 
-Welcome! We're thrilled that you're interested in contributing to the `RustLogs (RLG)` library. Whether you're looking to evangelize, submit feedback, or contribute code, we appreciate your involvement in making `RustLogs (RLG)` a better tool for everyone. Here's how you can get started.
+Thanks for your interest in `rlg`. This document covers the development setup, the verification commands every PR must pass, and the cryptographic signing policy that gates merges.
 
-## Evangelize
+## Development Setup
 
-One of the simplest ways to help us out is by spreading the word about `RustLogs (RLG)`. We believe that a bigger, more involved community makes for a better framework, and that better frameworks make the world a better place. If you know people who might benefit from using `RustLogs (RLG)`, please let them know!
+```bash
+git clone https://github.com/sebastienrousseau/rlg.git
+cd rlg
+cargo check --all-features
+```
 
-## How to Contribute
+`rlg` targets Rust **1.88.0** (MSRV) and edition 2024. It runs on macOS, Linux, and WSL. Windows is supported on a best-effort basis.
 
-If you're interested in making a more direct contribution, there are several ways you can help us improve `RustLogs (RLG)`. Here are some guidelines for submitting feedback, bug reports, and code contributions.
+## Verification — Required Before Pushing
 
-### Feedback
+Every PR must pass the following locally. CI re-runs them via the centralized [`sebastienrousseau/pipelines`](https://github.com/sebastienrousseau/pipelines) reusable workflows.
 
-Your feedback is incredibly valuable to us, and we're always looking for ways to make `RustLogs (RLG)` better. If you have ideas, suggestions, or questions about `RustLogs (RLG)`, we'd love to hear them. Here's how you can provide feedback:
+```bash
+cargo fmt --check                                              # format
+cargo clippy --all-features --tests --benches -- -D warnings   # lint
+cargo test  --all-features                                     # unit + integration
+cargo bench --bench competitive_bench                          # perf-sensitive changes only
+```
 
-- Click [here][02] to submit a new feedback.
-- Use a descriptive title that clearly summarizes your feedback.
-- Provide a detailed description of the issue or suggestion.
-- Be patient while we review and respond to your feedback.
+On macOS, run integration tests with `RLG_FALLBACK_STDOUT=1` to bypass the `os_log` FFI dispatch when not needed.
 
-### Bug Reports
+## Cryptographic Signing — Mandatory
 
-If you encounter a bug while using `RustLogs (RLG)`, please let us know so we can fix it. Here's how you can submit a bug report:
+Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.
 
-- Click [here][02] to submit a new issue.
-- Use a descriptive title that clearly summarizes the bug.
-- Provide a detailed description of the issue, including steps to reproduce it.
-- Be patient while we review and respond to your bug report.
+### One-time setup (SSH signing, recommended)
 
-### Code Contributions
+```bash
+git config --global user.signingkey ~/.ssh/id_ed25519
+git config --global gpg.format ssh
+git config --global commit.gpgsign true
+git config --global tag.gpgsign true
+```
 
-If you're interested in contributing code to `RustLogs (RLG)`, we're excited to have your help! Here's what you need to know:
+Add the same public key to your GitHub account under **Settings → SSH and GPG keys → New SSH key → Signing Key**.
 
-#### Feature Requests
+### Per-commit
 
-If you have an idea for a new feature or improvement, we'd love to hear it. Here's how you can contribute code for a new feature to `RustLogs (RLG)`:
+```bash
+git commit -S -m "feat: …"
+git tag -s v0.0.10 -m "release v0.0.10"
+```
 
-- Fork the repo.
-- Clone the [RustLogs (RLG)][01] repo by running:
-  `git clone {repository}`
-- Edit files in the `src/` folder. The `src/` folder contains the source code for `RustLogs (RLG)`.
-- Submit a pull request, and we'll review and merge your changes if they fit with our vision for `RustLogs (RLG)`.
+Verify a commit:
 
-#### Submitting Code
+```bash
+git log --show-signature -1
+```
 
-If you've identified a bug or have a specific code improvement in mind, we welcome your pull requests. Here's how to submit your code changes:
+`git log` should report `Good "git" signature for <your-email>`. GitHub will display the `Verified` badge.
 
-- Fork the repo.
-- Clone the `RustLogs (RLG)` repo by running:
-  `git clone {repository}`
-- Edit files in the `src/` folder. The `src/` folder contains the source code for `RustLogs (RLG)`.
-- Submit a pull request, and we'll review and merge your changes if they fit with our vision for `RustLogs (RLG)`.
+## Commit Conventions
 
-We hope that this guide has been helpful in explaining how you can contribute to `RustLogs (RLG)`. Thank you for your interest and involvement in our project!
+`rlg` follows [Conventional Commits](https://www.conventionalcommits.org/) with the following type prefixes:
 
-[01]: https://github.com/sebastienrousseau/rlg
-[02]: https://github.com/sebastienrousseau/rlg/issues/new
+| Prefix       | Use for                                     |
+| ------------ | ------------------------------------------- |
+| `feat`       | New public API or capability                |
+| `fix`        | Bug fix                                     |
+| `perf`       | Performance improvement, no behaviour delta |
+| `refactor`   | Internal restructuring                      |
+| `docs`       | Documentation only                          |
+| `test`       | Test additions / changes only               |
+| `chore(deps)`| Dependency bumps                            |
+| `ci`         | CI configuration                            |
+
+## Pull Request Flow
+
+1. Fork → branch from `main` (e.g. `feat/short-name`).
+2. Make focused commits — one concern per commit, all signed.
+3. Run the verification block above.
+4. Open a PR. The PR description must reference any related issue and explain the *why*, not the *what* (the diff documents the what).
+5. CI must pass green: `ci`, `security`, and (on `main`) `docs`.
+
+## Security
+
+Vulnerability reports go through the private channel documented in [`SECURITY.md`](SECURITY.md). Do not file public issues for security problems.
+
+## License
+
+By contributing you agree your work is dual-licensed under [Apache-2.0](LICENSE-APACHE) **or** [MIT](LICENSE-MIT) at the user's option, matching the project license.
