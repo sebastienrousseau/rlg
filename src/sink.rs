@@ -41,47 +41,69 @@ pub enum PlatformSink {
     Journald(Option<UnixDatagram>),
 }
 
-#[cfg(any(target_os = "macos", test))]
+/// POSIX `syslog(3)` bindings.
+///
+/// `syslog(3)` is the supported, stable-ABI path for emitting log records
+/// from a non-Objective-C process. On macOS (Sierra and newer) the syslog
+/// gateway is routed into `os_log`, so records still appear under
+/// `log stream` / Console.app. This avoids the `_os_log_impl` private
+/// symbol, whose binary-trailer calling convention can only be produced
+/// by the compiler-expanded `os_log` macro and is undefined behaviour to
+/// call directly from Rust.
+#[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
-mod macos_ffi {
-    use std::os::raw::{c_char, c_void};
-    #[allow(dead_code)]
-    pub(super) type os_log_t = *mut c_void;
-    #[repr(transparent)]
-    #[allow(dead_code)]
-    pub(super) struct os_log_type_t(pub(super) u8);
+mod syslog_ffi {
+    use std::ffi::CString;
+    use std::os::raw::{c_char, c_int};
+    use std::sync::OnceLock;
 
-    #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_DEFAULT: os_log_type_t =
-        os_log_type_t(0x00);
-    #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_INFO: os_log_type_t =
-        os_log_type_t(0x01);
-    #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_DEBUG: os_log_type_t =
-        os_log_type_t(0x02);
-    #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_ERROR: os_log_type_t =
-        os_log_type_t(0x10);
-    #[allow(dead_code)]
-    pub(super) const OS_LOG_TYPE_FAULT: os_log_type_t =
-        os_log_type_t(0x11);
+    pub(super) const LOG_CRIT: c_int = 2;
+    pub(super) const LOG_ERR: c_int = 3;
+    pub(super) const LOG_WARNING: c_int = 4;
+    pub(super) const LOG_NOTICE: c_int = 5;
+    pub(super) const LOG_INFO: c_int = 6;
+    pub(super) const LOG_DEBUG: c_int = 7;
+    const LOG_USER: c_int = 1 << 3;
+    const LOG_PID: c_int = 0x01;
 
     unsafe extern "C" {
-        #[allow(dead_code)]
-        pub(super) fn os_log_create(
-            subsystem: *const c_char,
-            category: *const c_char,
-        ) -> os_log_t;
-        #[allow(dead_code)]
-        pub(super) fn _os_log_impl(
-            dso: *mut c_void,
-            log: os_log_t,
-            log_type: os_log_type_t,
-            format: *const c_char,
-            buf: *const u8,
-            size: u32,
+        fn openlog(
+            ident: *const c_char,
+            logopt: c_int,
+            facility: c_int,
         );
+        fn syslog(
+            priority: c_int,
+            format: *const c_char,
+            arg: *const c_char,
+        );
+    }
+
+    static INIT: OnceLock<()> = OnceLock::new();
+
+    fn ensure_open() {
+        INIT.get_or_init(|| {
+            // Leak a static identifier — its address must remain valid for
+            // the lifetime of the syslog connection (POSIX requirement).
+            let ident: &'static CString =
+                Box::leak(Box::new(CString::new("rlg").unwrap()));
+            // SAFETY: `ident.as_ptr()` is a valid null-terminated string with
+            // a 'static lifetime; LOG_PID + LOG_USER are valid bit flags.
+            unsafe { openlog(ident.as_ptr(), LOG_PID, LOG_USER) };
+        });
+    }
+
+    /// Emit a single record. `msg` must be a valid null-terminated string.
+    ///
+    /// # Safety
+    /// `msg` must point to a valid `\0`-terminated byte sequence that
+    /// remains valid for the duration of the call.
+    pub(super) unsafe fn emit(priority: c_int, msg: *const c_char) {
+        ensure_open();
+        // SAFETY: caller upholds `msg` validity. We pass a static "%s"
+        // format with exactly one `%s` argument, which matches the variadic
+        // contract `syslog(3)` expects (no varargs UB).
+        unsafe { syslog(priority, c"%s".as_ptr(), msg) };
     }
 }
 
@@ -161,14 +183,7 @@ impl PlatformSink {
     }
 
     /// Write a formatted log payload to this sink.
-    ///
-    /// # Panics
-    ///
-    /// Panics only if construction of the internal `CString` subsystem/category
-    /// identifiers fails on macOS — these are compile-time constants and cannot
-    /// realistically fail at runtime.
     #[allow(unused_variables)]
-    #[allow(clippy::too_many_lines)]
     pub fn emit(&mut self, level: &str, payload: &[u8]) {
         match self {
             Self::Stdout => {
@@ -179,141 +194,105 @@ impl PlatformSink {
                 let _ = f.write_all(payload);
                 let _ = f.write_all(b"\n");
             }
-            Self::OsLog => {
-                #[cfg(target_os = "macos")]
-                {
-                    if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
-                        || std::env::var("GITHUB_ACTIONS").is_ok()
-                    {
-                        let _ = (level, payload);
-                    } else {
-                        #[cfg(not(any(test, miri)))]
-                        {
-                            use macos_ffi::{
-                                _os_log_impl, OS_LOG_TYPE_DEBUG,
-                                OS_LOG_TYPE_DEFAULT, OS_LOG_TYPE_ERROR,
-                                OS_LOG_TYPE_FAULT, OS_LOG_TYPE_INFO,
-                                os_log_create,
-                            };
-                            use std::ffi::CString;
-
-                            let subsystem =
-                                CString::new("com.rlg.logger").unwrap();
-                            let category =
-                                CString::new("default").unwrap();
-
-                            // SAFETY: The pointers passed to `os_log_create` and `_os_log_impl` are derived from
-                            // valid, null-terminated `CString`s. The `buf` pointer is valid for `size` bytes.
-                            // We check `log_handle` for null before passing it to `_os_log_impl`.
-                            #[allow(unsafe_code)]
-                            unsafe {
-                                let log_handle = os_log_create(
-                                    subsystem.as_ptr(),
-                                    category.as_ptr(),
-                                );
-                                if log_handle.is_null() {
-                                    // Fallback to stdout if os_log_create fails
-                                    let _ = std::io::stdout()
-                                        .write_all(payload);
-                                    let _ = std::io::stdout()
-                                        .write_all(b"\n");
-                                    return;
-                                }
-                                let log_type = match level {
-                                    "ERROR" | "FATAL" => {
-                                        OS_LOG_TYPE_ERROR
-                                    }
-                                    "CRITICAL" => OS_LOG_TYPE_FAULT,
-                                    "INFO" => OS_LOG_TYPE_INFO,
-                                    "DEBUG" | "TRACE" | "VERBOSE" => {
-                                        OS_LOG_TYPE_DEBUG
-                                    }
-                                    // "WARN" and any unknown level
-                                    _ => OS_LOG_TYPE_DEFAULT,
-                                };
-
-                                let format =
-                                    CString::new("%{public}s").unwrap();
-                                // Strip null bytes from payload before creating CString
-                                let clean_payload: Vec<u8> = payload
-                                    .iter()
-                                    .copied()
-                                    .filter(|&b| b != 0)
-                                    .collect();
-                                let msg = CString::new(clean_payload)
-                                    .unwrap_or_default();
-
-                                let msg_bytes = msg.as_bytes();
-                                let msg_len =
-                                    u32::try_from(msg_bytes.len())
-                                        .unwrap_or(u32::MAX);
-                                _os_log_impl(
-                                    std::ptr::null_mut(),
-                                    log_handle,
-                                    log_type,
-                                    format.as_ptr(),
-                                    msg.as_ptr().cast::<u8>(),
-                                    msg_len,
-                                );
-                            }
-                        }
-                        #[cfg(any(test, miri))]
-                        {
-                            let _ = (level, payload);
-                        }
-                    }
-                }
-                #[cfg(not(target_os = "macos"))]
-                {
-                    let _ = (level, payload);
-                }
-            }
+            Self::OsLog => Self::emit_os_log(level, payload),
             Self::Journald(socket_opt) => {
-                if let Some(socket) = socket_opt {
-                    #[cfg(any(test, miri))]
-                    let _ = socket;
-                    let priority = match level {
-                        "ERROR" | "FATAL" | "CRITICAL" => "3",
-                        "WARN" => "4",
-                        "INFO" => "6",
-                        "DEBUG" | "TRACE" | "VERBOSE" => "7",
-                        _ => "5",
-                    };
-
-                    // Journald expects newline-separated key-value pairs
-                    let mut journal_payload =
-                        Vec::with_capacity(payload.len() + 32);
-                    journal_payload.extend_from_slice(b"PRIORITY=");
-                    journal_payload
-                        .extend_from_slice(priority.as_bytes());
-                    journal_payload.extend_from_slice(b"\nMESSAGE=");
-                    journal_payload.extend_from_slice(payload);
-                    journal_payload.extend_from_slice(b"\n");
-
-                    if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
-                        || std::env::var("GITHUB_ACTIONS").is_ok()
-                    {
-                        let _ = journal_payload;
-                    } else {
-                        #[cfg(all(
-                            target_os = "linux",
-                            not(any(test, miri))
-                        ))]
-                        let _ = socket.send(&journal_payload);
-                        #[cfg(any(
-                            not(target_os = "linux"),
-                            test,
-                            miri
-                        ))]
-                        {
-                            let _ = journal_payload;
-                        }
-                    }
-                } else {
-                    let _ = std::io::stdout().write_all(payload);
-                    let _ = std::io::stdout().write_all(b"\n");
-                }
+                Self::emit_journald(
+                    level,
+                    payload,
+                    socket_opt.as_ref(),
+                );
             }
+        }
+    }
+
+    /// Emit one record to macOS `os_log` via the `syslog(3)` gateway.
+    ///
+    /// On non-macOS targets this is a no-op so the `OsLog` variant remains
+    /// callable cross-platform.
+    #[cfg(target_os = "macos")]
+    fn emit_os_log(level: &str, payload: &[u8]) {
+        use syslog_ffi::{
+            LOG_CRIT, LOG_DEBUG, LOG_ERR, LOG_INFO, LOG_NOTICE,
+            LOG_WARNING, emit,
+        };
+
+        if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
+            || std::env::var("GITHUB_ACTIONS").is_ok()
+        {
+            let _ = std::io::stdout().write_all(payload);
+            let _ = std::io::stdout().write_all(b"\n");
+            return;
+        }
+
+        let priority = match level {
+            "FATAL" | "CRITICAL" => LOG_CRIT,
+            "ERROR" => LOG_ERR,
+            "WARN" => LOG_WARNING,
+            "INFO" => LOG_INFO,
+            "DEBUG" | "TRACE" | "VERBOSE" => LOG_DEBUG,
+            _ => LOG_NOTICE,
+        };
+        // Strip embedded NULs so the C string is well-formed, then
+        // append our own terminator.
+        let mut buf: Vec<u8> =
+            payload.iter().copied().filter(|&b| b != 0).collect();
+        buf.push(0);
+        // SAFETY: `buf` is owned for the duration of this call, ends
+        // in a `\0`, and `syslog(3)` is thread-safe.
+        #[allow(unsafe_code)]
+        unsafe {
+            emit(priority, buf.as_ptr().cast::<std::os::raw::c_char>());
+        }
+    }
+
+    /// No-op on non-macOS targets.
+    #[cfg(not(target_os = "macos"))]
+    fn emit_os_log(_level: &str, _payload: &[u8]) {}
+
+    /// Emit one record to the `journald` Unix-datagram socket.
+    ///
+    /// Falls back to stdout when the socket is unavailable, when the host
+    /// is not Linux, or when `RLG_FALLBACK_STDOUT` / `GITHUB_ACTIONS` is
+    /// set.
+    fn emit_journald(
+        level: &str,
+        payload: &[u8],
+        socket_opt: Option<&UnixDatagram>,
+    ) {
+        let Some(socket) = socket_opt else {
+            let _ = std::io::stdout().write_all(payload);
+            let _ = std::io::stdout().write_all(b"\n");
+            return;
+        };
+
+        if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
+            || std::env::var("GITHUB_ACTIONS").is_ok()
+        {
+            let _ = socket;
+            return;
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            let priority = match level {
+                "ERROR" | "FATAL" | "CRITICAL" => "3",
+                "WARN" => "4",
+                "INFO" => "6",
+                "DEBUG" | "TRACE" | "VERBOSE" => "7",
+                _ => "5",
+            };
+            let mut journal_payload =
+                Vec::with_capacity(payload.len() + 32);
+            journal_payload.extend_from_slice(b"PRIORITY=");
+            journal_payload.extend_from_slice(priority.as_bytes());
+            journal_payload.extend_from_slice(b"\nMESSAGE=");
+            journal_payload.extend_from_slice(payload);
+            journal_payload.extend_from_slice(b"\n");
+            let _ = socket.send(&journal_payload);
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (level, payload, socket);
         }
     }
 }
