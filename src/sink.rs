@@ -161,6 +161,12 @@ impl PlatformSink {
     }
 
     /// Write a formatted log payload to this sink.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if construction of the internal `CString` subsystem/category
+    /// identifiers fails on macOS — these are compile-time constants and cannot
+    /// realistically fail at runtime.
     #[allow(unused_variables)]
     #[allow(clippy::too_many_lines)]
     pub fn emit(&mut self, level: &str, payload: &[u8]) {
@@ -183,7 +189,12 @@ impl PlatformSink {
                     } else {
                         #[cfg(not(any(test, miri)))]
                         {
-                            use macos_ffi::*;
+                            use macos_ffi::{
+                                _os_log_impl, OS_LOG_TYPE_DEBUG,
+                                OS_LOG_TYPE_DEFAULT, OS_LOG_TYPE_ERROR,
+                                OS_LOG_TYPE_FAULT, OS_LOG_TYPE_INFO,
+                                os_log_create,
+                            };
                             use std::ffi::CString;
 
                             let subsystem =
@@ -213,11 +224,11 @@ impl PlatformSink {
                                         OS_LOG_TYPE_ERROR
                                     }
                                     "CRITICAL" => OS_LOG_TYPE_FAULT,
-                                    "WARN" => OS_LOG_TYPE_DEFAULT,
                                     "INFO" => OS_LOG_TYPE_INFO,
                                     "DEBUG" | "TRACE" | "VERBOSE" => {
                                         OS_LOG_TYPE_DEBUG
                                     }
+                                    // "WARN" and any unknown level
                                     _ => OS_LOG_TYPE_DEFAULT,
                                 };
 
@@ -232,13 +243,17 @@ impl PlatformSink {
                                 let msg = CString::new(clean_payload)
                                     .unwrap_or_default();
 
+                                let msg_bytes = msg.as_bytes();
+                                let msg_len =
+                                    u32::try_from(msg_bytes.len())
+                                        .unwrap_or(u32::MAX);
                                 _os_log_impl(
                                     std::ptr::null_mut(),
                                     log_handle,
                                     log_type,
                                     format.as_ptr(),
                                     msg.as_ptr().cast::<u8>(),
-                                    msg.as_bytes().len() as u32,
+                                    msg_len,
                                 );
                             }
                         }

@@ -151,10 +151,7 @@ impl LockFreeEngine {
                 );
 
             // Spawn the TUI dashboard thread if RLG_TUI=1
-            if std::env::var("RLG_TUI")
-                .map(|v| v == "1")
-                .unwrap_or(false)
-            {
+            if std::env::var("RLG_TUI").is_ok_and(|v| v == "1") {
                 spawn_tui_thread(
                     metrics.clone(),
                     shutdown_flag.clone(),

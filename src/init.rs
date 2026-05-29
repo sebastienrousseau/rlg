@@ -30,10 +30,7 @@ use std::sync::OnceLock;
 /// - **Pipe / file / CI** → `JSON` (machine-parseable)
 /// - **`RLG_ENV=production`** → `JSON`
 fn detect_default_format() -> LogFormat {
-    if std::env::var("RLG_ENV")
-        .map(|v| v == "production")
-        .unwrap_or(false)
-    {
+    if std::env::var("RLG_ENV").is_ok_and(|v| v == "production") {
         return LogFormat::JSON;
     }
     if atty_stdout() {
