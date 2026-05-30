@@ -1,0 +1,43 @@
+# Codecov configuration for the rlg workspace.
+#
+# We exclude two classes of files from coverage gates:
+#
+# 1. Binary `main.rs` entry points. They are exercised end-to-end
+#    via `assert_cmd` in integration tests, but those spawn the
+#    binary as a subprocess that `cargo llvm-cov` cannot follow,
+#    so the source lines show 0% even though the behaviour is
+#    fully tested. Library logic backing each binary lives in
+#    the sibling `lib.rs` and is covered there.
+#
+# 2. The `xtask` crate. It is an internal automation runner
+#    (`publish = false`), executed only by maintainers via
+#    `cargo xtask <task>`. Wrapping it in unit tests would
+#    just shell out to the same `cargo` subprocesses it already
+#    delegates to.
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 90%
+        threshold: 1%
+        only_pulls: true
+
+ignore:
+  - "crates/xtask/**"
+  - "crates/rlg-cli/src/main.rs"
+  - "crates/rlg-mcp/src/main.rs"
+  # Generated and example code — not part of the production surface.
+  - "**/build.rs"
+  - "**/examples/**"
+  - "**/benches/**"
+  - "**/tests/**"
+
+comment:
+  layout: "reach, diff, flags, files"
+  behavior: default
+  require_changes: false

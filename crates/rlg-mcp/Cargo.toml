@@ -1,0 +1,57 @@
+[package]
+name = "rlg-mcp"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = """
+Model Context Protocol (MCP) server exposing rlg log streams as tools
+to LLM agents (Claude Desktop, Cursor, mcp.run). Tools: `tail_log`,
+`filter_log`, `summarize_errors`. Speaks JSON-RPC 2.0 over stdio.
+"""
+repository = "https://github.com/sebastienrousseau/rlg"
+homepage = "https://rustlogs.com/"
+documentation = "https://docs.rs/rlg-mcp"
+readme = "README.md"
+keywords = ["mcp", "log", "agent", "rlg", "anthropic"]
+categories = ["command-line-utilities", "development-tools::debugging"]
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+include = [
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/README.md",
+    "/src/**",
+    "/tests/**",
+]
+
+[lib]
+name = "rlg_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rlg-mcp"
+path = "src/main.rs"
+
+[dependencies]
+rlg = { version = "0.0.9", path = "../rlg" }
+rlg-cli = { version = "0.0.1", path = "../rlg-cli" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints.rust]
+missing_copy_implementations = "warn"
+missing_docs = "warn"
+unsafe_code = "deny"
+unused_extern_crates = "warn"
+missing_debug_implementations = "forbid"
+non_ascii_idents = "forbid"
+unreachable_pub = "forbid"
+dead_code = "deny"
+
+[package.metadata.docs.rs]
+all-features = true

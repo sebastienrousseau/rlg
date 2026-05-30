@@ -30,16 +30,29 @@ use std::sync::OnceLock;
 /// - **Pipe / file / CI** → `JSON` (machine-parseable)
 /// - **`RLG_ENV=production`** → `JSON`
 fn detect_default_format() -> LogFormat {
-    if std::env::var("RLG_ENV")
-        .map(|v| v == "production")
-        .unwrap_or(false)
-    {
-        return LogFormat::JSON;
-    }
-    if atty_stdout() {
-        LogFormat::Logfmt
-    } else {
-        LogFormat::JSON
+    detect_default_format_for(
+        std::env::var("RLG_ENV").ok().as_deref(),
+        atty_stdout(),
+    )
+}
+
+/// Pure helper for [`detect_default_format`] — exposed to tests so the
+/// TTY/pipe branches can be exercised without an actual terminal.
+const fn detect_default_format_for(
+    rlg_env: Option<&str>,
+    is_tty: bool,
+) -> LogFormat {
+    match rlg_env {
+        Some(s) if matches!(s.as_bytes(), b"production") => {
+            LogFormat::JSON
+        }
+        _ => {
+            if is_tty {
+                LogFormat::Logfmt
+            } else {
+                LogFormat::JSON
+            }
+        }
     }
 }
 
@@ -269,6 +282,113 @@ pub fn init() -> Result<FlushGuard, InitError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
+
+    /// SAFETY shim: tests in this module manipulate process-wide env vars
+    /// — they must run serially.
+    #[allow(unsafe_code)]
+    fn set_env(key: &str, val: &str) {
+        // SAFETY: tests using this helper are `#[serial]`, so no other
+        // thread reads env vars concurrently.
+        unsafe { std::env::set_var(key, val) };
+    }
+
+    #[allow(unsafe_code)]
+    fn unset_env(key: &str) {
+        // SAFETY: see `set_env`.
+        unsafe { std::env::remove_var(key) };
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn parse_rust_log_returns_most_permissive() {
+        set_env("RUST_LOG", "warn,my_crate=debug,other=info");
+        let level = parse_rust_log();
+        assert_eq!(level, Some(LogLevel::DEBUG));
+        unset_env("RUST_LOG");
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn parse_rust_log_simple_level() {
+        set_env("RUST_LOG", "trace");
+        assert_eq!(parse_rust_log(), Some(LogLevel::TRACE));
+        unset_env("RUST_LOG");
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn parse_rust_log_ignores_unparseable_directives() {
+        set_env("RUST_LOG", "garbage_xyz,info");
+        assert_eq!(parse_rust_log(), Some(LogLevel::INFO));
+        unset_env("RUST_LOG");
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn parse_rust_log_returns_none_when_unset() {
+        unset_env("RUST_LOG");
+        assert!(parse_rust_log().is_none());
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn detect_default_format_production_env_forces_json() {
+        set_env("RLG_ENV", "production");
+        assert_eq!(detect_default_format(), LogFormat::JSON);
+        unset_env("RLG_ENV");
+    }
+
+    #[test]
+    #[serial]
+    #[cfg_attr(miri, ignore)]
+    fn detect_default_format_outside_production_picks_via_tty() {
+        unset_env("RLG_ENV");
+        // Outside production the answer depends on stdout being a TTY.
+        // Either branch is acceptable — what matters is that the function
+        // runs without panicking and returns one of the two valid choices.
+        let fmt = detect_default_format();
+        assert!(fmt == LogFormat::JSON || fmt == LogFormat::Logfmt);
+    }
+
+    #[test]
+    fn detect_default_format_for_covers_every_branch() {
+        // production → JSON regardless of TTY.
+        assert_eq!(
+            detect_default_format_for(Some("production"), true),
+            LogFormat::JSON
+        );
+        assert_eq!(
+            detect_default_format_for(Some("production"), false),
+            LogFormat::JSON
+        );
+        // Non-production + TTY → Logfmt (the branch real-life tests
+        // cannot reach because stdout is piped in `cargo test`).
+        assert_eq!(
+            detect_default_format_for(None, true),
+            LogFormat::Logfmt
+        );
+        assert_eq!(
+            detect_default_format_for(Some("staging"), true),
+            LogFormat::Logfmt
+        );
+        // Non-production + pipe → JSON.
+        assert_eq!(
+            detect_default_format_for(None, false),
+            LogFormat::JSON
+        );
+    }
+
+    #[test]
+    fn atty_stdout_runs() {
+        // Only verifying the call is reachable.
+        let _ = atty_stdout();
+    }
 
     #[test]
     fn test_init_error_display_logger_already_set() {

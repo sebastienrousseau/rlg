@@ -53,7 +53,7 @@ fn get_terminal_height() -> u16 {
 }
 
 #[cfg(not(feature = "tui"))]
-fn get_terminal_height() -> u16 {
+const fn get_terminal_height() -> u16 {
     DEFAULT_TERMINAL_HEIGHT
 }
 
@@ -239,7 +239,7 @@ fn get_terminal_width() -> u16 {
 
 /// Returns the default terminal width when the `tui` feature is disabled.
 #[cfg(not(feature = "tui"))]
-fn get_terminal_width() -> u16 {
+const fn get_terminal_width() -> u16 {
     DEFAULT_TERMINAL_WIDTH
 }
 
@@ -340,17 +340,10 @@ pub fn compute_level_bars(
     let level_total = info_c + warn_c + error_c + debug_c + trace_c;
 
     let info_bar = render_level_bar(info_c, level_total.max(1));
-    let info_pct = if level_total > 0 {
-        (info_c * 100) / level_total
-    } else {
-        0
-    };
+    let info_pct = (info_c * 100).checked_div(level_total).unwrap_or(0);
     let error_bar = render_level_bar(error_c, level_total.max(1));
-    let error_pct = if level_total > 0 {
-        (error_c * 100) / level_total
-    } else {
-        0
-    };
+    let error_pct =
+        (error_c * 100).checked_div(level_total).unwrap_or(0);
 
     (info_bar, info_pct, error_bar, error_pct)
 }

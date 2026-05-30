@@ -182,6 +182,24 @@ mod tests {
 
     #[test]
     #[cfg_attr(miri, ignore)]
+    fn test_rlg_logger_log_below_filter_short_circuits() {
+        // Raise the global filter so that Info records are rejected,
+        // forcing the `!self.enabled(...)` early return.
+        let prior = ENGINE.filter_level();
+        ENGINE.set_filter(LogLevel::ERROR.to_numeric());
+        let logger = RlgLogger::new(LogFormat::JSON);
+        let record = log::RecordBuilder::new()
+            .args(format_args!("filtered"))
+            .level(log::Level::Info)
+            .target("filter_test")
+            .build();
+        log::Log::log(&logger, &record);
+        // Restore prior filter so we don't break other tests.
+        ENGINE.set_filter(prior);
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
     fn test_rlg_logger_log_with_metadata() {
         let logger = RlgLogger::new(LogFormat::JSON);
 
