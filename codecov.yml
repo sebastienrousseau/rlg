@@ -31,6 +31,7 @@ ignore:
   - "crates/xtask/**"
   - "crates/rlg-cli/src/main.rs"
   - "crates/rlg-mcp/src/main.rs"
+  - "crates/rlg-report/src/main.rs"
   # Generated and example code — not part of the production surface.
   - "**/build.rs"
   - "**/examples/**"

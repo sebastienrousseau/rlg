@@ -1,20 +1,21 @@
 [package]
-name = "rlg-mcp"
+name = "rlg-tower"
 version = "0.0.10"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
-Model Context Protocol (MCP) server exposing rlg log streams as tools
-to LLM agents (Claude Desktop, Cursor, mcp.run). Tools: `tail_log`,
-`filter_log`, `summarize_errors`. Speaks JSON-RPC 2.0 over stdio.
+Tower middleware for rlg. Emits per-request structured access logs
+for any `tower::Service<http::Request<_>>` — axum, tonic, hyper,
+lambda_runtime — with method, path, status, latency, and trace-ID
+propagation.
 """
 repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"
-documentation = "https://docs.rs/rlg-mcp"
+documentation = "https://docs.rs/rlg-tower"
 readme = "README.md"
-keywords = ["mcp", "log", "agent", "rlg", "anthropic"]
-categories = ["command-line-utilities", "development-tools::debugging"]
+keywords = ["tower", "axum", "middleware", "rlg", "logging"]
+categories = ["development-tools::debugging", "web-programming"]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 include = [
     "/Cargo.toml",
@@ -26,22 +27,25 @@ include = [
 ]
 
 [lib]
-name = "rlg_mcp"
+name = "rlg_tower"
 path = "src/lib.rs"
 
-[[bin]]
-name = "rlg-mcp"
-path = "src/main.rs"
+[[example]]
+name = "echo"
+path = "examples/echo.rs"
 
 [dependencies]
 rlg = { version = "0.0.10", path = "../rlg" }
-rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-anyhow = "1.0"
+tower = { version = "0.5", default-features = false }
+tower-layer = "0.3"
+tower-service = "0.3"
+http = "1"
+pin-project-lite = "0.2"
 
 [dev-dependencies]
-tempfile = "3"
+http-body-util = "0.1"
+tokio = { version = "1", default-features = false, features = ["macros", "rt"] }
+tower = { version = "0.5", features = ["util"] }
 
 [lints.rust]
 missing_copy_implementations = "warn"

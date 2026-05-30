@@ -1,20 +1,21 @@
 [package]
-name = "rlg-mcp"
+name = "rlg-wasm"
 version = "0.0.10"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
-Model Context Protocol (MCP) server exposing rlg log streams as tools
-to LLM agents (Claude Desktop, Cursor, mcp.run). Tools: `tail_log`,
-`filter_log`, `summarize_errors`. Speaks JSON-RPC 2.0 over stdio.
+WebAssembly bindings for rlg. Bring structured logging into browsers,
+Deno, Cloudflare Workers, Bun, and any wasm-bindgen-capable host.
+Records are rendered in any of the 14 rlg LogFormats and dispatched
+to the host's console API.
 """
 repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"
-documentation = "https://docs.rs/rlg-mcp"
+documentation = "https://docs.rs/rlg-wasm"
 readme = "README.md"
-keywords = ["mcp", "log", "agent", "rlg", "anthropic"]
-categories = ["command-line-utilities", "development-tools::debugging"]
+keywords = ["wasm", "rlg", "logging", "browser", "cloudflare"]
+categories = ["wasm", "development-tools::debugging"]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 include = [
     "/Cargo.toml",
@@ -26,22 +27,23 @@ include = [
 ]
 
 [lib]
-name = "rlg_mcp"
+name = "rlg_wasm"
 path = "src/lib.rs"
+# wasm-bindgen requires both rlib (for tests) and cdylib (for the
+# WASM artifact). cdylib is wrapped behind cfg so doc builds and
+# host-side `cargo test` stay clean.
+crate-type = ["cdylib", "rlib"]
 
-[[bin]]
-name = "rlg-mcp"
-path = "src/main.rs"
+[[example]]
+name = "hello"
+path = "examples/hello.rs"
 
 [dependencies]
 rlg = { version = "0.0.10", path = "../rlg" }
-rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
-serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-anyhow = "1.0"
 
-[dev-dependencies]
-tempfile = "3"
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
 
 [lints.rust]
 missing_copy_implementations = "warn"

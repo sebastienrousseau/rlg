@@ -1,20 +1,21 @@
 [package]
-name = "rlg-mcp"
+name = "rlg-redact"
 version = "0.0.10"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
-Model Context Protocol (MCP) server exposing rlg log streams as tools
-to LLM agents (Claude Desktop, Cursor, mcp.run). Tools: `tail_log`,
-`filter_log`, `summarize_errors`. Speaks JSON-RPC 2.0 over stdio.
+PII and secret redaction for rlg records. Built-in regex patterns for
+credit cards, JWTs, OAuth bearers, emails, and IPv4 addresses, plus a
+custom-pattern API. Sits between `Log::fire()` and the sink so logs
+emitted to disk / OTLP / syslog are scrubbed.
 """
 repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"
-documentation = "https://docs.rs/rlg-mcp"
+documentation = "https://docs.rs/rlg-redact"
 readme = "README.md"
-keywords = ["mcp", "log", "agent", "rlg", "anthropic"]
-categories = ["command-line-utilities", "development-tools::debugging"]
+keywords = ["rlg", "redact", "pii", "compliance", "logging"]
+categories = ["development-tools::debugging"]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 include = [
     "/Cargo.toml",
@@ -26,22 +27,25 @@ include = [
 ]
 
 [lib]
-name = "rlg_mcp"
+name = "rlg_redact"
 path = "src/lib.rs"
 
-[[bin]]
-name = "rlg-mcp"
-path = "src/main.rs"
+[[example]]
+name = "scrub"
+path = "examples/scrub.rs"
+
+[[bench]]
+name = "scrub"
+harness = false
+path = "benches/scrub.rs"
 
 [dependencies]
 rlg = { version = "0.0.10", path = "../rlg" }
-rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
-serde = { version = "1.0", features = ["derive"] }
+regex = "1.12"
 serde_json = "1.0"
-anyhow = "1.0"
 
 [dev-dependencies]
-tempfile = "3"
+criterion = "0.8"
 
 [lints.rust]
 missing_copy_implementations = "warn"
