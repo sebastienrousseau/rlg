@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/rlg"]
+members = ["crates/rlg", "crates/rlg-cli", "crates/rlg-mcp", "crates/xtask"]
 
 [profile.dev]
 codegen-units = 256

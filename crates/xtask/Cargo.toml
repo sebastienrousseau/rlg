@@ -1,0 +1,21 @@
+[package]
+name = "xtask"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Internal automation tasks for the rlg workspace."
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+
+[lints.rust]
+missing_docs = "warn"
+unsafe_code = "deny"
+unreachable_pub = "forbid"
