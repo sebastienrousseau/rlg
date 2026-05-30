@@ -1340,7 +1340,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.1"
+version = "0.0.9"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1353,7 +1353,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.1"
+version = "0.0.9"
 dependencies = [
  "anyhow",
  "rlg",
