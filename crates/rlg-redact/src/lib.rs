@@ -44,8 +44,7 @@ pub const DEFAULT_MARKER: &str = "[REDACTED]";
 /// Visa / MC / Amex / Discover. Matches 13-19 digits, optionally
 /// separated by spaces or hyphens. Luhn validation is not performed
 /// — false positives are preferred over false negatives for logs.
-pub const CREDIT_CARD: &str =
-    r"\b(?:\d[ -]?){12,18}\d\b";
+pub const CREDIT_CARD: &str = r"\b(?:\d[ -]?){12,18}\d\b";
 
 /// Three-segment base64url JWT (`header.payload.signature`).
 pub const JWT: &str =
@@ -59,8 +58,7 @@ pub const EMAIL: &str =
     r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b";
 
 /// IPv4 dotted-quad addresses.
-pub const IPV4: &str =
-    r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b";
+pub const IPV4: &str = r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b";
 
 /// AWS access key IDs (`AKIA…`, `ASIA…`, etc.).
 pub const AWS_ACCESS_KEY: &str =
@@ -71,17 +69,10 @@ pub const AWS_ACCESS_KEY: &str =
 /// [`Redactor::with_defaults`] so repeated default-redactor
 /// construction in hot paths doesn't recompile six regexes per call.
 static BUILTIN_REGEXES: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    [
-        CREDIT_CARD,
-        JWT,
-        BEARER_TOKEN,
-        EMAIL,
-        IPV4,
-        AWS_ACCESS_KEY,
-    ]
-    .into_iter()
-    .map(|p| Regex::new(p).expect("built-in regex must compile"))
-    .collect()
+    [CREDIT_CARD, JWT, BEARER_TOKEN, EMAIL, IPV4, AWS_ACCESS_KEY]
+        .into_iter()
+        .map(|p| Regex::new(p).expect("built-in regex must compile"))
+        .collect()
 });
 
 // ---------------------------------------------------------------------------
@@ -131,7 +122,10 @@ impl Redactor {
     ///
     /// # Errors
     /// Returns [`regex::Error`] if the pattern fails to compile.
-    pub fn with_pattern(mut self, pattern: &str) -> Result<Self, regex::Error> {
+    pub fn with_pattern(
+        mut self,
+        pattern: &str,
+    ) -> Result<Self, regex::Error> {
         self.patterns.push(Regex::new(pattern)?);
         Ok(self)
     }
@@ -149,7 +143,8 @@ impl Redactor {
     pub fn scrub(&self, mut log: Log) -> Log {
         log.description = self.apply(&log.description);
         for value in log.attributes.values_mut() {
-            *value = self.scrub_value(std::mem::replace(value, Value::Null));
+            *value =
+                self.scrub_value(std::mem::replace(value, Value::Null));
         }
         log
     }
@@ -158,7 +153,8 @@ impl Redactor {
     pub fn apply(&self, input: &str) -> String {
         let mut out = input.to_string();
         for re in &self.patterns {
-            out = re.replace_all(&out, self.marker.as_str()).into_owned();
+            out =
+                re.replace_all(&out, self.marker.as_str()).into_owned();
         }
         out
     }
@@ -167,10 +163,15 @@ impl Redactor {
         match v {
             Value::String(s) => Value::String(self.apply(&s)),
             Value::Array(items) => Value::Array(
-                items.into_iter().map(|i| self.scrub_value(i)).collect(),
+                items
+                    .into_iter()
+                    .map(|i| self.scrub_value(i))
+                    .collect(),
             ),
             Value::Object(map) => Value::Object(
-                map.into_iter().map(|(k, v)| (k, self.scrub_value(v))).collect(),
+                map.into_iter()
+                    .map(|(k, v)| (k, self.scrub_value(v)))
+                    .collect(),
             ),
             other => other,
         }
@@ -277,7 +278,10 @@ mod tests {
         let out = r.scrub(log);
         assert!(!out.description.contains("user@host.com"));
         // Numeric attributes pass through unchanged.
-        assert_eq!(out.attributes.get("session_id_num"), Some(&serde_json::json!(42_u64)));
+        assert_eq!(
+            out.attributes.get("session_id_num"),
+            Some(&serde_json::json!(42_u64))
+        );
         // String attributes are scrubbed.
         let email = out.attributes.get("email").unwrap();
         assert!(email.as_str().unwrap().contains("[REDACTED]"));

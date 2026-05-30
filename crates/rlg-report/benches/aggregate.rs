@@ -38,12 +38,12 @@ fn bench_aggregate(c: &mut Criterion) {
     let mut group = c.benchmark_group("rlg-report/from_lines");
     for &n in &[100, 1_000, 10_000] {
         let lines = make_lines(n);
-        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        let refs: Vec<&str> =
+            lines.iter().map(String::as_str).collect();
         group.bench_function(format!("lines_{n:05}"), |b| {
             b.iter(|| {
-                let report = Report::from_lines(
-                    black_box(refs.iter().copied()),
-                );
+                let report =
+                    Report::from_lines(black_box(refs.iter().copied()));
                 black_box(report)
             });
         });

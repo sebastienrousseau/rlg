@@ -16,12 +16,14 @@ use rlg_redact::Redactor;
 fn main() {
     let redactor = Redactor::with_defaults();
 
-    let raw = Log::info("card 4111-1111-1111-1111 declined for alice@example.com")
-        .component("payments")
-        .with("client_ip", "192.0.2.42")
-        .with("session_token", "Bearer abc123XYZdef")
-        .with("order_id", 9001_u64) // numeric — preserved as-is
-        .format(LogFormat::JSON);
+    let raw = Log::info(
+        "card 4111-1111-1111-1111 declined for alice@example.com",
+    )
+    .component("payments")
+    .with("client_ip", "192.0.2.42")
+    .with("session_token", "Bearer abc123XYZdef")
+    .with("order_id", 9001_u64) // numeric — preserved as-is
+    .format(LogFormat::JSON);
 
     let safe = redactor.scrub(raw);
 

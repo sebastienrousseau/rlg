@@ -15,7 +15,10 @@ fn main() {
     logger.info("worker booted", None);
     logger.info(
         "request handled",
-        Some(r#"{"url":"/api","status":200,"latency_ms":12}"#.to_string()),
+        Some(
+            r#"{"url":"/api","status":200,"latency_ms":12}"#
+                .to_string(),
+        ),
     );
     logger.warn("rate limited", None);
     logger.error(

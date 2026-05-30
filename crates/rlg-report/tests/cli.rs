@@ -45,7 +45,8 @@ fn json_output_is_valid_json() {
         .success();
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout)
         .into_owned();
-    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(stdout.trim()).unwrap();
     assert_eq!(v["total"], 3);
     assert_eq!(v["count_by_level"]["ERROR"], 2);
     assert_eq!(v["latency"]["samples"], 2);
@@ -71,6 +72,7 @@ fn top_flag_clamps_descriptions() {
         .success();
     let stdout = String::from_utf8_lossy(&assert.get_output().stdout)
         .into_owned();
-    let v: serde_json::Value = serde_json::from_str(stdout.trim()).unwrap();
+    let v: serde_json::Value =
+        serde_json::from_str(stdout.trim()).unwrap();
     assert_eq!(v["top_descriptions"].as_array().unwrap().len(), 1);
 }

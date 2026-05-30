@@ -115,7 +115,8 @@ impl Report {
             }
         }
 
-        let mut top: Vec<(String, u64)> = descriptions.into_iter().collect();
+        let mut top: Vec<(String, u64)> =
+            descriptions.into_iter().collect();
         top.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
         top.truncate(top_n);
         report.top_descriptions = top;
@@ -136,7 +137,8 @@ impl Report {
             "── rlg report ───────────────────────────────────────────"
         );
         let _ = writeln!(out, "total records:      {}", self.total);
-        let _ = writeln!(out, "unparseable lines:  {}", self.unparseable);
+        let _ =
+            writeln!(out, "unparseable lines:  {}", self.unparseable);
         let _ = writeln!(out, "\n── by level ─────────────────");
         for (level, count) in &self.count_by_level {
             let _ = writeln!(out, "  {level:<10} {count}");
@@ -145,8 +147,7 @@ impl Report {
         for (component, count) in &self.count_by_component {
             let _ = writeln!(out, "  {component:<10} {count}");
         }
-        let _ =
-            writeln!(out, "\n── top descriptions ─────────");
+        let _ = writeln!(out, "\n── top descriptions ─────────");
         for (desc, count) in &self.top_descriptions {
             let _ = writeln!(out, "  {count:>5}  {desc}");
         }
@@ -239,9 +240,13 @@ mod tests {
 
     #[test]
     fn counts_records_by_level_and_component() {
-        let r = Report::from_lines(
-            [INFO, ERROR_BOOM_1, ERROR_BOOM_2, FATAL, HTTP],
-        );
+        let r = Report::from_lines([
+            INFO,
+            ERROR_BOOM_1,
+            ERROR_BOOM_2,
+            FATAL,
+            HTTP,
+        ]);
         assert_eq!(r.total, 5);
         assert_eq!(r.count_by_level.get("INFO").copied(), Some(2));
         assert_eq!(r.count_by_level.get("ERROR").copied(), Some(2));
@@ -253,9 +258,12 @@ mod tests {
 
     #[test]
     fn top_descriptions_ranks_by_frequency() {
-        let r = Report::from_lines(
-            [INFO, ERROR_BOOM_1, ERROR_BOOM_2, FATAL],
-        );
+        let r = Report::from_lines([
+            INFO,
+            ERROR_BOOM_1,
+            ERROR_BOOM_2,
+            FATAL,
+        ]);
         // "boom" appears twice, "hi" and "crash" once each.
         assert_eq!(r.top_descriptions[0].0, "boom");
         assert_eq!(r.top_descriptions[0].1, 2);
@@ -263,9 +271,7 @@ mod tests {
 
     #[test]
     fn latency_percentiles_are_sorted() {
-        let r = Report::from_lines(
-            [ERROR_BOOM_1, ERROR_BOOM_2, HTTP],
-        );
+        let r = Report::from_lines([ERROR_BOOM_1, ERROR_BOOM_2, HTTP]);
         let l = r.latency.expect("latency stats present");
         assert_eq!(l.samples, 3);
         assert_eq!(l.max, 120);
@@ -277,9 +283,8 @@ mod tests {
 
     #[test]
     fn unparseable_lines_are_counted_separately() {
-        let r = Report::from_lines(
-            [INFO, "not json at all", "", FATAL],
-        );
+        let r =
+            Report::from_lines([INFO, "not json at all", "", FATAL]);
         assert_eq!(r.total, 2);
         assert_eq!(r.unparseable, 1);
     }
@@ -305,17 +310,18 @@ mod tests {
 
     #[test]
     fn error_count_sums_error_and_above() {
-        let r = Report::from_lines(
-            [INFO, ERROR_BOOM_1, ERROR_BOOM_2, FATAL],
-        );
+        let r = Report::from_lines([
+            INFO,
+            ERROR_BOOM_1,
+            ERROR_BOOM_2,
+            FATAL,
+        ]);
         assert_eq!(r.error_count(), 3);
     }
 
     #[test]
     fn top_n_can_be_clamped() {
-        let lines = [
-            INFO, ERROR_BOOM_1, ERROR_BOOM_2, FATAL, HTTP,
-        ];
+        let lines = [INFO, ERROR_BOOM_1, ERROR_BOOM_2, FATAL, HTTP];
         let r = Report::from_lines_with_top(lines, 1);
         assert_eq!(r.top_descriptions.len(), 1);
     }

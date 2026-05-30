@@ -45,14 +45,11 @@ fn main() -> anyhow::Result<()> {
         Some(path) => BufReader::new(File::open(path)?)
             .lines()
             .collect::<Result<_, _>>()?,
-        None => stdin
-            .lock()
-            .lines()
-            .collect::<Result<_, _>>()?,
+        None => stdin.lock().lines().collect::<Result<_, _>>()?,
     };
-    let line_refs: Vec<&str> = lines.iter().map(String::as_str).collect();
-    let report =
-        Report::from_lines_with_top(line_refs, cli.top);
+    let line_refs: Vec<&str> =
+        lines.iter().map(String::as_str).collect();
+    let report = Report::from_lines_with_top(line_refs, cli.top);
     match cli.format {
         OutputShape::Text => println!("{}", report.to_text()),
         OutputShape::Json => println!("{}", report.to_json()?),

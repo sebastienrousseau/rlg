@@ -44,7 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     if let Err(e) = exporter.export_batch(&records) {
-        eprintln!("export failed (expected without a real API key): {e}");
+        eprintln!(
+            "export failed (expected without a real API key): {e}"
+        );
     } else {
         println!("export ok");
     }

@@ -34,5 +34,8 @@ fn main() {
     assert_logged!(capture, contains "INSUFFICIENT_FUNDS");
     assert_logged!(capture, attribute "user_id" => 42_u64);
 
-    println!("captured {} records — all assertions held", capture.len());
+    println!(
+        "captured {} records — all assertions held",
+        capture.len()
+    );
 }

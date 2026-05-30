@@ -112,11 +112,7 @@ impl LogExt for Log {
 /// Did `capture` see at least one record with the given level?
 #[must_use]
 pub fn has_level(capture: &Capture, level: LogLevel) -> bool {
-    capture
-        .inner
-        .lock()
-        .iter()
-        .any(|r| r.level == level)
+    capture.inner.lock().iter().any(|r| r.level == level)
 }
 
 /// Did `capture` see at least one record whose `description`
@@ -132,7 +128,11 @@ pub fn description_contains(capture: &Capture, needle: &str) -> bool {
 
 /// Did `capture` see at least one record whose `key` attribute
 /// equals `expected`?
-pub fn attribute_eq<V>(capture: &Capture, key: &str, expected: V) -> bool
+pub fn attribute_eq<V>(
+    capture: &Capture,
+    key: &str,
+    expected: V,
+) -> bool
 where
     V: Into<Value>,
 {

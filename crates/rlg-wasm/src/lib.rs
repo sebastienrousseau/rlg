@@ -55,9 +55,9 @@ fn dispatch(level: LogLevel, rendered: &str) {
     {
         match level {
             LogLevel::WARN => console_warn(rendered),
-            LogLevel::ERROR
-            | LogLevel::FATAL
-            | LogLevel::CRITICAL => console_error(rendered),
+            LogLevel::ERROR | LogLevel::FATAL | LogLevel::CRITICAL => {
+                console_error(rendered)
+            }
             _ => console_log(rendered),
         }
     }
@@ -93,7 +93,8 @@ impl RlgWasm {
     pub fn new(component: &str, format: &str) -> Self {
         Self {
             component: component.to_string(),
-            format: LogFormat::from_str(format).unwrap_or(LogFormat::JSON),
+            format: LogFormat::from_str(format)
+                .unwrap_or(LogFormat::JSON),
         }
     }
 
@@ -110,12 +111,20 @@ impl RlgWasm {
     }
 
     /// Emit an ERROR record.
-    pub fn error(&self, message: &str, attributes_json: Option<String>) {
+    pub fn error(
+        &self,
+        message: &str,
+        attributes_json: Option<String>,
+    ) {
         self.emit(LogLevel::ERROR, message, attributes_json.as_deref());
     }
 
     /// Emit a DEBUG record.
-    pub fn debug(&self, message: &str, attributes_json: Option<String>) {
+    pub fn debug(
+        &self,
+        message: &str,
+        attributes_json: Option<String>,
+    ) {
         self.emit(LogLevel::DEBUG, message, attributes_json.as_deref());
     }
 
@@ -155,18 +164,8 @@ mod tests {
     #[test]
     fn new_accepts_each_format_variant() {
         for name in [
-            "CLF",
-            "CEF",
-            "ELF",
-            "W3C",
-            "JSON",
-            "GELF",
-            "Logstash",
-            "NDJSON",
-            "MCP",
-            "OTLP",
-            "Logfmt",
-            "ECS",
+            "CLF", "CEF", "ELF", "W3C", "JSON", "GELF", "Logstash",
+            "NDJSON", "MCP", "OTLP", "Logfmt", "ECS",
         ] {
             let r = RlgWasm::new("svc", name);
             assert_eq!(format!("{:?}", r.format), name);

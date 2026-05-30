@@ -95,7 +95,9 @@ impl RlgLayer {
     /// trace-header extraction.
     #[must_use]
     pub fn new() -> Self {
-        Self { config: Config::default() }
+        Self {
+            config: Config::default(),
+        }
     }
 
     /// Override the level emitted for every record.
@@ -135,7 +137,10 @@ impl<S> Layer<S> for RlgLayer {
     type Service = RlgService<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        RlgService { inner, config: self.config.clone() }
+        RlgService {
+            inner,
+            config: self.config.clone(),
+        }
     }
 }
 
@@ -204,7 +209,10 @@ where
 {
     type Output = Result<Response<ResBody>, E>;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+    fn poll(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Self::Output> {
         let this = self.project();
         match this.inner.poll(cx) {
             Poll::Pending => Poll::Pending,
@@ -244,8 +252,7 @@ fn emit(
 ) {
     let status_str =
         status.map_or_else(|| "ERR".to_string(), |s| s.to_string());
-    let description =
-        format!("{method} {path} -> {status_str}");
+    let description = format!("{method} {path} -> {status_str}");
     let mut log = Log::build(cfg.level, &description)
         .component(cfg.component)
         .format(cfg.format)

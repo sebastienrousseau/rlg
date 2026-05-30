@@ -153,12 +153,13 @@ impl OtlpExporter {
     /// Sleep `backoff_base * 2^attempt`, capped at 30 s. Pure-std
     /// implementation — no external backoff crate needed.
     fn sleep_for_attempt(&self, attempt: u32) {
-        let factor = 1u64
-            .checked_shl(attempt)
-            .unwrap_or(u64::MAX);
+        let factor = 1u64.checked_shl(attempt).unwrap_or(u64::MAX);
         let delay = self
             .backoff_base
-            .saturating_mul(u32::try_from(factor.min(u64::from(u32::MAX))).unwrap_or(u32::MAX))
+            .saturating_mul(
+                u32::try_from(factor.min(u64::from(u32::MAX)))
+                    .unwrap_or(u32::MAX),
+            )
             .min(Duration::from_secs(30));
         std::thread::sleep(delay);
     }
@@ -238,7 +239,9 @@ impl OtlpExporterBuilder {
                 .endpoint
                 .expect("OtlpExporterBuilder::endpoint is required"),
             headers: self.headers,
-            timeout: self.timeout.unwrap_or_else(|| Duration::from_secs(10)),
+            timeout: self
+                .timeout
+                .unwrap_or_else(|| Duration::from_secs(10)),
             max_retries: self.max_retries.unwrap_or(3),
             backoff_base: self
                 .backoff_base
@@ -307,7 +310,9 @@ mod tests {
 
     #[test]
     fn builder_defaults_to_sensible_values() {
-        let e = OtlpExporter::builder().endpoint("http://x/v1/logs").build();
+        let e = OtlpExporter::builder()
+            .endpoint("http://x/v1/logs")
+            .build();
         assert_eq!(e.timeout, Duration::from_secs(10));
         assert_eq!(e.max_retries, 3);
         assert_eq!(e.backoff_base, Duration::from_millis(200));
@@ -320,7 +325,10 @@ mod tests {
             .header("x-honeycomb-team", "key123")
             .timeout_secs(30)
             .build();
-        assert_eq!(e.headers.get("x-honeycomb-team").unwrap(), "key123");
+        assert_eq!(
+            e.headers.get("x-honeycomb-team").unwrap(),
+            "key123"
+        );
         assert_eq!(e.timeout, Duration::from_secs(30));
         assert_eq!(e.endpoint(), "http://x/v1/logs");
     }
@@ -349,8 +357,8 @@ mod tests {
     fn serialise_batch_wraps_in_resource_logs_envelope() {
         let body = serialise_batch(&[sample(LogLevel::INFO)]).unwrap();
         let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        let log_records = &v["resourceLogs"][0]["scopeLogs"][0]
-            ["logRecords"];
+        let log_records =
+            &v["resourceLogs"][0]["scopeLogs"][0]["logRecords"];
         assert!(log_records.is_array());
         assert_eq!(log_records.as_array().unwrap().len(), 1);
         assert_eq!(
