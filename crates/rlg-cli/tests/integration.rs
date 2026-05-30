@@ -5,8 +5,13 @@
 
 //! End-to-end CLI tests: spawn the `rlg` binary with `assert_cmd`,
 //! feed it JSON-shaped records, and assert on stdout.
+//!
+//! Skipped under MIRI: `assert_cmd` shells out via `posix_spawn`,
+//! which MIRI does not support. The binary's logic is exercised
+//! in-process through `rlg_cli`'s lib tests in `src/lib.rs`.
 
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 
 use assert_cmd::Command;
 use predicates::prelude::*;
