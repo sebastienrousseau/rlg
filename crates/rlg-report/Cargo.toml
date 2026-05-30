@@ -1,19 +1,19 @@
 [package]
-name = "rlg-mcp"
+name = "rlg-report"
 version = "0.0.10"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
-Model Context Protocol (MCP) server exposing rlg log streams as tools
-to LLM agents (Claude Desktop, Cursor, mcp.run). Tools: `tail_log`,
-`filter_log`, `summarize_errors`. Speaks JSON-RPC 2.0 over stdio.
+Log digest / analytics for rlg. Reads JSON-shaped rlg records from
+a file or stdin and produces aggregation tables: count by level,
+top components, top error messages, latency percentiles.
 """
 repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"
-documentation = "https://docs.rs/rlg-mcp"
+documentation = "https://docs.rs/rlg-report"
 readme = "README.md"
-keywords = ["mcp", "log", "agent", "rlg", "anthropic"]
+keywords = ["rlg", "log", "analytics", "digest", "cli"]
 categories = ["command-line-utilities", "development-tools::debugging"]
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 include = [
@@ -26,21 +26,34 @@ include = [
 ]
 
 [lib]
-name = "rlg_mcp"
+name = "rlg_report"
 path = "src/lib.rs"
 
 [[bin]]
-name = "rlg-mcp"
+name = "rlg-report"
 path = "src/main.rs"
+
+[[example]]
+name = "digest"
+path = "examples/digest.rs"
+
+[[bench]]
+name = "aggregate"
+harness = false
+path = "benches/aggregate.rs"
 
 [dependencies]
 rlg = { version = "0.0.10", path = "../rlg" }
 rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
+clap = { version = "4.6", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 
 [dev-dependencies]
+assert_cmd = "2"
+criterion = "0.8"
+predicates = "3"
 tempfile = "3"
 
 [lints.rust]
