@@ -450,4 +450,98 @@ mod tests {
         let r = dispatch(&call).expect("response");
         assert!(r.error.is_some());
     }
+
+    #[test]
+    fn dispatch_tools_call_filter_log_full_args() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
+        let call = req(
+            "tools/call",
+            serde_json::json!({
+                "name": "filter_log",
+                "arguments": {
+                    "path": f.path().to_str().unwrap(),
+                    "min_level": "ERROR",
+                    "component": "db",
+                    "format": "JSON"
+                }
+            }),
+        );
+        let r = dispatch(&call).expect("response");
+        assert!(r.error.is_none());
+        let text = r.result.unwrap()["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("boom") || text.contains("down"));
+        assert!(!text.contains("hello"));
+    }
+
+    #[test]
+    fn dispatch_tools_call_filter_log_rejects_bad_level() {
+        let f = write_log(INFO);
+        let call = req(
+            "tools/call",
+            serde_json::json!({
+                "name": "filter_log",
+                "arguments": {
+                    "path": f.path().to_str().unwrap(),
+                    "min_level": "NOT_A_LEVEL"
+                }
+            }),
+        );
+        let r = dispatch(&call).expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_tools_call_filter_log_rejects_bad_format() {
+        let f = write_log(INFO);
+        let call = req(
+            "tools/call",
+            serde_json::json!({
+                "name": "filter_log",
+                "arguments": {
+                    "path": f.path().to_str().unwrap(),
+                    "format": "NotAFormat"
+                }
+            }),
+        );
+        let r = dispatch(&call).expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_tools_call_summarize_errors() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
+        let call = req(
+            "tools/call",
+            serde_json::json!({
+                "name": "summarize_errors",
+                "arguments": { "path": f.path().to_str().unwrap() }
+            }),
+        );
+        let r = dispatch(&call).expect("response");
+        assert!(r.error.is_none());
+        let text = r.result.unwrap()["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("db"));
+    }
+
+    #[test]
+    fn response_ok_and_err_round_trip_json() {
+        let ok = Response::ok(
+            Some(serde_json::json!(1)),
+            serde_json::json!({"a": 1}),
+        );
+        let s = serde_json::to_string(&ok).unwrap();
+        assert!(s.contains("\"jsonrpc\":\"2.0\""));
+        assert!(s.contains("\"result\""));
+
+        let err = Response::err(None, -32_700, "parse failed");
+        let s = serde_json::to_string(&err).unwrap();
+        assert!(s.contains("\"error\""));
+        assert!(s.contains("parse failed"));
+    }
 }
