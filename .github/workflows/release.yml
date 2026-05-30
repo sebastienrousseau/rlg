@@ -10,6 +10,16 @@ env:
   CARGO_INCREMENTAL: '0'
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
+# Every publishable crate in the workspace. Lockstep versions —
+# every entry must match the tag's version.
+#
+# `xtask` is excluded (publish = false).
+#
+# Order matters for the publish step:
+#   1. `rlg` first  — every other crate depends on it.
+#   2. `rlg-cli` second — `rlg-mcp` and `rlg-report` depend on it.
+#   3. The rest can publish independently of one another.
+
 jobs:
   # ─── Verify ────────────────────────────────────────────────────────
   validate:
@@ -24,7 +34,16 @@ jobs:
       - name: Check tag matches every publishable crate
         run: |
           TAG="${GITHUB_REF_NAME#v}"
-          for crate in rlg rlg-cli rlg-mcp; do
+          for crate in \
+              rlg \
+              rlg-cli \
+              rlg-mcp \
+              rlg-otlp \
+              rlg-redact \
+              rlg-report \
+              rlg-test \
+              rlg-tower \
+              rlg-wasm; do
             CRATE_VERSION=$(
               grep '^version' "crates/${crate}/Cargo.toml" \
                 | head -1 | sed 's/.*"\(.*\)"/\1/'
@@ -61,15 +80,27 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       # Crates publish in dependency order. After each publish we
-      # sleep briefly to give the sparse index a chance to catch
-      # the new version before the next dependent crate runs
-      # `cargo publish` (which resolves against the live index).
+      # sleep briefly to give the sparse index a chance to catch the
+      # new version before the next dependent crate runs `cargo
+      # publish` (which resolves against the live index).
+      #
+      # The dependency graph:
+      #
+      #   rlg
+      #   ├── rlg-cli ─── rlg-mcp
+      #   │             └─ rlg-report
+      #   ├── rlg-otlp
+      #   ├── rlg-redact
+      #   ├── rlg-test
+      #   ├── rlg-tower
+      #   └── rlg-wasm
+
       - name: Publish rlg
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           cargo publish --package rlg --locked
-          echo "Waiting for crates.io index to catch up…"
+          echo "Waiting for crates.io sparse index…"
           sleep 30
 
       - name: Publish rlg-cli
@@ -77,14 +108,43 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           cargo publish --package rlg-cli --locked
-          echo "Waiting for crates.io index to catch up…"
+          echo "Waiting for crates.io sparse index…"
           sleep 30
+
+      - name: Publish rlg-otlp
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-otlp --locked
+
+      - name: Publish rlg-redact
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-redact --locked
+
+      - name: Publish rlg-test
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-test --locked
+
+      - name: Publish rlg-tower
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-tower --locked
+
+      - name: Publish rlg-wasm
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-wasm --locked
 
       - name: Publish rlg-mcp
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          cargo publish --package rlg-mcp --locked
+        run: cargo publish --package rlg-mcp --locked
+
+      - name: Publish rlg-report
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --package rlg-report --locked
 
   # ─── GitHub Release ────────────────────────────────────────────────
   github-release:
