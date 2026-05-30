@@ -59,7 +59,7 @@ rlg /var/log/app.ndjson \
 
 ### Input
 
-For `0.0.1`, the CLI accepts the **canonical `LogFormat::JSON`
+For `0.0.9`, the CLI accepts the **canonical `LogFormat::JSON`
 shape** — one record per line. Unparseable lines pass through
 verbatim so you can pipe non-rlg log noise through `rlg`
 without losing entries.

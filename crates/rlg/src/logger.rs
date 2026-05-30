@@ -166,9 +166,15 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(engine_filter)]
     fn test_rlg_logger_enabled() {
+        // ENGINE.filter_level is process-wide state; serialise with
+        // tests that mutate it (below) to prevent test-ordering races
+        // under tarpaulin's threading.
+        let prior = ENGINE.filter_level();
+        ENGINE.set_filter(LogLevel::ALL.to_numeric());
+
         let logger = RlgLogger::new(LogFormat::JSON);
-        // Default filter is 0 (ALL), so everything is enabled
         let metadata = log::MetadataBuilder::new()
             .level(log::Level::Trace)
             .build();
@@ -178,10 +184,13 @@ mod tests {
             .level(log::Level::Error)
             .build();
         assert!(log::Log::enabled(&logger, &metadata));
+
+        ENGINE.set_filter(prior);
     }
 
     #[test]
     #[cfg_attr(miri, ignore)]
+    #[serial_test::serial(engine_filter)]
     fn test_rlg_logger_log_below_filter_short_circuits() {
         // Raise the global filter so that Info records are rejected,
         // forcing the `!self.enabled(...)` early return.

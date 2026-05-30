@@ -1,6 +1,6 @@
 [package]
 name = "rlg-mcp"
-version = "0.0.1"
+version = "0.0.9"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -35,7 +35,7 @@ path = "src/main.rs"
 
 [dependencies]
 rlg = { version = "0.0.9", path = "../rlg" }
-rlg-cli = { version = "0.0.1", path = "../rlg-cli" }
+rlg-cli = { version = "0.0.9", path = "../rlg-cli" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
