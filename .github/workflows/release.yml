@@ -7,32 +7,117 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: '0'
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
 jobs:
+  # ─── Verify ────────────────────────────────────────────────────────
   validate:
-    name: Validate Tag
+    name: Validate tag matches crate versions
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - name: Check tag matches Cargo.toml version
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Check tag matches every publishable crate
         run: |
-          CARGO_VERSION="v$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')"
-          TAG="${GITHUB_REF_NAME}"
-          if [ "$CARGO_VERSION" != "$TAG" ]; then
-            echo "::error::Tag ${TAG} does not match Cargo.toml version ${CARGO_VERSION}"
-            exit 1
-          fi
-          echo "Tag ${TAG} matches Cargo.toml version ${CARGO_VERSION}"
+          TAG="${GITHUB_REF_NAME#v}"
+          for crate in rlg rlg-cli rlg-mcp; do
+            CRATE_VERSION=$(
+              grep '^version' "crates/${crate}/Cargo.toml" \
+                | head -1 | sed 's/.*"\(.*\)"/\1/'
+            )
+            echo "${crate}: ${CRATE_VERSION} (tag: ${TAG})"
+            if [ "$CRATE_VERSION" != "$TAG" ]; then
+              echo "::error::${crate} version (${CRATE_VERSION}) does not match tag (${TAG})"
+              exit 1
+            fi
+          done
 
-  publish:
-    name: Publish to Crates.io
+  # ─── CI gate ───────────────────────────────────────────────────────
+  ci:
+    name: Re-run CI on the tagged ref
     needs: [validate]
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
+    with:
+      rust-version: 'stable'
+
+  # ─── Publish to crates.io ──────────────────────────────────────────
+  publish:
+    name: Publish workspace to crates.io
+    needs: [validate, ci]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Publish
+
+      # Crates publish in dependency order. After each publish we
+      # sleep briefly to give the sparse index a chance to catch
+      # the new version before the next dependent crate runs
+      # `cargo publish` (which resolves against the live index).
+      - name: Publish rlg
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish
+        run: |
+          cargo publish --package rlg --locked
+          echo "Waiting for crates.io index to catch up…"
+          sleep 30
+
+      - name: Publish rlg-cli
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo publish --package rlg-cli --locked
+          echo "Waiting for crates.io index to catch up…"
+          sleep 30
+
+      - name: Publish rlg-mcp
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          cargo publish --package rlg-mcp --locked
+
+  # ─── GitHub Release ────────────────────────────────────────────────
+  github-release:
+    name: Create GitHub Release
+    needs: [publish]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create release with auto-generated notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Attach SBOM to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" sbom.spdx.json --clobber
