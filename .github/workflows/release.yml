@@ -79,12 +79,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      # Crates publish in dependency order. After each publish we
-      # sleep briefly to give the sparse index a chance to catch the
-      # new version before the next dependent crate runs `cargo
-      # publish` (which resolves against the live index).
+      # Idempotent publish: each crate is checked against the live
+      # crates.io index first; if `<crate>@<version>` is already
+      # published, the step logs a notice and skips. This makes
+      # `gh run rerun --failed` safe after a partial-publish failure
+      # (e.g. token rotation mid-release): re-running won't error on
+      # the crates that already landed.
       #
-      # The dependency graph:
+      # Dependency-order, with sparse-index sleeps after the two
+      # crates other workspace members depend on:
       #
       #   rlg
       #   ├── rlg-cli ─── rlg-mcp
@@ -94,57 +97,50 @@ jobs:
       #   ├── rlg-test
       #   ├── rlg-tower
       #   └── rlg-wasm
-
-      - name: Publish rlg
+      - name: Publish workspace (idempotent, dependency-ordered)
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          cargo publish --package rlg --locked
-          echo "Waiting for crates.io sparse index…"
-          sleep 30
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
 
-      - name: Publish rlg-cli
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          cargo publish --package rlg-cli --locked
-          echo "Waiting for crates.io sparse index…"
-          sleep 30
+          # publish_or_skip <crate> [sparse_index_sleep_seconds]
+          #
+          # Returns 0 if the crate@VERSION is already on crates.io
+          # (we log and skip) or if `cargo publish` succeeds.
+          # Propagates failure on a real publish error.
+          publish_or_skip() {
+            local crate="$1"
+            local sleep_after="${2:-0}"
+            local url="https://crates.io/api/v1/crates/${crate}/${VERSION}"
+            if curl -sf -o /dev/null "${url}"; then
+              echo "::notice::${crate} ${VERSION} already on crates.io — skipping"
+              return 0
+            fi
+            echo "::group::Publish ${crate} ${VERSION}"
+            cargo publish --package "${crate}" --locked
+            echo "::endgroup::"
+            if [ "${sleep_after}" -gt 0 ]; then
+              echo "Waiting ${sleep_after}s for sparse-index propagation…"
+              sleep "${sleep_after}"
+            fi
+          }
 
-      - name: Publish rlg-otlp
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-otlp --locked
-
-      - name: Publish rlg-redact
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-redact --locked
-
-      - name: Publish rlg-test
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-test --locked
-
-      - name: Publish rlg-tower
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-tower --locked
-
-      - name: Publish rlg-wasm
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-wasm --locked
-
-      - name: Publish rlg-mcp
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-mcp --locked
-
-      - name: Publish rlg-report
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --package rlg-report --locked
+          # 1. rlg first — every other workspace crate depends on it.
+          publish_or_skip rlg 30
+          # 2. rlg-cli second — rlg-mcp and rlg-report depend on it.
+          publish_or_skip rlg-cli 30
+          # 3. Independent of one another; only depend on `rlg`.
+          publish_or_skip rlg-otlp
+          publish_or_skip rlg-redact
+          publish_or_skip rlg-test
+          publish_or_skip rlg-tower
+          publish_or_skip rlg-wasm
+          # 4. Depend on `rlg` + `rlg-cli` — by now the sparse
+          #    index has had 30s + N publish-roundtrips to catch
+          #    both, so no further sleep needed.
+          publish_or_skip rlg-mcp
+          publish_or_skip rlg-report
 
   # ─── GitHub Release ────────────────────────────────────────────────
   github-release:
