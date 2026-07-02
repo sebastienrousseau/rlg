@@ -1,0 +1,52 @@
+name: MCP Protocol Conformance
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "crates/rlg-mcp/**"
+      - "crates/rlg/**"
+      - "crates/rlg-cli/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/mcp-inspect.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "crates/rlg-mcp/**"
+      - "crates/rlg/**"
+      - "crates/rlg-cli/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/mcp-inspect.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: MCP Inspector (tools/list)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target-mcp-inspect"
+          key: mcp-inspect
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build rlg-mcp (release)
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target-mcp-inspect
+        run: cargo build --release -p rlg-mcp
+
+      - name: List tools via MCP Inspector CLI
+        run: |
+          BIN="${{ github.workspace }}/target-mcp-inspect/release/rlg-mcp"
+          npx -y @modelcontextprotocol/inspector --cli "$BIN" --method tools/list

@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1.7
+# SPDX-FileCopyrightText: 2026 RustLogs
+# SPDX-License-Identifier: MIT OR Apache-2.0
+
+# pkg/docker/Dockerfile.mcp — Model Context Protocol server image.
+#
+# The MCP server speaks JSON-RPC over stdio so AI agents (Claude
+# Desktop, Cursor, mcp.run, …) can call log-analysis tools
+# (`tail_log`, `filter_log`, `summarize_errors`) without the agent
+# needing a Rust toolchain.
+
+FROM rust:1.88-bookworm AS build
+
+WORKDIR /src
+COPY . .
+
+ARG SOURCE_DATE_EPOCH
+ENV SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-0}
+ENV RUSTFLAGS="--remap-path-prefix=/src=/build --remap-path-prefix=/usr/local/cargo=/cargo"
+
+RUN cargo build --release --locked \
+    --manifest-path crates/rlg-mcp/Cargo.toml
+
+# ── Runtime stage ────────────────────────────────────────────────
+FROM gcr.io/distroless/cc-debian12:nonroot
+
+LABEL org.opencontainers.image.title="rlg-mcp"
+LABEL org.opencontainers.image.description="MCP server for rlg (RustLogs) — tail, filter, summarise log streams over JSON-RPC stdio."
+LABEL org.opencontainers.image.source="https://github.com/sebastienrousseau/rlg"
+LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
+
+COPY --from=build /src/target/release/rlg-mcp /usr/local/bin/rlg-mcp
+
+USER nonroot:nonroot
+ENTRYPOINT ["/usr/local/bin/rlg-mcp"]
