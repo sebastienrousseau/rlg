@@ -16,12 +16,14 @@ with the official Model Context Protocol Registry (via OCI
 packaging), adds MCP-spec conformance CI, ships a Glama directory
 manifest, and cross-links sibling developer-tools MCP servers.
 
-Per-crate versioning note: this cut is scoped to `rlg-mcp`. When the
-workspace next cuts a full release, the lockstep bump across all 9
-publishable crates (`rlg`, `rlg-cli`, `rlg-mcp`, `rlg-otlp`,
-`rlg-redact`, `rlg-report`, `rlg-test`, `rlg-tower`, `rlg-wasm`) can
-land in a separate PR to keep the review scope tight; the branch
-name `feat/v0.0.11` signals the intended target release cycle.
+Workspace-lockstep versioning: all 9 publishable crates bump from
+`0.0.10` → `0.0.11` (`rlg`, `rlg-cli`, `rlg-mcp`, `rlg-otlp`,
+`rlg-redact`, `rlg-report`, `rlg-test`, `rlg-tower`, `rlg-wasm`).
+`xtask` stays at `0.0.0` per workspace convention. This matches the
+release workflow's "tag matches every publishable crate" check.
+Only `rlg-mcp` has substantive changes in this cut; the other 8
+crates ship no code changes, so existing consumers can upgrade
+without any migration.
 
 ### Added — MCP registry work (rlg-mcp)
 
@@ -66,8 +68,11 @@ name `feat/v0.0.11` signals the intended target release cycle.
   `mcp`, `model-context-protocol`, `observability`, `sre`,
   `claude`, `claude-desktop`, and `ai-agents` (previously empty).
 
-### No functional / API changes
+### No functional / API changes to non-MCP crates
 
-- The `rlg-mcp` binary and the sibling crates continue to work
-  exactly as they did at v0.0.10. This release adds registry
-  metadata, CI, Docker packaging, and discoverability only.
+- Only `rlg-mcp` has substantive changes (the MCP registry work
+  above). The other 8 publishable crates (`rlg`, `rlg-cli`,
+  `rlg-otlp`, `rlg-redact`, `rlg-report`, `rlg-test`, `rlg-tower`,
+  `rlg-wasm`) bump to `0.0.11` as part of the workspace-lockstep
+  cut but ship no code changes — existing consumers can upgrade
+  without any migration.

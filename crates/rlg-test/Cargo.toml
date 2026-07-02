@@ -1,6 +1,6 @@
 [package]
 name = "rlg-test"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -34,7 +34,7 @@ name = "capture"
 path = "examples/capture.rs"
 
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
+rlg = { version = "0.0.11", path = "../rlg" }
 parking_lot = "0.12"
 serde_json = "1.0"
 

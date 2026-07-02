@@ -1,6 +1,6 @@
 [package]
 name = "rlg-tower"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -35,7 +35,7 @@ name = "echo"
 path = "examples/echo.rs"
 
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
+rlg = { version = "0.0.11", path = "../rlg" }
 tower = { version = "0.5", default-features = false }
 tower-layer = "0.3"
 tower-service = "0.3"

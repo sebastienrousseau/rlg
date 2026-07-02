@@ -1,6 +1,6 @@
 [package]
 name = "rlg-report"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -43,8 +43,8 @@ harness = false
 path = "benches/aggregate.rs"
 
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
-rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
+rlg = { version = "0.0.11", path = "../rlg" }
+rlg-cli = { version = "0.0.11", path = "../rlg-cli" }
 clap = { version = "4.6", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
