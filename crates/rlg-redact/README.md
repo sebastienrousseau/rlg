@@ -23,7 +23,7 @@
 
 ```toml
 [dependencies]
-rlg-redact = "0.0.10"
+rlg-redact = "0.0.11"
 ```
 
 ## Usage

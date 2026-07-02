@@ -22,7 +22,7 @@
 
 ```toml
 [dev-dependencies]
-rlg-test = "0.0.10"
+rlg-test = "0.0.11"
 ```
 
 ## Usage

@@ -22,14 +22,14 @@
 
 The core `rlg` crate renders records in `LogFormat::OTLP` shape but only writes them to local sinks (stdout, file, `os_log`, `journald`). To actually *ship* the records to a collector you need a network transport. `rlg-otlp` is that transport.
 
-OTLP/HTTP JSON is the v0.0.10 wire format. Protobuf is on the v0.0.11 roadmap.
+OTLP/HTTP JSON is the v0.0.11 wire format. Protobuf is on the v0.0.12 roadmap.
 
 ## Install
 
 ```toml
 [dependencies]
-rlg       = "0.0.10"
-rlg-otlp  = "0.0.10"
+rlg       = "0.0.11"
+rlg-otlp  = "0.0.11"
 ```
 
 ## Usage

@@ -24,8 +24,8 @@
 
 ```toml
 [dependencies]
-rlg        = "0.0.10"
-rlg-tower  = "0.0.10"
+rlg        = "0.0.11"
+rlg-tower  = "0.0.11"
 ```
 
 ## Quick start (axum)

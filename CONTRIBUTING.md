@@ -44,7 +44,7 @@ Add the same public key to your GitHub account under **Settings → SSH and GPG 
 
 ```bash
 git commit -S -m "feat: …"
-git tag -s v0.0.10 -m "release v0.0.10"
+git tag -s v0.0.11 -m "release v0.0.11"
 ```
 
 Verify a commit:
