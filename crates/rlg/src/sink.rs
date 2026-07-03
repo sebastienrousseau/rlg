@@ -53,7 +53,7 @@ pub enum PlatformSink {
 #[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
 mod syslog_ffi {
-    use std::ffi::CString;
+    use std::ffi::CStr;
     use std::os::raw::{c_char, c_int};
     use std::sync::OnceLock;
 
@@ -83,13 +83,14 @@ mod syslog_ffi {
 
     fn ensure_open() {
         INIT.get_or_init(|| {
-            // Leak a static identifier — its address must remain valid for
-            // the lifetime of the syslog connection (POSIX requirement).
-            let ident: &'static CString =
-                Box::leak(Box::new(CString::new("rlg").unwrap()));
-            // SAFETY: `ident.as_ptr()` is a valid null-terminated string with
+            // POSIX requires the ident pointer to remain valid for the
+            // lifetime of the syslog connection. A `c""` literal is a
+            // `&'static CStr` embedded in the binary — no allocation,
+            // no leak, no fallible construction.
+            const IDENT: &CStr = c"rlg";
+            // SAFETY: `IDENT.as_ptr()` is a valid null-terminated string with
             // a 'static lifetime; LOG_PID + LOG_USER are valid bit flags.
-            unsafe { openlog(ident.as_ptr(), LOG_PID, LOG_USER) };
+            unsafe { openlog(IDENT.as_ptr(), LOG_PID, LOG_USER) };
         });
     }
 
