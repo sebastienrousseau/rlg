@@ -39,7 +39,11 @@ jobs:
       # is orthogonal to those and is not the reason Miri is here.
       # Tests that spawn OS threads or dispatch through FFI still
       # carry `#[cfg_attr(miri, ignore)]`.
-      MIRIFLAGS: "-Zmiri-permissive-provenance -Zmiri-disable-isolation"
+      # `-Zmiri-ignore-leaks` tolerates the intentional global-cache
+      # leaks in `serial_test` (an scc::HashMap of `#[serial]` locks
+      # that never drops on purpose). Aliasing / atomics / UB checks
+      # remain in force.
+      MIRIFLAGS: "-Zmiri-permissive-provenance -Zmiri-disable-isolation -Zmiri-ignore-leaks"
       # Miri is single-threaded; scale test parallelism to match.
       RUST_TEST_THREADS: "1"
     steps:
