@@ -53,8 +53,15 @@ jobs:
       # 30-second budget per target per PR. Any crash lands as a
       # `fuzz/artifacts/<target>/crash-*` file that the job uploads
       # so the crash can be reproduced locally.
+      #
+      # `-C target-feature=-crt-static` disables statically-linked
+      # libc so libFuzzer's sanitizer runtime can be linked.
+      # Required on Ubuntu GHA images (rustup's musl target ships
+      # crt-static enabled by default).
       - name: Run ${{ matrix.target }} for 30s
         working-directory: fuzz
+        env:
+          RUSTFLAGS: "-C target-feature=-crt-static"
         run: |
           cargo +nightly fuzz run "${{ matrix.target }}" \
             -- -max_total_time=30 -print_final_stats=1
