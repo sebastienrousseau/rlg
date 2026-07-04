@@ -50,7 +50,6 @@ struct Cli {
 
 /// CLI-friendly mirror of [`LogFormat`].
 #[derive(Copy, Clone, Debug, ValueEnum)]
-#[allow(missing_docs)]
 enum OutputFormat {
     Clf,
     Cef,
@@ -91,7 +90,6 @@ impl From<OutputFormat> for LogFormat {
 
 /// CLI-friendly mirror of [`LogLevel`].
 #[derive(Copy, Clone, Debug, ValueEnum)]
-#[allow(missing_docs)]
 enum LevelArg {
     Trace,
     Debug,

@@ -1,10 +1,9 @@
+#![allow(missing_docs)]
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
 //! Additional tests for v0.0.7 to achieve >=95% code coverage.
-
-#![allow(missing_docs)]
 
 #[cfg(test)]
 mod tests {

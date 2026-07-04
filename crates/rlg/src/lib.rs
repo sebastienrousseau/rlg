@@ -65,8 +65,11 @@
     clippy::nursery,
     rust_2018_idioms
 )]
-#![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
+// Enable `#[doc(cfg(feature = "…"))]` under docs.rs so feature-gated
+// items advertise the flag that enables them. The `docsrs` cfg is set
+// by `[package.metadata.docs.rs]`.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 /// TOML-based configuration, validation, and hot-reload.
 pub mod config;
@@ -115,6 +118,7 @@ pub use crate::sink::PlatformSink;
 pub use crate::tracing::RlgSubscriber;
 
 #[cfg(feature = "tracing-layer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing-layer")))]
 pub use crate::tracing::RlgLayer;
 
 /// Crate version, injected at compile time.

@@ -1,5 +1,5 @@
-#![cfg(not(miri))]
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 use rlg::engine::{ENGINE, FastSerializer, LockFreeEngine, LogEvent};
 
 #[test]

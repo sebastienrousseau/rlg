@@ -4,8 +4,8 @@
 
 //! End-to-end tests for the `rlg-report` binary.
 
-#![allow(missing_docs)]
 #![cfg(not(miri))]
+#![allow(missing_docs)]
 
 use assert_cmd::Command;
 use predicates::str::contains;

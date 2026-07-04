@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 #![cfg(not(miri))]
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0

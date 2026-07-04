@@ -1,5 +1,5 @@
-#![cfg(not(miri))]
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 #[cfg(test)]
 mod tests {
     use rlg::log::Log;

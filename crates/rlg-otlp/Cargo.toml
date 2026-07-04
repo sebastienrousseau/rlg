@@ -51,7 +51,7 @@ tempfile = "3"
 
 [lints.rust]
 missing_copy_implementations = "warn"
-missing_docs = "warn"
+missing_docs = "deny"
 unsafe_code = "deny"
 unused_extern_crates = "warn"
 missing_debug_implementations = "forbid"

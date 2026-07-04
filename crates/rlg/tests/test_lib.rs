@@ -1,7 +1,7 @@
+#![allow(missing_docs)]
 #![cfg(not(miri))]
 // test_lib.rs
 // Integration tests for rlg
-#![allow(missing_docs)]
 
 use rlg::log::Log;
 use rlg::log_format::LogFormat;

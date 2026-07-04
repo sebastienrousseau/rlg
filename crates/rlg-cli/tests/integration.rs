@@ -10,8 +10,8 @@
 //! which MIRI does not support. The binary's logic is exercised
 //! in-process through `rlg_cli`'s lib tests in `src/lib.rs`.
 
-#![allow(missing_docs)]
 #![cfg(not(miri))]
+#![allow(missing_docs)]
 
 use assert_cmd::Command;
 use predicates::prelude::*;

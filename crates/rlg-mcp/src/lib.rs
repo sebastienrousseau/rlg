@@ -106,35 +106,57 @@ pub fn summarize_errors(
 // ---------------------------------------------------------------------------
 
 /// JSON-RPC 2.0 request envelope.
+///
+/// One `Request` corresponds to a single line on the stdio transport
+/// under MCP's `2025-06-18` protocol revision.
 #[derive(Debug, Deserialize)]
-#[allow(missing_docs)]
 pub struct Request {
+    /// JSON-RPC version marker. Must be the string `"2.0"`.
     pub jsonrpc: String,
+    /// Correlation identifier. Absent for notifications; present for
+    /// method calls that expect a paired [`Response`].
     #[serde(default)]
     pub id: Option<serde_json::Value>,
+    /// Fully-qualified method name (e.g. `"tools/list"`).
     pub method: String,
+    /// Method parameters. Shape is method-specific; unused methods
+    /// receive `Value::Null` after deserialisation.
     #[serde(default)]
     pub params: serde_json::Value,
 }
 
 /// JSON-RPC 2.0 response envelope.
+///
+/// Constructed via [`Response::ok`] or [`Response::err`]; direct
+/// field access is public so downstream code can inspect and log
+/// responses without going through the constructors.
 #[derive(Debug, Serialize)]
-#[allow(missing_docs)]
 pub struct Response {
+    /// JSON-RPC version marker. Always the literal `"2.0"`.
     pub jsonrpc: &'static str,
+    /// Correlation identifier echoed back from the paired
+    /// [`Request`]. `None` for responses to notifications.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<serde_json::Value>,
+    /// Success payload. Mutually exclusive with [`Self::error`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
+    /// Error payload. Mutually exclusive with [`Self::result`].
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ResponseError>,
 }
 
 /// JSON-RPC 2.0 error object.
+///
+/// Populates [`Response::error`] when a method call fails. Codes
+/// follow the JSON-RPC 2.0 reserved range (e.g. `-32603` for
+/// internal errors).
 #[derive(Debug, Serialize)]
-#[allow(missing_docs)]
 pub struct ResponseError {
+    /// Numeric error code. See the JSON-RPC 2.0 spec for reserved
+    /// ranges; rlg-mcp returns `-32_603` for handler failures.
     pub code: i32,
+    /// Human-readable error message.
     pub message: String,
 }
 

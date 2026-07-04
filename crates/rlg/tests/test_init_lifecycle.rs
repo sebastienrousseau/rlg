@@ -6,8 +6,8 @@
 // Skipped under MIRI: `init()` spawns the flusher thread and registers
 // the log/tracing facades, both of which MIRI cannot meaningfully run.
 
-#![allow(missing_docs)]
 #![cfg(not(miri))]
+#![allow(missing_docs)]
 
 use rlg::init;
 use rlg::log_format::LogFormat;

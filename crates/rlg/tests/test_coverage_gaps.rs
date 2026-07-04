@@ -1,5 +1,5 @@
-#![cfg(not(miri))]
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 
 //! Tests specifically targeting uncovered lines identified by cargo-llvm-cov.
 

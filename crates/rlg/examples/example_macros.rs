@@ -8,6 +8,8 @@
 //! This example demonstrates the usage of the fluent API and modern macros
 //! in the RustLogs (RLG) library.
 
+#![allow(missing_docs)]
+
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 
