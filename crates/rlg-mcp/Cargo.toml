@@ -38,6 +38,10 @@ name = "tail"
 harness = false
 path = "benches/tail.rs"
 
+[[example]]
+name = "library_mode"
+path = "examples/library_mode.rs"
+
 [dependencies]
 rlg = { version = "0.0.11", path = "../rlg" }
 rlg-cli = { version = "0.0.11", path = "../rlg-cli" }
