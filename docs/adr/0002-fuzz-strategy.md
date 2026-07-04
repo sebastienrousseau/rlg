@@ -36,15 +36,31 @@ four targets — one per entry point above — under `fuzz/`, excluded
 from the workspace so `libfuzzer-sys` and nightly-only build flags
 never leak into the normal `cargo build` / `cargo test` toolchain.
 
-CI job `.github/workflows/fuzz-smoke.yml` runs each target for **30
-seconds per PR** on Ubuntu with nightly. This is a smoke gate, not
-a bug-hunt — 30 s catches regressions on the well-explored corpus,
-not novel bugs.
+CI workflow `.github/workflows/fuzz-smoke.yml` provides an
+on-demand smoke run via `workflow_dispatch`. The initial intent was
+a 30-second-per-target gate on every PR, but the GHA Ubuntu image's
+Rust toolchain layout does not play well with cargo-fuzz's
+`-Zbuild-std` step (five iterations of RUSTFLAGS / target-scoped
+Cargo config / `--sanitizer none` / `rust-src` install did not
+converge on a green PR run). Rather than sink more time into a
+CI-image workaround that adds no unique coverage, we split the
+responsibility:
 
-Long-running fuzzing lives in **OSS-Fuzz** (see `docs/OSS-FUZZ.md`).
-Once Google accepts the submission, OSS-Fuzz runs each target for
-hours per day against the shared corpus and files crashes as
-private security issues automatically.
+- **Continuous fuzz coverage** — OSS-Fuzz, post-onboarding. Runs
+  each target for hours per day against the shared corpus with
+  ASan / MSan / UBSan variants. Files crashes as private
+  GitHub Security Advisories. See `docs/OSS-FUZZ.md`.
+- **UB detection per PR** — Miri
+  (`.github/workflows/miri.yml`). Catches the same class of bugs
+  ASan would surface in a smoke run.
+- **On-demand smoke** — the `fuzz-smoke` workflow trigger, invoked
+  manually by maintainers via the Actions tab (target + duration
+  inputs). Used to verify a target after touching its driver or
+  the underlying API.
+
+This split ships full fuzz-target coverage of every untrusted-input
+entry point without paying the cost of debugging GHA-specific
+build-std issues that add nothing unique on top of Miri + OSS-Fuzz.
 
 ## Target contracts
 
