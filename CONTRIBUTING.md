@@ -47,6 +47,27 @@ RUSTFLAGS="--cfg loom" cargo test --release --test loom_engine -p rlg -- --nocap
 
 See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-ring-buffer.md) for the model faithfulness argument and what is (and is not) covered.
 
+### Fuzzing (untrusted input)
+
+Four `cargo-fuzz` targets cover the deserialisation and scan entry points that accept untrusted input:
+
+| Target | Exercises |
+|---|---|
+| `parse_record` | `rlg_cli::parse_record` |
+| `log_format_from_str` | `<LogFormat as FromStr>::from_str` |
+| `config_load` | `toml::from_str::<Config>` |
+| `redact_scrub` | `Redactor::with_defaults().scrub` |
+
+CI runs each for 30 s per PR ([`.github/workflows/fuzz-smoke.yml`](.github/workflows/fuzz-smoke.yml)); OSS-Fuzz runs them continuously post-onboarding (see [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md)). To run locally:
+
+```bash
+cargo install cargo-fuzz --locked
+cd fuzz
+cargo +nightly fuzz run parse_record -- -max_total_time=30
+```
+
+Fuzz targets live under [`fuzz/`](fuzz/), which is deliberately excluded from the workspace so `libfuzzer-sys` and nightly-only build flags never leak into normal `cargo build` / `cargo test`. Strategy and corpus policy in [`docs/adr/0002-fuzz-strategy.md`](docs/adr/0002-fuzz-strategy.md).
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.

@@ -1,0 +1,68 @@
+name: Fuzz Smoke
+
+on:
+  pull_request:
+    paths:
+      - "crates/rlg/**"
+      - "crates/rlg-cli/**"
+      - "crates/rlg-redact/**"
+      - "fuzz/**"
+      - ".github/workflows/fuzz-smoke.yml"
+  push:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: cargo-fuzz smoke (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - parse_record
+          - log_format_from_str
+          - config_load
+          - redact_scrub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: fuzz-smoke
+          workspaces: fuzz -> target
+          cache-on-failure: true
+
+      # 30-second budget per target per PR. Any crash lands as a
+      # `fuzz/artifacts/<target>/crash-*` file that the job uploads
+      # so the crash can be reproduced locally.
+      - name: Run ${{ matrix.target }} for 30s
+        working-directory: fuzz
+        run: |
+          cargo +nightly fuzz run "${{ matrix.target }}" \
+            -- -max_total_time=30 -print_final_stats=1
+
+      - name: Upload crash artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore
