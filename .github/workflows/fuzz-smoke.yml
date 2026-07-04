@@ -37,8 +37,13 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Install nightly toolchain
+      # `rust-src` is required because cargo-fuzz builds with
+      # `-Zbuild-std` to recompile `std` against the sanitizer
+      # runtime.
+      - name: Install nightly toolchain with rust-src
         uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
 
       - uses: taiki-e/install-action@v2
         with:
