@@ -1623,6 +1623,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
+ "criterion",
  "predicates",
  "rlg",
  "serde_json",
@@ -1634,6 +1635,7 @@ name = "rlg-mcp"
 version = "0.0.11"
 dependencies = [
  "anyhow",
+ "criterion",
  "rlg",
  "rlg-cli",
  "serde",
@@ -1684,6 +1686,7 @@ dependencies = [
 name = "rlg-test"
 version = "0.0.11"
 dependencies = [
+ "criterion",
  "parking_lot",
  "rlg",
  "serde_json",
@@ -1693,6 +1696,7 @@ dependencies = [
 name = "rlg-tower"
 version = "0.0.11"
 dependencies = [
+ "criterion",
  "http",
  "http-body-util",
  "pin-project-lite",
@@ -1707,6 +1711,7 @@ dependencies = [
 name = "rlg-wasm"
 version = "0.0.11"
 dependencies = [
+ "criterion",
  "rlg",
  "serde_json",
  "wasm-bindgen",
