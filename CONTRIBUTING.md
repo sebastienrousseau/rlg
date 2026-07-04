@@ -25,6 +25,18 @@ cargo bench --bench competitive_bench                          # perf-sensitive 
 
 On macOS, run integration tests with `RLG_FALLBACK_STDOUT=1` to bypass the `os_log` FFI dispatch when not needed.
 
+### Miri (undefined-behaviour check)
+
+The ring-buffer hot path in `crates/rlg/src/engine.rs` and the syslog FFI in `crates/rlg/src/sink.rs` are covered by [Miri](https://github.com/rust-lang/miri) on every PR that touches `crates/rlg/**` (via [`.github/workflows/miri.yml`](.github/workflows/miri.yml)). To run it locally:
+
+```bash
+rustup toolchain install nightly --component miri rust-src
+cargo +nightly miri setup
+MIRIFLAGS="-Zmiri-permissive-provenance" cargo +nightly miri test -p rlg --lib --all-features
+```
+
+Tests that legitimately cannot run under Miri (thread spawns, file I/O, FFI dispatch to `syslog(3)`) carry `#[cfg_attr(miri, ignore)]`. When adding such a test, apply the attribute rather than tightening the workflow.
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.
