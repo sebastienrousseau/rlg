@@ -125,6 +125,18 @@ catch UB in the ring-buffer hot path and the `sink.rs` FFI boundary.
   in Phase 4 (`rlg-mcp`, `rlg-redact`, `rlg-test`, `rlg-otlp`) and add the
   same attr where needed.
 
+> **Implementation note (post-first-run).** The initial plan intended to
+> forgo `-Zmiri-disable-isolation` and rely entirely on
+> `#[cfg_attr(miri, ignore)]` gates. First-run CI surfaced that ~20 inline
+> tests in `config.rs`, `sink.rs`, `init.rs`, `rotation.rs`,
+> `datetime.rs`, and `tui.rs` legitimately touch env / clock / fs, and
+> per-test gating would exclude them from Miri entirely or impose an
+> ongoing maintenance cost. The workflow now sets
+> `MIRIFLAGS="-Zmiri-permissive-provenance -Zmiri-disable-isolation"`.
+> Miri retains all memory-safety, aliasing, and atomic-ordering checks;
+> only the OS-isolation model is relaxed. Tests that spawn OS threads or
+> dispatch through `syslog(3)` FFI still carry `#[cfg_attr(miri, ignore)]`.
+
 **Public API.** None.
 
 **Tests.** Every test that stays inside a single thread and does not open a
