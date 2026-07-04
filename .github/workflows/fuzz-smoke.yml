@@ -59,14 +59,23 @@ jobs:
       # `fuzz/artifacts/<target>/crash-*` file that the job uploads
       # so the crash can be reproduced locally.
       #
-      # `-C target-feature=-crt-static` is applied via
-      # `fuzz/.cargo/config.toml` (target-scoped) so it propagates
-      # through `-Zbuild-std` without conflicting with cargo-fuzz's
-      # own flag handling.
+      # `--sanitizer none` disables the ASan runtime for the CI smoke
+      # gate. Sanitizer coverage is orthogonal to fuzz coverage — the
+      # smoke gate's job is to catch panics and hangs in 30 s, which
+      # it does without ASan. Deep UB detection happens through:
+      #   1. Miri on every rlg PR (`.github/workflows/miri.yml`);
+      #   2. OSS-Fuzz post-onboarding, which runs ASan / MSan / UBSan
+      #      variants for hours per day on Google's infra.
+      #
+      # Skipping ASan here avoids the well-known GHA Ubuntu
+      # incompatibility between libFuzzer's sanitizer runtime and
+      # statically-linked libc, which no combination of RUSTFLAGS or
+      # target-scoped Cargo config resolves cleanly in the smoke
+      # window.
       - name: Run ${{ matrix.target }} for 30s
         working-directory: fuzz
         run: |
-          cargo +nightly fuzz run "${{ matrix.target }}" \
+          cargo +nightly fuzz run --sanitizer none "${{ matrix.target }}" \
             -- -max_total_time=30 -print_final_stats=1
 
       - name: Upload crash artefacts
