@@ -37,6 +37,16 @@ MIRIFLAGS="-Zmiri-permissive-provenance" cargo +nightly miri test -p rlg --lib -
 
 Tests that legitimately cannot run under Miri (thread spawns, file I/O, FFI dispatch to `syslog(3)`) carry `#[cfg_attr(miri, ignore)]`. When adding such a test, apply the attribute rather than tightening the workflow.
 
+### Loom (concurrency proofs)
+
+The producer/flusher shutdown handshake and `session_id` monotonicity are exhaustively verified by Loom on every PR that touches `crates/rlg/src/engine.rs` or the proofs themselves (via [`.github/workflows/loom.yml`](.github/workflows/loom.yml)). To run the proofs locally:
+
+```bash
+RUSTFLAGS="--cfg loom" cargo test --release --test loom_engine -p rlg -- --nocapture --test-threads=1
+```
+
+See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-ring-buffer.md) for the model faithfulness argument and what is (and is not) covered.
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.

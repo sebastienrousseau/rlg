@@ -102,6 +102,11 @@ tokio-test = "0.4.5"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
+# Loom concurrency proofs — only compiled under `--cfg loom`, see
+# `tests/loom_engine.rs` and `.github/workflows/loom.yml`.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7"
+
 [features]
 default = []
 debug_enabled = []
@@ -123,6 +128,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [lints.rust]
 missing_copy_implementations = "warn"
 missing_docs = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(docsrs)'] }
 unstable_features = "warn"
 unused_extern_crates = "warn"
 
