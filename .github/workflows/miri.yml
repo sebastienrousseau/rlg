@@ -27,11 +27,19 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     env:
-      # `-Zmiri-permissive-provenance` allows int-to-ptr casts that
-      # `crossbeam-queue::ArrayQueue` performs on the atomic tag path.
-      # `-Zmiri-disable-isolation` is deliberately NOT set: tests that
-      # need clock/env/fs already carry `#[cfg_attr(miri, ignore)]`.
-      MIRIFLAGS: "-Zmiri-permissive-provenance"
+      # `-Zmiri-permissive-provenance` allows the int-to-ptr casts
+      # that `crossbeam-queue::ArrayQueue` performs on the atomic tag
+      # path.
+      #
+      # `-Zmiri-disable-isolation` grants clock / env / fs access to
+      # the ~20 inline tests in `config.rs`, `sink.rs`, `init.rs`,
+      # `rotation.rs`, `datetime.rs`, and `tui.rs` that legitimately
+      # touch those interfaces. Miri retains full memory-safety,
+      # aliasing, and atomic-ordering checks — the isolation model
+      # is orthogonal to those and is not the reason Miri is here.
+      # Tests that spawn OS threads or dispatch through FFI still
+      # carry `#[cfg_attr(miri, ignore)]`.
+      MIRIFLAGS: "-Zmiri-permissive-provenance -Zmiri-disable-isolation"
       # Miri is single-threaded; scale test parallelism to match.
       RUST_TEST_THREADS: "1"
     steps:
