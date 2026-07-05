@@ -48,7 +48,7 @@ enum Task {
     /// recommended release-checklist next steps. Does **not** push,
     /// tag, or call `cargo publish`.
     Release {
-        /// New version, e.g. `0.0.10`.
+        /// New version, e.g. `0.0.11`.
         new: String,
     },
 }

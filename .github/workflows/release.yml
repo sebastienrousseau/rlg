@@ -37,6 +37,7 @@ jobs:
           for crate in \
               rlg \
               rlg-cli \
+              rlg-ebpf \
               rlg-mcp \
               rlg-otlp \
               rlg-redact \
@@ -131,6 +132,7 @@ jobs:
           # 2. rlg-cli second — rlg-mcp and rlg-report depend on it.
           publish_or_skip rlg-cli 30
           # 3. Independent of one another; only depend on `rlg`.
+          publish_or_skip rlg-ebpf
           publish_or_skip rlg-otlp
           publish_or_skip rlg-redact
           publish_or_skip rlg-test
@@ -166,14 +168,65 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Generate SBOM (SPDX)
+      # ─── SBOMs (SPDX + CycloneDX) ──────────────────────────────
+      # Two formats because:
+      # - SPDX is the OSS default consumers expect;
+      # - CycloneDX is the EU Cyber Resilience Act (CRA) baseline
+      #   most enterprise procurement RFPs will demand from 2026 on.
+
+      - name: Generate workspace SBOM (SPDX)
         uses: anchore/sbom-action@v0
         with:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
 
-      - name: Attach SBOM to release
+      - name: Generate workspace SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+
+      # ─── Sigstore / cosign signatures ───────────────────────────
+      # Keyless signing via GitHub Actions OIDC. No maintainer key
+      # material stored anywhere — the workflow's `id-token: write`
+      # permission is the trust anchor. Signature + certificate
+      # bundles land alongside the SBOMs on the release page.
+      #
+      # Consumers verify with:
+      #   cosign verify-blob \
+      #     --certificate sbom.spdx.json.crt \
+      #     --signature sbom.spdx.json.sig \
+      #     --certificate-identity-regexp 'https://github.com/sebastienrousseau/rlg/.github/workflows/release.yml@refs/tags/v[0-9]+.*' \
+      #     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      #     sbom.spdx.json
+      #
+      # See `pkg/VERIFY.md` for the full consumer runbook.
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign SBOMs with cosign (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          for f in sbom.spdx.json sbom.cyclonedx.json; do
+            cosign sign-blob --yes \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.crt" \
+              "$f"
+          done
+
+      - name: Attach SBOMs + signatures to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${GITHUB_REF_NAME}" sbom.spdx.json --clobber
+        run: |
+          gh release upload "${GITHUB_REF_NAME}" \
+            sbom.spdx.json \
+            sbom.spdx.json.sig \
+            sbom.spdx.json.crt \
+            sbom.cyclonedx.json \
+            sbom.cyclonedx.json.sig \
+            sbom.cyclonedx.json.crt \
+            --clobber

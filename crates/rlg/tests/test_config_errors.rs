@@ -1,5 +1,5 @@
-#![cfg(not(miri))]
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 #![allow(deprecated)]
 #[cfg(test)]
 mod tests {

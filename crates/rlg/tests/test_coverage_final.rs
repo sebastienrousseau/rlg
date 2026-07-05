@@ -9,8 +9,8 @@
 // sink, the `notify` watcher in config tests), which MIRI flags as
 // foreign-memory leaks even though stable runs are clean.
 
-#![allow(missing_docs)]
 #![cfg(not(miri))]
+#![allow(missing_docs)]
 
 use rlg::error::{RlgError, RlgResult};
 use rlg::log::Log;

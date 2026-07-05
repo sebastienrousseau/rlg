@@ -25,4 +25,8 @@ fn main() {
         "db timeout",
         Some(r#"{"db":"primary","elapsed_ms":5012}"#.to_string()),
     );
+    logger.debug(
+        "cache miss — key not in local shard",
+        Some(r#"{"cache":"local","key":"session:abc"}"#.to_string()),
+    );
 }

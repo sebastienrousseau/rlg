@@ -1,5 +1,5 @@
-#![cfg(not(miri))]
 #![allow(missing_docs)]
+#![cfg(not(miri))]
 use rlg::sink::PlatformSink;
 use rlg::tui::{TuiMetrics, spawn_tui_thread};
 use std::sync::Arc;

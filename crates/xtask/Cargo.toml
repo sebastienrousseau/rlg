@@ -16,6 +16,6 @@ anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 
 [lints.rust]
-missing_docs = "warn"
+missing_docs = "deny"
 unsafe_code = "deny"
 unreachable_pub = "forbid"

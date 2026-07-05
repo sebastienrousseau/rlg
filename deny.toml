@@ -1,5 +1,12 @@
+# cargo-deny policy for the rlg workspace.
+#
+# See `docs/adr/0007-cargo-deny-hardened.md` for the rationale
+# behind each policy tightening.
+
 [licenses]
-# List of allowed licenses for dependencies
+# Every license the transitive tree may carry. Anything else fails
+# the build. Enterprise adopters diff this list against their own
+# licence policy.
 allow = [
     "MIT",
     "Apache-2.0",
@@ -14,19 +21,64 @@ allow = [
 ]
 
 [bans]
-# Lint level for when multiple versions of the same crate are detected
-multiple-versions = "warn"
-
-# The graph highlighting used when creating dotgraphs for crates with multiple versions
-# Options: "lowest-version", "simplest-path", "all"
+# Duplicate versions are now a hard error. Every skip below carries
+# a documented reason and a link to the upstream tracker where
+# available.
+multiple-versions = "deny"
 highlight = "all"
 
-# Certain crates/versions that will be skipped when doing duplicate detection.
-skip = []
+# Wildcard-version dependencies are disallowed workspace-wide.
+# `Cargo.toml` must pin each dep to a concrete version range.
+wildcards = "deny"
 
-# Similarly to `skip` allows you to skip certain crates during duplicate detection, unlike skip, it also includes the entire tree of transitive dependencies starting at the specified crate, up to a certain depth, which is by default infinite
+# Documented duplicate exemptions. Each entry must justify itself —
+# not a dumping ground.
+skip = [
+    # The `config` crate (0.15.x) pulls in toml 0.8 + its
+    # supporting parser stack, while rlg's flagship uses toml 1.x
+    # directly. Two versions coexist until config upgrades.
+    # Tracked: https://github.com/mehcode/config-rs/issues (open)
+    { name = "toml", version = "0.8.*" },
+    { name = "toml_datetime", version = "0.6.*" },
+    { name = "serde_spanned", version = "0.6.*" },
+    { name = "winnow", version = "0.7.*" },
+
+    # `hashbrown` duplicates cascade through the whole ecosystem
+    # (indexmap, config, criterion). Ubiquitous transitively;
+    # unavoidable until every upstream converges on hashbrown 0.16.
+    { name = "hashbrown", version = "0.14.*" },
+]
+
 skip-tree = []
 
+# Preventive bans. None of these are currently in the tree; the
+# entries here guard against future transitive addition through a
+# careless dep bump. If a bump ever wants one of these in, it will
+# fail CI and force an explicit discussion.
+deny = [
+    # OpenSSL FFI. rlg's `rlg-otlp` uses `rustls` and we intend to
+    # keep it that way — statically-linked libssl on the target host
+    # is a supply-chain footgun.
+    { name = "openssl-sys" },
+    { name = "native-tls" },
+
+    # `chrono` has a history of breakage and a large-attack-surface
+    # C locale path. rlg uses `jiff` or in-house datetime helpers
+    # (`crates/rlg/src/datetime.rs`). Any transitive chrono
+    # introduction is worth pausing over.
+    { name = "chrono" },
+]
+
+[sources]
+# Every dep must come from crates.io. No git, no path-outside-
+# workspace, no alternate registries. Workspace-local path deps
+# (crates/rlg-*) are automatically allowed and don't need an
+# explicit whitelist entry.
+unknown-registry = "deny"
+unknown-git = "deny"
+
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+
 [advisories]
-# List of advisory IDs to ignore
 ignore = []

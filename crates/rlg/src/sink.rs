@@ -39,6 +39,23 @@ pub enum PlatformSink {
     OsLog,
     /// Systemd Journald socket on Linux.
     Journald(Option<UnixDatagram>),
+    /// Linux `io_uring`-backed file sink. Enabled with the `uring`
+    /// feature. Only compiles on Linux — see
+    /// `docs/adr/0011-io-uring-file-sink.md` for the current
+    /// implementation status.
+    ///
+    /// The variant currently stores the underlying `File` and
+    /// delegates writes to the standard synchronous path; the
+    /// `io_uring` submission-queue integration lands in Phase 20.1.
+    /// Consumers can already select this variant to future-proof
+    /// their sink pipeline, and the `io-uring` dependency is
+    /// resolved so the SQE wiring is drop-in.
+    #[cfg(all(target_os = "linux", feature = "uring"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(target_os = "linux", feature = "uring")))
+    )]
+    UringFile(std::fs::File),
 }
 
 /// POSIX `syslog(3)` bindings.
@@ -53,7 +70,7 @@ pub enum PlatformSink {
 #[cfg(target_os = "macos")]
 #[allow(unsafe_code)]
 mod syslog_ffi {
-    use std::ffi::CString;
+    use std::ffi::CStr;
     use std::os::raw::{c_char, c_int};
     use std::sync::OnceLock;
 
@@ -83,13 +100,14 @@ mod syslog_ffi {
 
     fn ensure_open() {
         INIT.get_or_init(|| {
-            // Leak a static identifier — its address must remain valid for
-            // the lifetime of the syslog connection (POSIX requirement).
-            let ident: &'static CString =
-                Box::leak(Box::new(CString::new("rlg").unwrap()));
-            // SAFETY: `ident.as_ptr()` is a valid null-terminated string with
+            // POSIX requires the ident pointer to remain valid for the
+            // lifetime of the syslog connection. A `c""` literal is a
+            // `&'static CStr` embedded in the binary — no allocation,
+            // no leak, no fallible construction.
+            const IDENT: &CStr = c"rlg";
+            // SAFETY: `IDENT.as_ptr()` is a valid null-terminated string with
             // a 'static lifetime; LOG_PID + LOG_USER are valid bit flags.
-            unsafe { openlog(ident.as_ptr(), LOG_PID, LOG_USER) };
+            unsafe { openlog(IDENT.as_ptr(), LOG_PID, LOG_USER) };
         });
     }
 
@@ -202,6 +220,19 @@ impl PlatformSink {
                     socket_opt.as_ref(),
                 );
             }
+            #[cfg(all(target_os = "linux", feature = "uring"))]
+            Self::UringFile(f) => {
+                // Phase 20 scaffold: delegates to the sync write
+                // path for correctness. Phase 20.1 wires up the
+                // io_uring submission queue for zero-copy
+                // batched writes. Consumers who need the io_uring
+                // performance profile today can construct their
+                // own SQE loop against the underlying `File`
+                // via the `io-uring` crate — the feature already
+                // resolves the dep.
+                let _ = f.write_all(payload);
+                let _ = f.write_all(b"\n");
+            }
         }
     }
 
@@ -307,6 +338,22 @@ mod tests {
     fn test_platform_sink_stdout() {
         let mut sink = PlatformSink::Stdout;
         sink.emit("INFO", b"test stdout");
+    }
+
+    /// `UringFile` variant scaffold — currently delegates to the
+    /// sync write path. Test verifies the variant compiles,
+    /// constructs from a real `File`, and successfully emits.
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[cfg(all(target_os = "linux", feature = "uring"))]
+    fn test_platform_sink_uring_file_scaffold_emits() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let file = tmp.reopen().unwrap();
+        let mut sink = PlatformSink::UringFile(file);
+        sink.emit("INFO", b"uring scaffold test");
+        // Read back the file and confirm the payload landed.
+        let contents = std::fs::read_to_string(tmp.path()).unwrap();
+        assert!(contents.contains("uring scaffold test"));
     }
 
     #[test]

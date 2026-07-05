@@ -1,0 +1,18 @@
+# Fuzz-target rustflags.
+#
+# libFuzzer's sanitizer runtime cannot be linked against a
+# statically-linked libc. Ubuntu GHA images ship the Rust
+# toolchain with `crt-static` enabled by default for some paths;
+# `-C target-feature=-crt-static` opts back to dynamic libc for the
+# fuzz binaries.
+#
+# Applying this via `[target.<triple>]` rather than an environment
+# `RUSTFLAGS=` ensures the flag propagates through `-Zbuild-std` to
+# std's rebuild without being overridden by cargo-fuzz's own flag
+# handling.
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-C", "target-feature=-crt-static"]
+
+[target.aarch64-unknown-linux-gnu]
+rustflags = ["-C", "target-feature=-crt-static"]

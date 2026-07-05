@@ -13,8 +13,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/sebastienrousseau/rlg/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/ci.yml?style=for-the-badge&logo=github" alt="Build" /></a>
   <a href="https://crates.io/crates/rlg-report"><img src="https://img.shields.io/crates/v/rlg-report.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/rlg-report"><img src="https://img.shields.io/badge/docs.rs-rlg--report-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
+  <a href="https://lib.rs/crates/rlg-report"><img src="https://img.shields.io/badge/lib.rs-rlg--report-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
 </p>
 
 ---
@@ -24,6 +27,8 @@
 ```bash
 cargo install rlg-report
 ```
+
+Requires Rust **1.88.0** or newer (edition 2024).
 
 ## CLI
 

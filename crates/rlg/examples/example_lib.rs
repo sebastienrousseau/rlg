@@ -8,6 +8,8 @@
 //! This example demonstrates the usage of the RustLogs (RLG) library,
 //! including creating log entries, formatting logs, and using the fluent API.
 
+#![allow(missing_docs)]
+
 use rlg::VERSION;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;

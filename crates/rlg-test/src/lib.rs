@@ -26,9 +26,9 @@
 //!    the handle via the `log_to` extension method or `capture.push()`.
 //!    Works regardless of the global engine state.
 //!
-//! 2. **Global capture** (not implemented in v0.0.10) — install the
+//! 2. **Global capture** (not implemented in v0.0.11) — install the
 //!    handle as the engine's sink for the test scope. Tracked under
-//!    the v0.0.11 roadmap; deferred so this crate doesn't reach into
+//!    the v0.0.12 roadmap; deferred so this crate doesn't reach into
 //!    `rlg`'s engine internals.
 
 #![forbid(unsafe_code)]

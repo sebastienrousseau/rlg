@@ -1,0 +1,77 @@
+name: Bench Publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: bench-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bench:
+    name: cargo criterion
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-criterion
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: bench-publish
+          cache-on-failure: true
+
+      # cargo-criterion emits HTML reports under target/criterion.
+      # These reports are the artefact promised at
+      # rustlogs.com/bench/<tag>/. Publication to the site is
+      # handled out-of-band by the maintainer (site build pipeline
+      # not in this repo).
+      - name: Run every workspace bench
+        env:
+          RLG_FALLBACK_STDOUT: "1"
+        run: |
+          set -euo pipefail
+          for manifest in crates/*/Cargo.toml; do
+            crate="$(basename "$(dirname "$manifest")")"
+            # xtask has no benches; skip.
+            [ "$crate" = "xtask" ] && continue
+            # Some crates may have no [[bench]] entries — skip
+            # silently.
+            if ! grep -q '\[\[bench\]\]' "$manifest"; then
+              continue
+            fi
+            echo "::group::${crate}: cargo criterion"
+            cargo criterion --manifest-path "$manifest" \
+              --message-format=json > "target/criterion-${crate}.jsonl" \
+              || echo "::warning::${crate} bench failed — non-fatal on publish"
+            echo "::endgroup::"
+          done
+
+      - name: Upload Criterion HTML report bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-${{ github.ref_name }}
+          path: target/criterion/
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Upload machine-readable summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: criterion-summary-${{ github.ref_name }}
+          path: target/criterion-*.jsonl
+          if-no-files-found: warn
+          retention-days: 90

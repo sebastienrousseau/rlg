@@ -6,12 +6,28 @@
 //!
 //! Wrap a [`rlg::log::Log`] with [`Redactor::scrub`] before firing
 //! it. Every string field (description + every string attribute
-//! value) is run through a chain of regex patterns; matches are
-//! replaced with the configured marker (default `"[REDACTED]"`).
+//! value) is scanned once against a **fused alternation of all
+//! loaded patterns**; matches are replaced with the configured
+//! marker (default `"[REDACTED]"`).
 //!
 //! Built-in patterns cover the common PII / secret classes that
 //! show up in log streams. Add custom patterns with
 //! [`Redactor::with_pattern`].
+//!
+//! # Performance model
+//!
+//! Every mutator ([`Redactor::with_defaults`], [`Redactor::with_pattern`])
+//! compiles all currently-loaded patterns into a single `Regex`
+//! alternation. `scrub` performs one `replace_all` pass instead of
+//! `N` (once per pattern) — the DFA engine handles the union
+//! internally. Result: single-pass throughput, no repeated
+//! traversal of the input string.
+//!
+//! The compilation cost is amortised at construction. Constructing
+//! [`Redactor::with_defaults`] is O(1) past the first call via a
+//! process-lifetime `LazyLock`. Ad-hoc `with_pattern` chains
+//! recompile the fused regex at each step; if you compose many
+//! patterns, build the full chain once and reuse the redactor.
 //!
 //! # Example
 //!
@@ -64,25 +80,51 @@ pub const IPV4: &str = r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b";
 pub const AWS_ACCESS_KEY: &str =
     r"\b(?:AKIA|ASIA|AGPA|ANPA|ANVA|AROA|AIPA)[A-Z0-9]{16}\b";
 
-/// Shared, process-lifetime compiled forms of every [built-in
-/// pattern](self#built-in-patterns). Used by
-/// [`Redactor::with_defaults`] so repeated default-redactor
-/// construction in hot paths doesn't recompile six regexes per call.
-static BUILTIN_REGEXES: LazyLock<Vec<Regex>> = LazyLock::new(|| {
-    [CREDIT_CARD, JWT, BEARER_TOKEN, EMAIL, IPV4, AWS_ACCESS_KEY]
-        .into_iter()
-        .map(|p| Regex::new(p).expect("built-in regex must compile"))
-        .collect()
+/// Source strings of the six built-in patterns, in the order they
+/// are fused into the default alternation.
+const DEFAULT_SOURCES: [&str; 6] =
+    [CREDIT_CARD, JWT, BEARER_TOKEN, EMAIL, IPV4, AWS_ACCESS_KEY];
+
+/// Process-lifetime fused alternation of every built-in pattern.
+/// Amortises compilation to a single first-touch cost regardless of
+/// how many times [`Redactor::with_defaults`] is called.
+static DEFAULT_COMBINED: LazyLock<Regex> = LazyLock::new(|| {
+    build_combined(&DEFAULT_SOURCES)
+        .expect("built-in patterns must compile as an alternation")
 });
+
+/// Build a fused alternation `(?:p1)|(?:p2)|…|(?:pN)`. Individual
+/// patterns are wrapped in non-capturing groups so the top-level
+/// alternation composes cleanly regardless of internal grouping.
+fn build_combined<S: AsRef<str>>(
+    sources: &[S],
+) -> Result<Regex, regex::Error> {
+    debug_assert!(!sources.is_empty(), "must not build from empty set");
+    let alternation = sources
+        .iter()
+        .map(|p| format!("(?:{})", p.as_ref()))
+        .collect::<Vec<_>>()
+        .join("|");
+    Regex::new(&alternation)
+}
 
 // ---------------------------------------------------------------------------
 // Redactor.
 // ---------------------------------------------------------------------------
 
-/// A compiled chain of regex patterns + a replacement marker.
+/// A fused-alternation redactor: one regex, one pass, N patterns.
+///
+/// See the crate-level docs for the performance model.
 #[derive(Debug, Clone)]
 pub struct Redactor {
-    patterns: Vec<Regex>,
+    /// Source patterns kept for [`len`](Self::len) reporting and
+    /// re-composition when a new pattern is appended.
+    sources: Vec<String>,
+    /// Fused alternation of `sources`. `None` when `sources` is
+    /// empty — the fast path returns the input unchanged without
+    /// touching the regex engine.
+    combined: Option<Regex>,
+    /// Replacement marker.
     marker: String,
 }
 
@@ -98,7 +140,8 @@ impl Redactor {
     #[must_use]
     pub fn empty() -> Self {
         Self {
-            patterns: Vec::new(),
+            sources: Vec::new(),
+            combined: None,
             marker: DEFAULT_MARKER.to_string(),
         }
     }
@@ -106,19 +149,27 @@ impl Redactor {
     /// Construct a redactor pre-loaded with every built-in pattern:
     /// credit card, JWT, OAuth bearer, email, IPv4, AWS key.
     ///
-    /// The built-in regexes are compiled once per process via
-    /// `LazyLock` and shared (`Arc`-cloned in effect since `Regex` is
-    /// `Clone` over an inner `Arc`). Constructing a default redactor
-    /// is O(`builtins.len()`) and allocation-free past the first call.
+    /// All six patterns are fused into a single alternation regex
+    /// at process start-up (via [`LazyLock`]). Subsequent calls to
+    /// this constructor clone the cached `Regex` — construction is
+    /// O(1) past the first call.
     #[must_use]
     pub fn with_defaults() -> Self {
         Self {
-            patterns: BUILTIN_REGEXES.clone(),
+            sources: DEFAULT_SOURCES
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect(),
+            combined: Some(DEFAULT_COMBINED.clone()),
             marker: DEFAULT_MARKER.to_string(),
         }
     }
 
     /// Append a custom regex pattern.
+    ///
+    /// The pattern is validated in isolation before being fused into
+    /// the combined alternation, so a compile error surfaces the
+    /// specific bad pattern rather than the fused string.
     ///
     /// # Errors
     /// Returns [`regex::Error`] if the pattern fails to compile.
@@ -126,7 +177,14 @@ impl Redactor {
         mut self,
         pattern: &str,
     ) -> Result<Self, regex::Error> {
-        self.patterns.push(Regex::new(pattern)?);
+        // Validate the standalone pattern first — surfaces a
+        // targeted error message.
+        let _ = Regex::new(pattern)?;
+        self.sources.push(pattern.to_string());
+        // Recompile the fused alternation. Individual patterns are
+        // known-valid; alternation should compile unless the user
+        // exceeds regex-engine size limits, which we surface too.
+        self.combined = Some(build_combined(&self.sources)?);
         Ok(self)
     }
 
@@ -149,14 +207,19 @@ impl Redactor {
         log
     }
 
-    /// Apply every pattern to a single string.
+    /// Apply the fused pattern to a single string.
+    ///
+    /// One `replace_all` pass through the regex DFA replaces every
+    /// match — regardless of which pattern each match originates
+    /// from — with the configured marker.
+    #[must_use]
     pub fn apply(&self, input: &str) -> String {
-        let mut out = input.to_string();
-        for re in &self.patterns {
-            out =
-                re.replace_all(&out, self.marker.as_str()).into_owned();
+        match &self.combined {
+            None => input.to_string(),
+            Some(re) => {
+                re.replace_all(input, self.marker.as_str()).into_owned()
+            }
         }
-        out
     }
 
     fn scrub_value(&self, v: Value) -> Value {
@@ -180,13 +243,13 @@ impl Redactor {
     /// How many patterns are loaded.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.patterns.len()
+        self.sources.len()
     }
 
     /// Returns `true` if no patterns are loaded.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.patterns.is_empty()
+        self.sources.is_empty()
     }
 }
 
@@ -316,5 +379,68 @@ mod tests {
         assert_eq!(r.len(), 6);
         assert!(!r.is_empty());
         assert!(Redactor::empty().is_empty());
+    }
+
+    // ---- Fusion-boundary regression tests (Phase 17) -----------------
+
+    #[test]
+    fn fusion_scans_all_pattern_kinds_in_one_pass() {
+        // Every built-in pattern class appears once in a single
+        // input. A per-pattern loop would iterate the input six
+        // times; the fused alternation touches it once.
+        let r = Redactor::with_defaults();
+        let out = r.apply(
+            "cc 4111-1111-1111-1111, jwt \
+             eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcd, \
+             Bearer xyz.abc, alice@example.com, 10.0.0.1, \
+             AKIAIOSFODNN7EXAMPLE",
+        );
+        for needle in [
+            "4111",
+            "eyJhbGciOiJIUzI1NiJ9",
+            "xyz.abc",
+            "alice@example.com",
+            "10.0.0.1",
+            "AKIAIOSFODNN7EXAMPLE",
+        ] {
+            assert!(
+                !out.contains(needle),
+                "fusion missed {needle:?} in output {out:?}"
+            );
+        }
+        assert!(out.matches("[REDACTED]").count() >= 6);
+    }
+
+    #[test]
+    fn fusion_prefers_leftmost_match_across_pattern_kinds() {
+        // The fused regex uses leftmost-first semantics, so the
+        // whole sensitive span is replaced with a single marker per
+        // longest match — one marker per distinct span.
+        let r = Redactor::empty()
+            .with_pattern(CREDIT_CARD)
+            .unwrap()
+            .with_pattern(IPV4)
+            .unwrap();
+        let out = r.apply("card 4111-1111-1111-1111 from 10.0.0.1");
+        assert!(!out.contains("4111"));
+        assert!(!out.contains("10.0.0.1"));
+        assert_eq!(out.matches("[REDACTED]").count(), 2);
+    }
+
+    #[test]
+    fn fusion_compiles_alternation_from_chained_with_pattern() {
+        // Chained with_pattern calls must produce a redactor whose
+        // fused regex covers every appended source. Regression test
+        // for the recompilation invariant.
+        let r = Redactor::empty()
+            .with_pattern(r"AAA-\d+")
+            .unwrap()
+            .with_pattern(r"BBB-\d+")
+            .unwrap()
+            .with_pattern(r"CCC-\d+")
+            .unwrap();
+        assert_eq!(r.len(), 3);
+        let out = r.apply("AAA-1 BBB-2 CCC-3 DDD-4");
+        assert!(out.contains("[REDACTED] [REDACTED] [REDACTED] DDD-4"));
     }
 }

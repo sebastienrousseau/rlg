@@ -1,0 +1,69 @@
+name: Miri
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    paths:
+      - "crates/rlg/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/miri.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  miri:
+    name: Miri (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      # `-Zmiri-permissive-provenance` allows the int-to-ptr casts
+      # that `crossbeam-queue::ArrayQueue` performs on the atomic tag
+      # path.
+      #
+      # `-Zmiri-disable-isolation` grants clock / env / fs access to
+      # the ~20 inline tests in `config.rs`, `sink.rs`, `init.rs`,
+      # `rotation.rs`, `datetime.rs`, and `tui.rs` that legitimately
+      # touch those interfaces. Miri retains full memory-safety,
+      # aliasing, and atomic-ordering checks — the isolation model
+      # is orthogonal to those and is not the reason Miri is here.
+      # Tests that spawn OS threads or dispatch through FFI still
+      # carry `#[cfg_attr(miri, ignore)]`.
+      # `-Zmiri-ignore-leaks` tolerates the intentional global-cache
+      # leaks in `serial_test` (an scc::HashMap of `#[serial]` locks
+      # that never drops on purpose). Aliasing / atomics / UB checks
+      # remain in force.
+      MIRIFLAGS: "-Zmiri-permissive-provenance -Zmiri-disable-isolation -Zmiri-ignore-leaks"
+      # Miri is single-threaded; scale test parallelism to match.
+      RUST_TEST_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install nightly toolchain with Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri, rust-src
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: miri-${{ matrix.os }}
+          cache-on-failure: true
+
+      - name: Setup Miri
+        run: cargo miri setup
+
+      - name: Run Miri on rlg library tests
+        run: cargo miri test -p rlg --lib --all-features

@@ -39,9 +39,43 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// Retry policy + full-jitter + tokens-per-window circuit breaker.
+///
+/// Transport-agnostic reliability primitives — the sync HTTP path
+/// in this crate uses them; the deferred async / gRPC transports
+/// (see `docs/adr/0010-otlp-pluggable-transport.md`) will use the
+/// same primitives without duplicating the reliability logic.
+pub mod backoff;
+
+pub use crate::backoff::{CircuitBreaker, RetryPolicy};
+
+/// Async HTTP/JSON transport via `reqwest` + `rustls`.
+/// Enable with the `async` feature.
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub mod async_http;
+
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use crate::async_http::{
+    AsyncOtlpExporter, AsyncOtlpExporterBuilder,
+};
+
+/// OTLP/gRPC transport scaffold via `tonic` + `rustls`.
+/// Enable with the `grpc` feature.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod grpc;
+
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub use crate::grpc::{GrpcOtlpExporter, GrpcOtlpExporterBuilder};
+
+use crate::backoff::cheap_random_0_to_1;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 
@@ -58,6 +92,32 @@ pub enum OtlpError {
     /// Serialising a record to OTLP/JSON failed.
     #[error("OTLP serialise error: {0}")]
     Serialise(#[from] serde_json::Error),
+    /// The circuit breaker is tripped for the current window. The
+    /// request was rejected without touching the network.
+    #[error("OTLP circuit breaker tripped (too many recent failures)")]
+    CircuitOpen,
+    /// The async HTTP transport failed. Only produced when the
+    /// `async` feature is enabled and an [`AsyncOtlpExporter`] is in
+    /// use.
+    #[cfg(feature = "async")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+    #[error("OTLP async transport error: {0}")]
+    AsyncTransport(Box<reqwest::Error>),
+    /// gRPC endpoint URL could not be parsed or the tonic channel
+    /// could not be built. Only produced when the `grpc` feature
+    /// is enabled.
+    #[cfg(feature = "grpc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+    #[error("OTLP gRPC endpoint error: {0}")]
+    GrpcEndpoint(String),
+    /// The gRPC transport's protobuf-encoded send is not yet
+    /// implemented. Scaffolding shipped in Phase 19c; the wire
+    /// path lands in Phase 19c.1. See
+    /// `docs/adr/0010-otlp-pluggable-transport.md`.
+    #[cfg(feature = "grpc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+    #[error("OTLP gRPC send not implemented (Phase 19c.1)")]
+    GrpcNotImplemented,
 }
 
 /// A `Result` alias with [`OtlpError`] as the error variant.
@@ -73,8 +133,12 @@ pub struct OtlpExporter {
     endpoint: String,
     headers: HashMap<String, String>,
     timeout: Duration,
-    max_retries: u32,
-    backoff_base: Duration,
+    retry: RetryPolicy,
+    /// Optional per-exporter circuit breaker. When set, every
+    /// `post` consults it before touching the network and updates
+    /// it based on the outcome. When unset, no circuit-breaking
+    /// behaviour applies.
+    circuit: Option<Arc<CircuitBreaker>>,
 }
 
 impl OtlpExporter {
@@ -105,6 +169,14 @@ impl OtlpExporter {
     }
 
     fn post(&self, body: &str) -> OtlpResult<()> {
+        // Consult the circuit breaker before every attempt. A tripped
+        // breaker rejects immediately without touching the network.
+        if let Some(cb) = &self.circuit
+            && !cb.allow()
+        {
+            return Err(OtlpError::CircuitOpen);
+        }
+
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(self.timeout))
             .build()
@@ -124,25 +196,37 @@ impl OtlpExporter {
                     // 5xx and 429 are retriable; everything else
                     // (success or 4xx client error) is final.
                     if status >= 500 || status == 429 {
-                        if attempt < self.max_retries {
+                        if attempt < self.retry.max_retries {
                             self.sleep_for_attempt(attempt);
                             attempt += 1;
                             continue;
                         }
+                        if let Some(cb) = &self.circuit {
+                            cb.record_failure();
+                        }
                         return Err(OtlpError::BadStatus(status));
                     }
                     if !(200..300).contains(&status) {
+                        if let Some(cb) = &self.circuit {
+                            cb.record_failure();
+                        }
                         return Err(OtlpError::BadStatus(status));
+                    }
+                    if let Some(cb) = &self.circuit {
+                        cb.record_success();
                     }
                     return Ok(());
                 }
                 Err(e) => {
                     // Transport errors (timeout, connection refused,
                     // DNS) are retriable.
-                    if attempt < self.max_retries {
+                    if attempt < self.retry.max_retries {
                         self.sleep_for_attempt(attempt);
                         attempt += 1;
                         continue;
+                    }
+                    if let Some(cb) = &self.circuit {
+                        cb.record_failure();
                     }
                     return Err(OtlpError::Transport(Box::new(e)));
                 }
@@ -150,18 +234,13 @@ impl OtlpExporter {
         }
     }
 
-    /// Sleep `backoff_base * 2^attempt`, capped at 30 s. Pure-std
-    /// implementation — no external backoff crate needed.
+    /// Sleep for the delay computed by the retry policy, including
+    /// full jitter. Delegates the schedule math to
+    /// [`RetryPolicy::delay`] in `backoff.rs`.
     fn sleep_for_attempt(&self, attempt: u32) {
-        let factor = 1u64.checked_shl(attempt).unwrap_or(u64::MAX);
-        let delay = self
-            .backoff_base
-            .saturating_mul(
-                u32::try_from(factor.min(u64::from(u32::MAX)))
-                    .unwrap_or(u32::MAX),
-            )
-            .min(Duration::from_secs(30));
-        std::thread::sleep(delay);
+        std::thread::sleep(
+            self.retry.delay(attempt, cheap_random_0_to_1()),
+        );
     }
 
     /// Endpoint URL the exporter posts to.
@@ -179,6 +258,7 @@ pub struct OtlpExporterBuilder {
     timeout: Option<Duration>,
     max_retries: Option<u32>,
     backoff_base: Option<Duration>,
+    circuit: Option<Arc<CircuitBreaker>>,
 }
 
 impl OtlpExporterBuilder {
@@ -219,12 +299,25 @@ impl OtlpExporterBuilder {
     }
 
     /// Base for the exponential backoff between retries.
-    /// `delay = base * 2^attempt`, capped at 30 s. Default base is
-    /// 200 ms, which gives 200 ms / 400 ms / 800 ms across the
-    /// default 3 retries.
+    /// `delay = base * 2^attempt`, capped at 30 s and modulated by
+    /// full jitter. Default base is 200 ms, which gives a
+    /// `[0, 200 ms]` / `[0, 400 ms]` / `[0, 800 ms]` schedule under
+    /// the default 3 retries.
     #[must_use]
     pub const fn backoff_base(mut self, base: Duration) -> Self {
         self.backoff_base = Some(base);
+        self
+    }
+
+    /// Attach a circuit breaker. When set, every export consults the
+    /// breaker before touching the network; a tripped breaker
+    /// rejects immediately with [`OtlpError::CircuitOpen`].
+    ///
+    /// Cloning the returned exporter shares the same breaker state
+    /// across clones (the field is `Arc<CircuitBreaker>`).
+    #[must_use]
+    pub fn circuit(mut self, cb: Arc<CircuitBreaker>) -> Self {
+        self.circuit = Some(cb);
         self
     }
 
@@ -234,6 +327,14 @@ impl OtlpExporterBuilder {
     /// Panics if `.endpoint()` was not called.
     #[must_use]
     pub fn build(self) -> OtlpExporter {
+        let retry = RetryPolicy {
+            max_retries: self.max_retries.unwrap_or(3),
+            base: self
+                .backoff_base
+                .unwrap_or_else(|| Duration::from_millis(200)),
+            max_delay: Duration::from_secs(30),
+            jitter: 1.0,
+        };
         OtlpExporter {
             endpoint: self
                 .endpoint
@@ -242,10 +343,8 @@ impl OtlpExporterBuilder {
             timeout: self
                 .timeout
                 .unwrap_or_else(|| Duration::from_secs(10)),
-            max_retries: self.max_retries.unwrap_or(3),
-            backoff_base: self
-                .backoff_base
-                .unwrap_or_else(|| Duration::from_millis(200)),
+            retry,
+            circuit: self.circuit,
         }
     }
 }
@@ -314,8 +413,8 @@ mod tests {
             .endpoint("http://x/v1/logs")
             .build();
         assert_eq!(e.timeout, Duration::from_secs(10));
-        assert_eq!(e.max_retries, 3);
-        assert_eq!(e.backoff_base, Duration::from_millis(200));
+        assert_eq!(e.retry.max_retries, 3);
+        assert_eq!(e.retry.base, Duration::from_millis(200));
     }
 
     #[test]
@@ -340,8 +439,8 @@ mod tests {
             .max_retries(5)
             .backoff_base(Duration::from_millis(50))
             .build();
-        assert_eq!(e.max_retries, 5);
-        assert_eq!(e.backoff_base, Duration::from_millis(50));
+        assert_eq!(e.retry.max_retries, 5);
+        assert_eq!(e.retry.base, Duration::from_millis(50));
     }
 
     #[test]
@@ -350,7 +449,7 @@ mod tests {
             .endpoint("http://x/v1/logs")
             .max_retries(0)
             .build();
-        assert_eq!(e.max_retries, 0);
+        assert_eq!(e.retry.max_retries, 0);
     }
 
     #[test]
@@ -464,7 +563,7 @@ mod tests {
         // Override the cap by using a base small enough to not
         // actually wait: a 30s cap with this test would be too slow.
         // Just verify the math doesn't panic.
-        let _ = e.max_retries; // keep reference live
+        let _ = e.retry.max_retries; // keep reference live
     }
 
     #[test]

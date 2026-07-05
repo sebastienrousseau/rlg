@@ -25,6 +25,91 @@ cargo bench --bench competitive_bench                          # perf-sensitive 
 
 On macOS, run integration tests with `RLG_FALLBACK_STDOUT=1` to bypass the `os_log` FFI dispatch when not needed.
 
+### Miri (undefined-behaviour check)
+
+The ring-buffer hot path in `crates/rlg/src/engine.rs` and the syslog FFI in `crates/rlg/src/sink.rs` are covered by [Miri](https://github.com/rust-lang/miri) on every PR that touches `crates/rlg/**` (via [`.github/workflows/miri.yml`](.github/workflows/miri.yml)). To run it locally:
+
+```bash
+rustup toolchain install nightly --component miri rust-src
+cargo +nightly miri setup
+MIRIFLAGS="-Zmiri-permissive-provenance" cargo +nightly miri test -p rlg --lib --all-features
+```
+
+Tests that legitimately cannot run under Miri (thread spawns, file I/O, FFI dispatch to `syslog(3)`) carry `#[cfg_attr(miri, ignore)]`. When adding such a test, apply the attribute rather than tightening the workflow.
+
+### Loom (concurrency proofs)
+
+The producer/flusher shutdown handshake and `session_id` monotonicity are exhaustively verified by Loom on every PR that touches `crates/rlg/src/engine.rs` or the proofs themselves (via [`.github/workflows/loom.yml`](.github/workflows/loom.yml)). To run the proofs locally:
+
+```bash
+RUSTFLAGS="--cfg loom" cargo test --release --test loom_engine -p rlg -- --nocapture --test-threads=1
+```
+
+See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-ring-buffer.md) for the model faithfulness argument and what is (and is not) covered.
+
+### Fuzzing (untrusted input)
+
+Four `cargo-fuzz` targets cover the deserialisation and scan entry points that accept untrusted input:
+
+| Target | Exercises |
+|---|---|
+| `parse_record` | `rlg_cli::parse_record` |
+| `log_format_from_str` | `<LogFormat as FromStr>::from_str` |
+| `config_load` | `toml::from_str::<Config>` |
+| `redact_scrub` | `Redactor::with_defaults().scrub` |
+
+CI runs each for 30 s per PR ([`.github/workflows/fuzz-smoke.yml`](.github/workflows/fuzz-smoke.yml)); OSS-Fuzz runs them continuously post-onboarding (see [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md)). To run locally:
+
+```bash
+cargo install cargo-fuzz --locked
+cd fuzz
+cargo +nightly fuzz run parse_record -- -max_total_time=30
+```
+
+Fuzz targets live under [`fuzz/`](fuzz/), which is deliberately excluded from the workspace so `libfuzzer-sys` and nightly-only build flags never leak into normal `cargo build` / `cargo test`. Strategy and corpus policy in [`docs/adr/0002-fuzz-strategy.md`](docs/adr/0002-fuzz-strategy.md).
+
+### Property tests
+
+Seven `proptest` properties cover the format `Display` impls, NDJSON single-line invariant, serde round-trip, and `Filter` monotonicity. Run with standard `cargo test`:
+
+```bash
+cargo test -p rlg --test proptest_round_trip
+cargo test -p rlg-cli --test proptest_filter
+```
+
+Failures shrink to a minimal counter-example that appears directly in the test output. Strategy and coverage boundaries in [`docs/adr/0003-property-tested-formats.md`](docs/adr/0003-property-tested-formats.md).
+
+### Kani (model-checked proofs)
+
+Three Kani proofs formally verify the `LogLevel::from_numeric` ↔ `to_numeric` bijection and the session-counter fetch_add monotonicity. Kani runs on merges to `main` and weekly cron via [`.github/workflows/kani.yml`](.github/workflows/kani.yml), not per-PR. To run locally:
+
+```bash
+cargo install --locked kani-verifier
+cargo kani setup
+cd crates/rlg && cargo kani --tests
+```
+
+Coverage boundary and what Kani does NOT prove in [`docs/adr/0004-kani-verified-invariants.md`](docs/adr/0004-kani-verified-invariants.md).
+
+### cargo-vet (supply-chain audit chain)
+
+Every transitive dependency must be either (a) covered by a trusted upstream audit import (Bytecode Alliance / Google / Mozilla / Zcash), (b) locally audited in `supply-chain/audits.toml`, or (c) exempted with a documented reason in `supply-chain/config.toml`. CI runs [`cargo vet --locked`](https://mozilla.github.io/cargo-vet/) on every PR ([`.github/workflows/cargo-vet.yml`](.github/workflows/cargo-vet.yml)).
+
+Adding a new dependency will fail CI until you resolve it. Options:
+
+```bash
+# 1. Try inheriting from a trusted upstream:
+cargo vet prune
+
+# 2. Audit locally after reading the source:
+cargo vet certify <crate> <version> safe-to-deploy
+
+# 3. Add a documented exemption with justification (rare — prefer options 1 or 2):
+#    edit supply-chain/config.toml under [[exemptions.<crate>]]
+```
+
+Strategy and bootstrap exemptions policy in [`docs/adr/0006-cargo-vet-adoption.md`](docs/adr/0006-cargo-vet-adoption.md).
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.
@@ -44,7 +129,7 @@ Add the same public key to your GitHub account under **Settings → SSH and GPG 
 
 ```bash
 git commit -S -m "feat: …"
-git tag -s v0.0.10 -m "release v0.0.10"
+git tag -s v0.0.11 -m "release v0.0.11"
 ```
 
 Verify a commit:

@@ -31,4 +31,12 @@ fn main() {
     if let Some(latency) = &report.latency {
         println!("p99 latency  = {} ms", latency.p99);
     }
+
+    println!("\n── Top-N clamp = 2 ────────────");
+    let clamped =
+        Report::from_lines_with_top(SAMPLE.iter().copied(), 2);
+    for (description, count) in clamped.top_descriptions.iter() {
+        println!("{count:>3}  {description}");
+    }
+    assert!(clamped.top_descriptions.len() <= 2);
 }

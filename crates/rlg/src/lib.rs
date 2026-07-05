@@ -65,8 +65,11 @@
     clippy::nursery,
     rust_2018_idioms
 )]
-#![warn(missing_docs)]
 #![allow(clippy::module_name_repetitions)]
+// Enable `#[doc(cfg(feature = "…"))]` under docs.rs so feature-gated
+// items advertise the flag that enables them. The `docsrs` cfg is set
+// by `[package.metadata.docs.rs]`.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 /// TOML-based configuration, validation, and hot-reload.
 pub mod config;
@@ -90,6 +93,17 @@ pub mod logger;
 pub mod macros;
 /// Log rotation policies: size, time, date, and count-based.
 pub mod rotation;
+/// Internal sharded queue backing the engine's ring buffer.
+/// Behaviour switches on the `fast-queue` feature — see
+/// `docs/adr/0009-sharded-producer-queue.md`.
+//
+// `redundant_pub_crate` (clippy::nursery) fires because the module
+// is already `pub(crate)`; `unreachable_pub` (workspace lint) fires
+// if we drop the `pub(crate)` on items inside. The `allow` here
+// resolves the tension by suppressing the nursery lint at the
+// module-import site.
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) mod sharded_queue;
 /// Platform-native sinks: `os_log` (macOS), `journald` (Linux), file, stdout.
 pub mod sink;
 /// `tracing` integration: `RlgSubscriber` and optional `RlgLayer`.
@@ -98,6 +112,12 @@ pub mod tracing;
 pub mod tui;
 /// Timestamps, file I/O helpers, and input sanitization.
 pub mod utils;
+
+/// Kani model-checked proofs. Only compiled under `--cfg kani`
+/// (set automatically by `cargo kani`). See
+/// `docs/adr/0004-kani-verified-invariants.md`.
+#[cfg(kani)]
+mod kani_proofs;
 
 /// Shared utilities from `euxis-commons`.
 pub use euxis_commons as commons;
@@ -115,6 +135,7 @@ pub use crate::sink::PlatformSink;
 pub use crate::tracing::RlgSubscriber;
 
 #[cfg(feature = "tracing-layer")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing-layer")))]
 pub use crate::tracing::RlgLayer;
 
 /// Crate version, injected at compile time.

@@ -1,6 +1,6 @@
 [package]
 name = "rlg-tower"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -34,8 +34,13 @@ path = "src/lib.rs"
 name = "echo"
 path = "examples/echo.rs"
 
+[[bench]]
+name = "layer"
+harness = false
+path = "benches/layer.rs"
+
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
+rlg = { version = "0.0.11", path = "../rlg" }
 tower = { version = "0.5", default-features = false }
 tower-layer = "0.3"
 tower-service = "0.3"
@@ -43,13 +48,14 @@ http = "1"
 pin-project-lite = "0.2"
 
 [dev-dependencies]
+criterion = "0.8"
 http-body-util = "0.1"
 tokio = { version = "1", default-features = false, features = ["macros", "rt"] }
 tower = { version = "0.5", features = ["util"] }
 
 [lints.rust]
 missing_copy_implementations = "warn"
-missing_docs = "warn"
+missing_docs = "deny"
 unsafe_code = "deny"
 unused_extern_crates = "warn"
 missing_debug_implementations = "forbid"

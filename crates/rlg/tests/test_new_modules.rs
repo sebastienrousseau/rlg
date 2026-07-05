@@ -1,3 +1,4 @@
+#![allow(missing_docs)]
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
@@ -7,8 +8,6 @@
 //! - `init.rs` (zero-config init API)
 //! - `tracing.rs` (RlgLayer behind `tracing-layer` feature)
 //! - `engine.rs` (Debug impl, inc_format)
-
-#![allow(missing_docs)]
 
 #[cfg(test)]
 mod tests {

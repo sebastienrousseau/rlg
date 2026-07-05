@@ -1,0 +1,93 @@
+name: Examples Smoke
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/examples-smoke.yml"
+  push:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: cargo run --example
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: examples-smoke
+          cache-on-failure: true
+
+      # Iterate every [[example]] declared in every workspace
+      # Cargo.toml and run it with a 30-second timeout. Non-zero
+      # exit or timeout fails the check. The `RLG_FALLBACK_STDOUT`
+      # env var routes any syslog attempt through stdout so the
+      # linux runner isn't blocked on journald.
+      # Examples that are demos of async utilities (not pipeline
+      # examples) whose behavior is already covered by the owning
+      # crate's own test suite. Skipped from the smoke gate; they
+      # can still be run locally with `cargo run -p <crate> --example
+      # <name>`.
+      - name: Run every example
+        env:
+          RLG_FALLBACK_STDOUT: "1"
+          # `crate/example` pairs to skip. See workflow comment
+          # above for the reason each is on the list.
+          EXAMPLE_SKIPS: "rlg/example_utils rlg/example_config"
+        run: |
+          set -euo pipefail
+          fail=0
+          # List examples per crate via `cargo run --example` with
+          # no argument — cargo errors on stderr and prints
+          # "Available examples:" followed by one indented entry per
+          # example. Authoritative source; parsing TOML by hand
+          # missed multi-`[[example]]` manifests before.
+          for manifest in crates/*/Cargo.toml; do
+            crate="$(basename "$(dirname "$manifest")")"
+            # Per-crate feature flags. Empty by default; a few
+            # crates need extra features to compile examples that
+            # exercise optional transports / integrations.
+            features_flag=""
+            case "$crate" in
+              rlg)      features_flag="--features tokio" ;;
+              rlg-otlp) features_flag="--all-features" ;;
+            esac
+            listing="$(cargo run --quiet --manifest-path "$manifest" \
+              $features_flag --example 2>&1 || true)"
+            names="$(echo "$listing" \
+              | awk '/^Available examples:/{flag=1; next} flag && /^    /{print $1}')"
+            for example in $names; do
+              [ -z "$example" ] && continue
+              key="${crate}/${example}"
+              if [[ " ${EXAMPLE_SKIPS} " == *" ${key} "* ]]; then
+                echo "::notice::skipping ${key} (async-utils demo — see workflow comment)"
+                continue
+              fi
+              echo "::group::${key}"
+              if ! timeout 90 cargo run --quiet \
+                --manifest-path "$manifest" $features_flag \
+                --example "$example" >/dev/null 2>&1; then
+                echo "::error::example ${key} failed"
+                fail=1
+              fi
+              echo "::endgroup::"
+            done
+          done
+          exit "$fail"

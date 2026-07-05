@@ -12,8 +12,11 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/sebastienrousseau/rlg/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/ci.yml?style=for-the-badge&logo=github" alt="Build" /></a>
   <a href="https://crates.io/crates/rlg-cli"><img src="https://img.shields.io/crates/v/rlg-cli.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/rlg-cli"><img src="https://img.shields.io/badge/docs.rs-rlg--cli-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
+  <a href="https://lib.rs/crates/rlg-cli"><img src="https://img.shields.io/badge/lib.rs-rlg--cli-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
 </p>
 
 ---
@@ -24,7 +27,7 @@
 cargo install rlg-cli
 ```
 
-The binary is named `rlg`.
+The binary is named `rlg`. Requires Rust **1.88.0** or newer (edition 2024).
 
 ## Usage
 
@@ -59,7 +62,7 @@ rlg /var/log/app.ndjson \
 
 ### Input
 
-For `0.0.9`, the CLI accepts the **canonical `LogFormat::JSON`
+For `0.0.11`, the CLI accepts the **canonical `LogFormat::JSON`
 shape** — one record per line. Unparseable lines pass through
 verbatim so you can pipe non-rlg log noise through `rlg`
 without losing entries.

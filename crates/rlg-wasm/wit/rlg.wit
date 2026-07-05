@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+//
+// rlg-wasm WIT interface for the WASI 0.2 component model.
+//
+// This file defines the component-model surface that a
+// `wasm32-wasip2` target will expose. The current cdylib +
+// wasm-bindgen build (default) does NOT emit a component — that
+// path uses the `wasm-bindgen` JavaScript ABI instead.
+//
+// See `docs/adr/0013-wasi-0.2-component.md` for the wire-up
+// status. Phase 22.1 (planned) delivers the `wit-bindgen`
+// integration that turns this WIT into a runnable component.
+
+package rlg:core@0.0.11;
+
+/// Structured logging surface exposed by rlg-wasm to a WASI 0.2
+/// host. Mirrors the JavaScript surface (`RlgWasm::info`,
+/// `RlgWasm::warn`, `RlgWasm::error`) so callers on both paths
+/// see the same shape.
+interface logger {
+  /// Emit an INFO record. `attributes-json` is an optional JSON
+  /// object string; keys become structured attributes.
+  info: func(message: string, attributes-json: option<string>);
+
+  /// Emit a WARN record.
+  warn: func(message: string, attributes-json: option<string>);
+
+  /// Emit an ERROR record.
+  error: func(message: string, attributes-json: option<string>);
+
+  /// Emit a DEBUG record.
+  debug: func(message: string, attributes-json: option<string>);
+}
+
+world rlg-logger {
+  export logger;
+}

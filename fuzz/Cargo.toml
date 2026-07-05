@@ -1,0 +1,50 @@
+[package]
+name = "rlg-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+rust-version = "1.88.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rlg = { path = "../crates/rlg" }
+rlg-cli = { path = "../crates/rlg-cli" }
+rlg-redact = { path = "../crates/rlg-redact" }
+toml = "1.0"
+
+[[bin]]
+name = "parse_record"
+path = "fuzz_targets/parse_record.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "log_format_from_str"
+path = "fuzz_targets/log_format_from_str.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "config_load"
+path = "fuzz_targets/config_load.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "redact_scrub"
+path = "fuzz_targets/redact_scrub.rs"
+test = false
+doc = false
+bench = false
+
+# Fuzzing forbids workspace lint inheritance because `fuzz/` is
+# outside the workspace. Set the essentials here.
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "allow"

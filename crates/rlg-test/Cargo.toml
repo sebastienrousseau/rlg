@@ -1,6 +1,6 @@
 [package]
 name = "rlg-test"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -33,14 +33,22 @@ path = "src/lib.rs"
 name = "capture"
 path = "examples/capture.rs"
 
+[[bench]]
+name = "capture"
+harness = false
+path = "benches/capture.rs"
+
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
+rlg = { version = "0.0.11", path = "../rlg" }
 parking_lot = "0.12"
 serde_json = "1.0"
 
+[dev-dependencies]
+criterion = "0.8"
+
 [lints.rust]
 missing_copy_implementations = "warn"
-missing_docs = "warn"
+missing_docs = "deny"
 unsafe_code = "deny"
 unused_extern_crates = "warn"
 missing_debug_implementations = "forbid"

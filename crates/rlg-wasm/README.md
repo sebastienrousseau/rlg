@@ -12,11 +12,32 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/sebastienrousseau/rlg/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/ci.yml?style=for-the-badge&logo=github" alt="Build" /></a>
   <a href="https://crates.io/crates/rlg-wasm"><img src="https://img.shields.io/crates/v/rlg-wasm.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Crates.io" /></a>
   <a href="https://docs.rs/rlg-wasm"><img src="https://img.shields.io/badge/docs.rs-rlg--wasm-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
+  <a href="https://lib.rs/crates/rlg-wasm"><img src="https://img.shields.io/badge/lib.rs-rlg--wasm-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
 </p>
 
 ---
+
+## WASI 0.2 component (scaffold)
+
+A component-model interface definition ships at
+[`wit/rlg.wit`](wit/rlg.wit) — package `rlg:core@0.0.11`, world
+`rlg-logger`. Consumable by any WASI 0.2 host (`wasmtime run
+--component`, `jco`, Fermyon Spin, …) once Phase 22.1 wires the
+`wit-bindgen` codegen. See
+[`docs/adr/0013-wasi-0.2-component.md`](../../docs/adr/0013-wasi-0.2-component.md).
+
+## Install
+
+```toml
+[dependencies]
+rlg-wasm = "0.0.11"
+```
+
+Requires Rust **1.88.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.
 
 ## Build a WASM bundle
 

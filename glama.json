@@ -1,0 +1,36 @@
+{
+  "$schema": "https://glama.ai/api/mcp/v1/schemas/glama.json",
+  "maintainers": ["sebastienrousseau"],
+  "title": "rlg-mcp",
+  "display_name": "RustLogs MCP",
+  "description": "Model Context Protocol server exposing rlg (RustLogs) log streams as tools to LLM agents. Tools: tail_log (last N events, filtered by level/target), filter_log (JSON-Path-style predicates), summarize_errors (grouped error taxonomy for on-call triage). Speaks JSON-RPC 2.0 over stdio; near-lock-free structured logging engine underneath.",
+  "version": "0.0.11",
+  "repository": "https://github.com/sebastienrousseau/rlg",
+  "homepage": "https://rustlogs.com/",
+  "license": "Apache-2.0 OR MIT",
+  "language": "Rust",
+  "runtime": "docker",
+  "categories": ["developer-tools"],
+  "tags": [
+    "logging",
+    "log-analysis",
+    "observability",
+    "sre",
+    "oncall",
+    "structured-logging",
+    "rust",
+    "claude",
+    "anthropic",
+    "mcp"
+  ],
+  "mcpServers": {
+    "rlg": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i", "ghcr.io/sebastienrousseau/rlg-mcp:0.0.11"]
+    }
+  },
+  "installation": {
+    "cargo": "cargo install rlg-mcp",
+    "docker": "docker run --rm -i ghcr.io/sebastienrousseau/rlg-mcp:0.0.11"
+  }
+}

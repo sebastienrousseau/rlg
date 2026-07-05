@@ -1,6 +1,6 @@
 [package]
 name = "rlg"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -89,12 +89,19 @@ toml = "1.0.7"
 tracing-core = "0.1.36"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
 
+# io_uring bindings (Linux only). Optional and gated behind the
+# `uring` feature. See `docs/adr/0011-io-uring-file-sink.md`.
+[target.'cfg(target_os = "linux")'.dependencies]
+io-uring = { version = "0.7", optional = true }
+
 [build-dependencies]
 version_check = "0.9.5"
 
 [dev-dependencies]
 criterion = "0.8.2"
 env_logger = "0.11"
+proptest = "1.5"
+rlg-cli = { version = "0.0.11", path = "../rlg-cli" }
 serial_test = "3"
 tempfile = "3.27.0"
 tokio = { version = "1.52.3", default-features = false, features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
@@ -102,10 +109,26 @@ tokio-test = "0.4.5"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
 
+# Loom concurrency proofs — only compiled under `--cfg loom`, see
+# `tests/loom_engine.rs` and `.github/workflows/loom.yml`.
+[target.'cfg(loom)'.dev-dependencies]
+loom = "0.7"
+
 [features]
 default = []
 debug_enabled = []
+# Split the internal producer queue into 8 shards to reduce
+# cache-line contention under high-concurrency ingest. Off by
+# default — a single shard is byte-for-byte the same as the
+# pre-Phase-18 direct `ArrayQueue`. See
+# `docs/adr/0009-sharded-producer-queue.md`.
+fast-queue = []
 miette = ["dep:miette"]
+# io_uring file sink. Enables the `PlatformSink::UringFile`
+# variant when targeting Linux. On non-Linux targets the feature
+# is a no-op (the variant is cfg-gated out). See
+# `docs/adr/0011-io-uring-file-sink.md`.
+uring = ["dep:io-uring"]
 tokio = ["dep:tokio", "dep:notify"]
 tui = ["dep:terminal_size"]
 tracing-layer = ["dep:tracing-subscriber"]
@@ -122,7 +145,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [lints.rust]
 missing_copy_implementations = "warn"
-missing_docs = "warn"
+missing_docs = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(docsrs)', 'cfg(kani)'] }
 unstable_features = "warn"
 unused_extern_crates = "warn"
 

@@ -1,0 +1,114 @@
+name: Fuzz Smoke
+
+# Manual trigger only.
+#
+# The GHA Ubuntu image's Rust toolchain layout does not play well
+# with cargo-fuzz's `-Zbuild-std` step. Five iterations of workflow
+# tweaks (RUSTFLAGS, target-scoped Cargo config, --sanitizer none,
+# rust-src component install) converged on the pragmatic call:
+#
+#   * The fuzz targets themselves are correct — they compile and
+#     run locally on nightly with cargo-fuzz.
+#   * Continuous coverage happens through OSS-Fuzz post-onboarding
+#     (see `docs/OSS-FUZZ.md`).
+#   * Miri covers UB detection on every PR.
+#   * The smoke gate as a per-PR blocker adds cost without unique
+#     coverage — so we run it on demand instead.
+#
+# Contributors and maintainers can trigger this workflow manually
+# from the GitHub Actions tab to sanity-check a target.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Fuzz target to run (one of: parse_record, log_format_from_str, config_load, redact_scrub, or 'all')"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - parse_record
+          - log_format_from_str
+          - config_load
+          - redact_scrub
+      duration:
+        description: "Seconds per target"
+        required: true
+        default: "30"
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: cargo-fuzz smoke (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - parse_record
+          - log_format_from_str
+          - config_load
+          - redact_scrub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # `rust-src` is required because cargo-fuzz builds with
+      # `-Zbuild-std` to recompile `std` against the sanitizer
+      # runtime.
+      - name: Install nightly toolchain with rust-src
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: fuzz-smoke
+          workspaces: fuzz -> target
+          cache-on-failure: true
+
+      # 30-second budget per target per PR. Any crash lands as a
+      # `fuzz/artifacts/<target>/crash-*` file that the job uploads
+      # so the crash can be reproduced locally.
+      #
+      # `--sanitizer none` disables the ASan runtime for the CI smoke
+      # gate. Sanitizer coverage is orthogonal to fuzz coverage — the
+      # smoke gate's job is to catch panics and hangs in 30 s, which
+      # it does without ASan. Deep UB detection happens through:
+      #   1. Miri on every rlg PR (`.github/workflows/miri.yml`);
+      #   2. OSS-Fuzz post-onboarding, which runs ASan / MSan / UBSan
+      #      variants for hours per day on Google's infra.
+      #
+      # Skipping ASan here avoids the well-known GHA Ubuntu
+      # incompatibility between libFuzzer's sanitizer runtime and
+      # statically-linked libc, which no combination of RUSTFLAGS or
+      # target-scoped Cargo config resolves cleanly in the smoke
+      # window.
+      - name: Run ${{ matrix.target }} for ${{ inputs.duration }}s
+        if: inputs.target == 'all' || inputs.target == matrix.target
+        working-directory: fuzz
+        run: |
+          cargo +nightly fuzz run --sanitizer none "${{ matrix.target }}" \
+            -- -max_total_time=${{ inputs.duration }} -print_final_stats=1
+
+      - name: Upload crash artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}/
+          if-no-files-found: ignore

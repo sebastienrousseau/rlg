@@ -1,0 +1,75 @@
+[package]
+name = "rlg-ebpf"
+version = "0.0.11"
+edition = "2024"
+rust-version = "1.88.0"
+license = "MIT OR Apache-2.0"
+description = """
+Kernel-context enrichment for rlg records. Attaches PID, TID, UID,
+and (future) network 4-tuple to every log record. Optional eBPF
+kernel-side attach programs land in Phase 21.1.
+"""
+repository = "https://github.com/sebastienrousseau/rlg"
+homepage = "https://rustlogs.com/"
+documentation = "https://docs.rs/rlg-ebpf"
+readme = "README.md"
+keywords = ["ebpf", "observability", "logging", "rlg", "linux"]
+categories = ["development-tools::debugging", "os::linux-apis"]
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+include = [
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/README.md",
+    "/src/**",
+    "/tests/**",
+]
+
+[lib]
+name = "rlg_ebpf"
+path = "src/lib.rs"
+
+[[bench]]
+name = "enrich"
+harness = false
+path = "benches/enrich.rs"
+
+[[example]]
+name = "enrich"
+path = "examples/enrich.rs"
+
+[[example]]
+name = "chain"
+path = "examples/chain.rs"
+
+[dependencies]
+rlg = { version = "0.0.11", path = "../rlg" }
+serde_json = "1.0"
+
+# Unix pid/tid/uid via libc. Cross-Unix; Windows implementation
+# is a follow-up (see ADR 0012).
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[dev-dependencies]
+criterion = "0.8"
+
+[features]
+# Kernel-side eBPF program attach (Linux only). Enables the
+# `EbpfEnricher` scaffold. Not yet wired to a live BPF program —
+# see `docs/adr/0012-ebpf-enricher.md` for the current status.
+default = []
+ebpf = []
+
+[lints.rust]
+missing_copy_implementations = "warn"
+missing_docs = "deny"
+unsafe_code = "deny"
+unused_extern_crates = "warn"
+missing_debug_implementations = "forbid"
+non_ascii_idents = "forbid"
+unreachable_pub = "forbid"
+dead_code = "deny"
+
+[package.metadata.docs.rs]
+all-features = true

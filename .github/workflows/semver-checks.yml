@@ -1,0 +1,42 @@
+name: SemVer
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/semver-checks.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  semver:
+    name: cargo semver-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-semver-checks
+
+      # Exclude crates that don't have a baseline on crates.io
+      # yet. `rlg-ebpf` was introduced in Phase 21 and publishes at
+      # the next tag push; until then semver-checks has no baseline
+      # to compare against and errors with "not found in registry".
+      # Removed from the exclude list on the first release that
+      # includes `rlg-ebpf`.
+      - name: Run cargo semver-checks
+        run: cargo semver-checks check-release --workspace --exclude rlg-ebpf

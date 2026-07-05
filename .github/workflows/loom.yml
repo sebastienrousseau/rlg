@@ -1,0 +1,51 @@
+name: Loom
+
+on:
+  push:
+    branches: [main, "feat/**"]
+  pull_request:
+    paths:
+      - "crates/rlg/src/engine.rs"
+      - "crates/rlg/tests/loom_engine.rs"
+      - "crates/rlg/Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/loom.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  loom:
+    name: Loom
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # `--cfg loom` swaps std sync primitives for Loom's shims
+      # inside `crates/rlg/tests/loom_engine.rs`.
+      RUSTFLAGS: "--cfg loom"
+      # Cap the state-space per test at ~200k paths. Loom's default
+      # is unlimited, which blows the CI budget on rich models.
+      LOOM_MAX_PREEMPTIONS: "3"
+      LOOM_MAX_BRANCHES: "200000"
+      # Enable full backtraces on Loom counter-examples so the
+      # failure is actionable.
+      LOOM_LOG: "trace"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: loom-linux
+          cache-on-failure: true
+
+      - name: Run Loom proofs
+        run: cargo test --release --test loom_engine -p rlg -- --nocapture --test-threads=1

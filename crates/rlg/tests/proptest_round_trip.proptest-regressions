@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc a87b21fe4ed30b925ed41bd61e025e19fbc296e7caafa0c3884e524432da9a65 # shrinks to log = Log { session_id: 0, time: "2026-07-05T00:00:00.000000000Z", level: TRACE, component: "", description: "", format: CLF, attributes: {} }

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/rlg",
     "crates/rlg-cli",
+    "crates/rlg-ebpf",
     "crates/rlg-mcp",
     "crates/rlg-otlp",
     "crates/rlg-redact",
@@ -12,6 +13,11 @@ members = [
     "crates/rlg-wasm",
     "crates/xtask",
 ]
+# `fuzz/` is a cargo-fuzz nested crate. Excluded from the workspace
+# so `libfuzzer-sys` and nightly-only build flags never leak into
+# normal `cargo build` / `cargo test`. See `fuzz/README.md` and
+# `docs/adr/0002-fuzz-strategy.md`.
+exclude = ["fuzz"]
 
 [profile.dev]
 codegen-units = 256

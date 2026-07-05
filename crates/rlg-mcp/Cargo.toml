@@ -1,6 +1,6 @@
 [package]
 name = "rlg-mcp"
-version = "0.0.10"
+version = "0.0.11"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -33,19 +33,33 @@ path = "src/lib.rs"
 name = "rlg-mcp"
 path = "src/main.rs"
 
+[[bench]]
+name = "tail"
+harness = false
+path = "benches/tail.rs"
+
+[[example]]
+name = "library_mode"
+path = "examples/library_mode.rs"
+
+[[example]]
+name = "dispatch"
+path = "examples/dispatch.rs"
+
 [dependencies]
-rlg = { version = "0.0.10", path = "../rlg" }
-rlg-cli = { version = "0.0.10", path = "../rlg-cli" }
+rlg = { version = "0.0.11", path = "../rlg" }
+rlg-cli = { version = "0.0.11", path = "../rlg-cli" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 
 [dev-dependencies]
+criterion = "0.8"
 tempfile = "3"
 
 [lints.rust]
 missing_copy_implementations = "warn"
-missing_docs = "warn"
+missing_docs = "deny"
 unsafe_code = "deny"
 unused_extern_crates = "warn"
 missing_debug_implementations = "forbid"
