@@ -29,8 +29,13 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      # `--all-features` matches the workspace's normal test build
+      # (integration tests in `tests/` reference `tui`-gated APIs).
+      # The `kani_proofs` module itself lives in `src/`, so `--tests`
+      # is unnecessary — Kani's default proof discovery picks up
+      # `#[kani::proof]` from the library crate.
       - name: Set up Kani
         uses: model-checking/kani-github-action@v1
         with:
           working-directory: crates/rlg
-          args: --tests --output-format terse
+          args: --all-features --output-format terse
