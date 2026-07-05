@@ -4,6 +4,25 @@
 .PHONY: all
 all: help ## Display this help.
 
+# Local verification pipeline. Runs everything a contributor needs
+# to pass locally before opening a PR — fmt, clippy, tests,
+# semver-checks, deny, vet.
+.PHONY: verify
+verify: ## Run the full local pre-PR verification pipeline.
+	@echo "▶ cargo fmt --check"
+	@cargo fmt --check
+	@echo "▶ cargo clippy --workspace --all-features --tests --benches -- -D warnings"
+	@cargo clippy --workspace --all-features --tests --benches -- -D warnings
+	@echo "▶ cargo test --workspace --all-features"
+	@cargo test --workspace --all-features
+	@echo "▶ cargo semver-checks --workspace --exclude rlg-ebpf"
+	@cargo semver-checks check-release --workspace --exclude rlg-ebpf
+	@echo "▶ cargo deny check"
+	@cargo deny check
+	@echo "▶ cargo vet check"
+	@cargo vet check
+	@echo "✓ Local verification passed."
+
 # Build the project including all workspace members.
 .PHONY: build
 build: ## Build the project.
