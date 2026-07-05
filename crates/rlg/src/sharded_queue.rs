@@ -39,6 +39,9 @@ pub(crate) const SHARD_COUNT: usize = 8;
 #[cfg(not(feature = "fast-queue"))]
 pub(crate) const SHARD_COUNT: usize = 1;
 
+// Compile-time invariant: at least one shard.
+const _: () = assert!(SHARD_COUNT > 0, "SHARD_COUNT must be > 0");
+
 /// Round-robin counter used to assign a sticky shard index to each
 /// producer thread on first `push` call.
 static NEXT_SHARD: AtomicUsize = AtomicUsize::new(0);
@@ -50,14 +53,13 @@ thread_local! {
 }
 
 fn thread_shard() -> usize {
-    SHARD_INDEX.with(|slot| match slot.get() {
-        Some(idx) => idx,
-        None => {
+    SHARD_INDEX.with(|slot| {
+        slot.get().unwrap_or_else(|| {
             let idx = NEXT_SHARD.fetch_add(1, Ordering::Relaxed)
                 % SHARD_COUNT;
             slot.set(Some(idx));
             idx
-        }
+        })
     })
 }
 
@@ -74,7 +76,6 @@ impl ShardedQueue {
     /// shards. Per-shard capacity is `total_capacity / SHARD_COUNT`,
     /// with any remainder distributed to the first shards.
     pub(crate) fn new(total_capacity: usize) -> Self {
-        assert!(SHARD_COUNT > 0, "SHARD_COUNT must be > 0");
         let base = total_capacity / SHARD_COUNT;
         let remainder = total_capacity % SHARD_COUNT;
         let shards = (0..SHARD_COUNT)
@@ -92,6 +93,11 @@ impl ShardedQueue {
     /// assigned round-robin on first call, so subsequent pushes from
     /// the same thread hit the same shard with no contention on the
     /// shard-selection path.
+    ///
+    /// # Errors
+    /// Returns the event back to the caller if the thread-local
+    /// shard is at capacity — the same contract as
+    /// [`crossbeam_queue::ArrayQueue::push`].
     pub(crate) fn push(&self, event: LogEvent) -> Result<(), LogEvent> {
         self.shards[thread_shard()].push(event)
     }

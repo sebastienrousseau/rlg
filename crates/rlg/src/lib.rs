@@ -96,6 +96,13 @@ pub mod rotation;
 /// Internal sharded queue backing the engine's ring buffer.
 /// Behaviour switches on the `fast-queue` feature — see
 /// `docs/adr/0009-sharded-producer-queue.md`.
+//
+// `redundant_pub_crate` (clippy::nursery) fires because the module
+// is already `pub(crate)`; `unreachable_pub` (workspace lint) fires
+// if we drop the `pub(crate)` on items inside. The `allow` here
+// resolves the tension by suppressing the nursery lint at the
+// module-import site.
+#[allow(clippy::redundant_pub_crate)]
 pub(crate) mod sharded_queue;
 /// Platform-native sinks: `os_log` (macOS), `journald` (Linux), file, stdout.
 pub mod sink;
