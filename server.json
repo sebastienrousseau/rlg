@@ -10,8 +10,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/sebastienrousseau/rlg-mcp",
-      "version": "0.0.11",
+      "identifier": "ghcr.io/sebastienrousseau/rlg-mcp:0.0.11",
       "transport": {
         "type": "stdio"
       }
