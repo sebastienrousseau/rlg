@@ -37,6 +37,7 @@ jobs:
           for crate in \
               rlg \
               rlg-cli \
+              rlg-ebpf \
               rlg-mcp \
               rlg-otlp \
               rlg-redact \
@@ -131,6 +132,7 @@ jobs:
           # 2. rlg-cli second — rlg-mcp and rlg-report depend on it.
           publish_or_skip rlg-cli 30
           # 3. Independent of one another; only depend on `rlg`.
+          publish_or_skip rlg-ebpf
           publish_or_skip rlg-otlp
           publish_or_skip rlg-redact
           publish_or_skip rlg-test

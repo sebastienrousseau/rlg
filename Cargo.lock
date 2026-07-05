@@ -2135,6 +2135,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlg-ebpf"
+version = "0.0.11"
+dependencies = [
+ "criterion",
+ "libc",
+ "rlg",
+ "serde_json",
+]
+
+[[package]]
 name = "rlg-mcp"
 version = "0.0.11"
 dependencies = [

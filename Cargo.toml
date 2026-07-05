@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/rlg",
     "crates/rlg-cli",
+    "crates/rlg-ebpf",
     "crates/rlg-mcp",
     "crates/rlg-otlp",
     "crates/rlg-redact",
