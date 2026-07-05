@@ -32,5 +32,11 @@ jobs:
         with:
           tool: cargo-semver-checks
 
+      # Exclude crates that don't have a baseline on crates.io
+      # yet. `rlg-ebpf` was introduced in Phase 21 and publishes at
+      # the next tag push; until then semver-checks has no baseline
+      # to compare against and errors with "not found in registry".
+      # Removed from the exclude list on the first release that
+      # includes `rlg-ebpf`.
       - name: Run cargo semver-checks
-        run: cargo semver-checks check-release --workspace
+        run: cargo semver-checks check-release --workspace --exclude rlg-ebpf
