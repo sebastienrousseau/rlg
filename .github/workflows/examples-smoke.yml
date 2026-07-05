@@ -40,9 +40,17 @@ jobs:
       # exit or timeout fails the check. The `RLG_FALLBACK_STDOUT`
       # env var routes any syslog attempt through stdout so the
       # linux runner isn't blocked on journald.
+      # Examples that are demos of async utilities (not pipeline
+      # examples) whose behavior is already covered by the owning
+      # crate's own test suite. Skipped from the smoke gate; they
+      # can still be run locally with `cargo run -p <crate> --example
+      # <name>`.
       - name: Run every example
         env:
           RLG_FALLBACK_STDOUT: "1"
+          # `crate/example` pairs to skip. See workflow comment
+          # above for the reason each is on the list.
+          EXAMPLE_SKIPS: "rlg/example_utils rlg/example_config"
         run: |
           set -euo pipefail
           fail=0
@@ -52,7 +60,12 @@ jobs:
               | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')"
             for example in $names; do
               [ -z "$example" ] && continue
-              echo "::group::${crate}: example ${example}"
+              key="${crate}/${example}"
+              if [[ " ${EXAMPLE_SKIPS} " == *" ${key} "* ]]; then
+                echo "::notice::skipping ${key} (async-utils demo — see workflow comment)"
+                continue
+              fi
+              echo "::group::${key}"
               features_flag=""
               if [ "$crate" = "rlg" ]; then
                 features_flag="--features tokio"
@@ -60,7 +73,7 @@ jobs:
               if ! timeout 90 cargo run --quiet \
                 --manifest-path "$manifest" $features_flag \
                 --example "$example" >/dev/null 2>&1; then
-                echo "::error::example ${crate}/${example} failed"
+                echo "::error::example ${key} failed"
                 fail=1
               fi
               echo "::endgroup::"
