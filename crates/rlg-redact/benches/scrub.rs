@@ -28,6 +28,23 @@ fn heavy_pii_payload() -> Log {
         .with("aws_key", "AKIAIOSFODNN7EXAMPLE")
 }
 
+/// Long-form description mixing multiple sensitive substrings.
+/// Amplifies the fused-vs-per-pattern delta because the whole
+/// string is traversed once per pattern in the loop-based impl.
+fn long_mixed_payload() -> Log {
+    let raw = "\
+        transaction 4111-1111-1111-1111 for alice@example.com \
+        from 10.0.0.1 completed in 142ms with token \
+        eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcdEFGHijk \
+        signed by AKIAIOSFODNN7EXAMPLE; retry via \
+        4222-2222-2222-2222 for bob@example.com from 10.0.0.2";
+    Log::info(raw)
+        .component("payments")
+        .with("client_ip", "192.0.2.42")
+        .with("session_token", "Bearer abc123XYZdef.ghi")
+        .with("aws_key", "AKIAIOSFODNN7EXAMPLE")
+}
+
 fn bench_redact(c: &mut Criterion) {
     let redactor = Redactor::with_defaults();
     let mut group = c.benchmark_group("rlg-redact/scrub");
@@ -42,6 +59,14 @@ fn bench_redact(c: &mut Criterion) {
 
     group.bench_function("heavy_pii_match", |b| {
         let log = heavy_pii_payload();
+        b.iter(|| {
+            let out = redactor.scrub(black_box(log.clone()));
+            black_box(out)
+        });
+    });
+
+    group.bench_function("long_mixed_payload", |b| {
+        let log = long_mixed_payload();
         b.iter(|| {
             let out = redactor.scrub(black_box(log.clone()));
             black_box(out)
