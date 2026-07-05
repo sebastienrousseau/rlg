@@ -1,0 +1,69 @@
+name: Examples Smoke
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/examples-smoke.yml"
+  push:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: cargo run --example
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: examples-smoke
+          cache-on-failure: true
+
+      # Iterate every [[example]] declared in every workspace
+      # Cargo.toml and run it with a 30-second timeout. Non-zero
+      # exit or timeout fails the check. The `RLG_FALLBACK_STDOUT`
+      # env var routes any syslog attempt through stdout so the
+      # linux runner isn't blocked on journald.
+      - name: Run every example
+        env:
+          RLG_FALLBACK_STDOUT: "1"
+        run: |
+          set -euo pipefail
+          fail=0
+          for manifest in crates/*/Cargo.toml; do
+            crate="$(basename "$(dirname "$manifest")")"
+            names="$(grep -E '^name\s*=' <(sed -n '/\[\[example\]\]/,/\[\[/p' "$manifest") \
+              | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')"
+            for example in $names; do
+              [ -z "$example" ] && continue
+              echo "::group::${crate}: example ${example}"
+              features_flag=""
+              if [ "$crate" = "rlg" ]; then
+                features_flag="--features tokio"
+              fi
+              if ! timeout 30 cargo run --quiet --release \
+                --manifest-path "$manifest" $features_flag \
+                --example "$example" >/dev/null 2>&1; then
+                echo "::error::example ${crate}/${example} failed"
+                fail=1
+              fi
+              echo "::endgroup::"
+            done
+          done
+          exit "$fail"
