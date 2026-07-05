@@ -39,16 +39,16 @@ pub enum PlatformSink {
     OsLog,
     /// Systemd Journald socket on Linux.
     Journald(Option<UnixDatagram>),
-    /// Linux io_uring-backed file sink. Enabled with the `uring`
+    /// Linux `io_uring`-backed file sink. Enabled with the `uring`
     /// feature. Only compiles on Linux — see
     /// `docs/adr/0011-io-uring-file-sink.md` for the current
     /// implementation status.
     ///
     /// The variant currently stores the underlying `File` and
     /// delegates writes to the standard synchronous path; the
-    /// io_uring submission-queue integration lands in Phase 20.1.
+    /// `io_uring` submission-queue integration lands in Phase 20.1.
     /// Consumers can already select this variant to future-proof
-    /// their sink pipeline, and the io-uring dependency is
+    /// their sink pipeline, and the `io-uring` dependency is
     /// resolved so the SQE wiring is drop-in.
     #[cfg(all(target_os = "linux", feature = "uring"))]
     #[cfg_attr(
