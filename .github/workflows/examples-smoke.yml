@@ -57,7 +57,7 @@ jobs:
               if [ "$crate" = "rlg" ]; then
                 features_flag="--features tokio"
               fi
-              if ! timeout 30 cargo run --quiet --release \
+              if ! timeout 90 cargo run --quiet \
                 --manifest-path "$manifest" $features_flag \
                 --example "$example" >/dev/null 2>&1; then
                 echo "::error::example ${crate}/${example} failed"

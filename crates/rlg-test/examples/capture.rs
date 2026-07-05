@@ -31,8 +31,14 @@ fn main() {
     assert_logged!(capture, len == 2);
     assert_logged!(capture, level == LogLevel::ERROR);
     assert_logged!(capture, component "auth");
-    assert_logged!(capture, contains "INSUFFICIENT_FUNDS");
+    // The second record's description is "payment declined";
+    // "INSUFFICIENT_FUNDS" is an attribute, not the description.
+    assert_logged!(capture, contains "payment declined");
     assert_logged!(capture, attribute "user_id" => 42_u64);
+    assert_logged!(
+        capture,
+        attribute "reason" => "INSUFFICIENT_FUNDS"
+    );
 
     println!(
         "captured {} records — all assertions held",
