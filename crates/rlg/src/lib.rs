@@ -77,10 +77,6 @@ pub mod config;
 pub mod datetime;
 /// Ring buffer engine: ingestion, flushing, and the global `ENGINE`.
 pub mod engine;
-/// Internal sharded queue backing the engine's ring buffer.
-/// Behaviour switches on the `fast-queue` feature — see
-/// `docs/adr/0009-sharded-producer-queue.md`.
-pub(crate) mod sharded_queue;
 /// Error types and the `RlgResult` alias.
 pub mod error;
 /// Zero-config `init()`, builder API, and `FlushGuard`.
@@ -97,6 +93,10 @@ pub mod logger;
 pub mod macros;
 /// Log rotation policies: size, time, date, and count-based.
 pub mod rotation;
+/// Internal sharded queue backing the engine's ring buffer.
+/// Behaviour switches on the `fast-queue` feature — see
+/// `docs/adr/0009-sharded-producer-queue.md`.
+pub(crate) mod sharded_queue;
 /// Platform-native sinks: `os_log` (macOS), `journald` (Linux), file, stdout.
 pub mod sink;
 /// `tracing` integration: `RlgSubscriber` and optional `RlgLayer`.

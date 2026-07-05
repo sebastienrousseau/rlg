@@ -92,10 +92,7 @@ impl ShardedQueue {
     /// assigned round-robin on first call, so subsequent pushes from
     /// the same thread hit the same shard with no contention on the
     /// shard-selection path.
-    pub(crate) fn push(
-        &self,
-        event: LogEvent,
-    ) -> Result<(), LogEvent> {
+    pub(crate) fn push(&self, event: LogEvent) -> Result<(), LogEvent> {
         self.shards[thread_shard()].push(event)
     }
 
@@ -108,6 +105,14 @@ impl ShardedQueue {
 
     /// Pop any available event across all shards. Called by the
     /// flusher thread's drain loop.
+    ///
+    /// `cfg_attr(miri, allow(dead_code))` — the flusher spawn path
+    /// in `engine.rs` is `#[cfg(not(miri))]`, so under Miri nothing
+    /// calls this and the dead-code lint fires. The engine still
+    /// constructs a `ShardedQueue` under Miri (the constructor is
+    /// exercised), so the method must exist; only the lint needs
+    /// suppressing.
+    #[cfg_attr(miri, allow(dead_code))]
     pub(crate) fn pop(&self) -> Option<LogEvent> {
         for shard in &self.shards {
             if let Some(event) = shard.pop() {
@@ -117,7 +122,9 @@ impl ShardedQueue {
         None
     }
 
-    /// True when every shard is empty.
+    /// True when every shard is empty. See [`Self::pop`] for the
+    /// `cfg_attr(miri, allow(dead_code))` rationale.
+    #[cfg_attr(miri, allow(dead_code))]
     pub(crate) fn is_empty(&self) -> bool {
         self.shards.iter().all(ArrayQueue::is_empty)
     }
