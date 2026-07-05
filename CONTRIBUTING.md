@@ -91,6 +91,25 @@ cd crates/rlg && cargo kani --tests
 
 Coverage boundary and what Kani does NOT prove in [`docs/adr/0004-kani-verified-invariants.md`](docs/adr/0004-kani-verified-invariants.md).
 
+### cargo-vet (supply-chain audit chain)
+
+Every transitive dependency must be either (a) covered by a trusted upstream audit import (Bytecode Alliance / Google / Mozilla / Zcash), (b) locally audited in `supply-chain/audits.toml`, or (c) exempted with a documented reason in `supply-chain/config.toml`. CI runs [`cargo vet --locked`](https://mozilla.github.io/cargo-vet/) on every PR ([`.github/workflows/cargo-vet.yml`](.github/workflows/cargo-vet.yml)).
+
+Adding a new dependency will fail CI until you resolve it. Options:
+
+```bash
+# 1. Try inheriting from a trusted upstream:
+cargo vet prune
+
+# 2. Audit locally after reading the source:
+cargo vet certify <crate> <version> safe-to-deploy
+
+# 3. Add a documented exemption with justification (rare — prefer options 1 or 2):
+#    edit supply-chain/config.toml under [[exemptions.<crate>]]
+```
+
+Strategy and bootstrap exemptions policy in [`docs/adr/0006-cargo-vet-adoption.md`](docs/adr/0006-cargo-vet-adoption.md).
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.

@@ -1,0 +1,44 @@
+name: cargo-vet
+
+on:
+  pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "supply-chain/**"
+      - ".github/workflows/cargo-vet.yml"
+  push:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  vet:
+    name: cargo vet
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-vet
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: cargo-vet
+          cache-on-failure: true
+
+      - name: Run cargo vet
+        run: cargo vet --locked
