@@ -59,6 +59,16 @@ pub use crate::async_http::{
     AsyncOtlpExporter, AsyncOtlpExporterBuilder,
 };
 
+/// OTLP/gRPC transport scaffold via `tonic` + `rustls`.
+/// Enable with the `grpc` feature.
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub mod grpc;
+
+#[cfg(feature = "grpc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+pub use crate::grpc::{GrpcOtlpExporter, GrpcOtlpExporterBuilder};
+
 use crate::backoff::{
     CircuitBreaker, RetryPolicy, cheap_random_0_to_1,
 };
@@ -93,6 +103,21 @@ pub enum OtlpError {
     #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
     #[error("OTLP async transport error: {0}")]
     AsyncTransport(Box<reqwest::Error>),
+    /// gRPC endpoint URL could not be parsed or the tonic channel
+    /// could not be built. Only produced when the `grpc` feature
+    /// is enabled.
+    #[cfg(feature = "grpc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+    #[error("OTLP gRPC endpoint error: {0}")]
+    GrpcEndpoint(String),
+    /// The gRPC transport's protobuf-encoded send is not yet
+    /// implemented. Scaffolding shipped in Phase 19c; the wire
+    /// path lands in Phase 19c.1. See
+    /// `docs/adr/0010-otlp-pluggable-transport.md`.
+    #[cfg(feature = "grpc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
+    #[error("OTLP gRPC send not implemented (Phase 19c.1)")]
+    GrpcNotImplemented,
 }
 
 /// A `Result` alias with [`OtlpError`] as the error variant.

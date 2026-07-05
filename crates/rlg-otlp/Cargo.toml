@@ -52,15 +52,25 @@ thiserror = "2.0"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"], optional = true }
 tokio = { version = "1", default-features = false, features = ["rt", "time", "macros"], optional = true }
 
+# Optional gRPC transport. `tonic` + `prost` provide the OTLP/gRPC
+# wire path. `tls-ring` uses rustls with the `ring` crypto backend
+# (matches our workspace TLS policy — no native-tls, no openssl-sys).
+tonic = { version = "0.14", default-features = false, features = ["codegen", "channel", "tls-ring", "transport"], optional = true }
+prost = { version = "0.14", optional = true }
+
 [features]
 # Sync HTTP transport (ureq). On by default — unchanged behaviour
 # for consumers who don't opt in to `async`.
 default = ["blocking"]
 blocking = []
 # Async HTTP transport (reqwest + rustls-tls). Enables the
-# `AsyncOtlpExporter` type. See
-# `docs/adr/0010-otlp-pluggable-transport.md`.
+# `AsyncOtlpExporter` type.
 async = ["dep:reqwest", "dep:tokio"]
+# gRPC transport (tonic + prost + rustls). Enables the
+# `GrpcOtlpExporter` type. The OTLP/gRPC protobuf types are
+# hand-carved to the minimal `ExportLogsServiceRequest` surface
+# — see `src/grpc.rs`.
+grpc = ["dep:tonic", "dep:prost", "dep:tokio"]
 
 [dev-dependencies]
 criterion = "0.8"

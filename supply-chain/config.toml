@@ -271,6 +271,10 @@ criteria = "safe-to-deploy"
 version = "0.3.32"
 criteria = "safe-to-run"
 
+[[exemptions.futures-sink]]
+version = "0.3.32"
+criteria = "safe-to-deploy"
+
 [[exemptions.futures-task]]
 version = "0.3.32"
 criteria = "safe-to-deploy"
@@ -297,6 +301,10 @@ criteria = "safe-to-run"
 
 [[exemptions.getrandom]]
 version = "0.4.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.h2]]
+version = "0.4.15"
 criteria = "safe-to-deploy"
 
 [[exemptions.half]]
@@ -337,6 +345,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.hyper-rustls]]
 version = "0.27.9"
+criteria = "safe-to-deploy"
+
+[[exemptions.hyper-timeout]]
+version = "0.5.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.hyper-util]]
@@ -409,7 +421,7 @@ criteria = "safe-to-deploy"
 
 [[exemptions.itertools]]
 version = "0.13.0"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.itoa]]
 version = "1.0.18"
@@ -551,6 +563,14 @@ criteria = "safe-to-deploy"
 version = "2.8.6"
 criteria = "safe-to-deploy"
 
+[[exemptions.pin-project]]
+version = "1.1.13"
+criteria = "safe-to-deploy"
+
+[[exemptions.pin-project-internal]]
+version = "1.1.13"
+criteria = "safe-to-deploy"
+
 [[exemptions.pin-project-lite]]
 version = "0.2.17"
 criteria = "safe-to-deploy"
@@ -586,6 +606,14 @@ criteria = "safe-to-deploy"
 [[exemptions.proptest]]
 version = "1.11.0"
 criteria = "safe-to-run"
+
+[[exemptions.prost]]
+version = "0.14.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.prost-derive]]
+version = "0.14.4"
+criteria = "safe-to-deploy"
 
 [[exemptions.quinn]]
 version = "0.11.11"
@@ -885,11 +913,15 @@ criteria = "safe-to-deploy"
 
 [[exemptions.tokio-stream]]
 version = "0.1.18"
-criteria = "safe-to-run"
+criteria = "safe-to-deploy"
 
 [[exemptions.tokio-test]]
 version = "0.4.5"
 criteria = "safe-to-run"
+
+[[exemptions.tokio-util]]
+version = "0.7.18"
+criteria = "safe-to-deploy"
 
 [[exemptions.toml]]
 version = "0.8.23"
@@ -921,6 +953,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.toml_writer]]
 version = "1.1.1+spec-1.1.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.tonic]]
+version = "0.14.6"
 criteria = "safe-to-deploy"
 
 [[exemptions.tower]]
