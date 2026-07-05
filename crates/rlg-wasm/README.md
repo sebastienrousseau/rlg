@@ -21,6 +21,15 @@
 
 ---
 
+## WASI 0.2 component (scaffold)
+
+A component-model interface definition ships at
+[`wit/rlg.wit`](wit/rlg.wit) — package `rlg:core@0.0.11`, world
+`rlg-logger`. Consumable by any WASI 0.2 host (`wasmtime run
+--component`, `jco`, Fermyon Spin, …) once Phase 22.1 wires the
+`wit-bindgen` codegen. See
+[`docs/adr/0013-wasi-0.2-component.md`](../../docs/adr/0013-wasi-0.2-component.md).
+
 ## Install
 
 ```toml
