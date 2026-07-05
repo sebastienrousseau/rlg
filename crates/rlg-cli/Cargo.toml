@@ -51,6 +51,7 @@ anyhow = "1.0"
 assert_cmd = "2"
 criterion = "0.8"
 predicates = "3"
+proptest = "1.5"
 tempfile = "3"
 
 [lints.rust]

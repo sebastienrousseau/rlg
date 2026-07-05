@@ -68,6 +68,17 @@ cargo +nightly fuzz run parse_record -- -max_total_time=30
 
 Fuzz targets live under [`fuzz/`](fuzz/), which is deliberately excluded from the workspace so `libfuzzer-sys` and nightly-only build flags never leak into normal `cargo build` / `cargo test`. Strategy and corpus policy in [`docs/adr/0002-fuzz-strategy.md`](docs/adr/0002-fuzz-strategy.md).
 
+### Property tests
+
+Seven `proptest` properties cover the format `Display` impls, NDJSON single-line invariant, serde round-trip, and `Filter` monotonicity. Run with standard `cargo test`:
+
+```bash
+cargo test -p rlg --test proptest_round_trip
+cargo test -p rlg-cli --test proptest_filter
+```
+
+Failures shrink to a minimal counter-example that appears directly in the test output. Strategy and coverage boundaries in [`docs/adr/0003-property-tested-formats.md`](docs/adr/0003-property-tested-formats.md).
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.
