@@ -340,7 +340,7 @@ mod tests {
         sink.emit("INFO", b"test stdout");
     }
 
-    /// UringFile variant scaffold — currently delegates to the
+    /// `UringFile` variant scaffold — currently delegates to the
     /// sync write path. Test verifies the variant compiles,
     /// constructs from a real `File`, and successfully emits.
     #[test]
