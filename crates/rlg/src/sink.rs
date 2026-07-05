@@ -39,6 +39,23 @@ pub enum PlatformSink {
     OsLog,
     /// Systemd Journald socket on Linux.
     Journald(Option<UnixDatagram>),
+    /// Linux io_uring-backed file sink. Enabled with the `uring`
+    /// feature. Only compiles on Linux — see
+    /// `docs/adr/0011-io-uring-file-sink.md` for the current
+    /// implementation status.
+    ///
+    /// The variant currently stores the underlying `File` and
+    /// delegates writes to the standard synchronous path; the
+    /// io_uring submission-queue integration lands in Phase 20.1.
+    /// Consumers can already select this variant to future-proof
+    /// their sink pipeline, and the io-uring dependency is
+    /// resolved so the SQE wiring is drop-in.
+    #[cfg(all(target_os = "linux", feature = "uring"))]
+    #[cfg_attr(
+        docsrs,
+        doc(cfg(all(target_os = "linux", feature = "uring")))
+    )]
+    UringFile(std::fs::File),
 }
 
 /// POSIX `syslog(3)` bindings.
@@ -202,6 +219,19 @@ impl PlatformSink {
                     payload,
                     socket_opt.as_ref(),
                 );
+            }
+            #[cfg(all(target_os = "linux", feature = "uring"))]
+            Self::UringFile(f) => {
+                // Phase 20 scaffold: delegates to the sync write
+                // path for correctness. Phase 20.1 wires up the
+                // io_uring submission queue for zero-copy
+                // batched writes. Consumers who need the io_uring
+                // performance profile today can construct their
+                // own SQE loop against the underlying `File`
+                // via the `io-uring` crate — the feature already
+                // resolves the dep.
+                let _ = f.write_all(payload);
+                let _ = f.write_all(b"\n");
             }
         }
     }

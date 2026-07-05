@@ -89,6 +89,11 @@ toml = "1.0.7"
 tracing-core = "0.1.36"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
 
+# io_uring bindings (Linux only). Optional and gated behind the
+# `uring` feature. See `docs/adr/0011-io-uring-file-sink.md`.
+[target.'cfg(target_os = "linux")'.dependencies]
+io-uring = { version = "0.7", optional = true }
+
 [build-dependencies]
 version_check = "0.9.5"
 
@@ -119,6 +124,11 @@ debug_enabled = []
 # `docs/adr/0009-sharded-producer-queue.md`.
 fast-queue = []
 miette = ["dep:miette"]
+# io_uring file sink. Enables the `PlatformSink::UringFile`
+# variant when targeting Linux. On non-Linux targets the feature
+# is a no-op (the variant is cfg-gated out). See
+# `docs/adr/0011-io-uring-file-sink.md`.
+uring = ["dep:io-uring"]
 tokio = ["dep:tokio", "dep:notify"]
 tui = ["dep:terminal_size"]
 tracing-layer = ["dep:tracing-subscriber"]
