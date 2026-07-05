@@ -15,12 +15,12 @@
 //! `shutdown()` to join the flusher thread.
 
 use crate::log_level::LogLevel;
+use crate::sharded_queue::ShardedQueue;
 #[cfg(not(miri))]
 use crate::sink::PlatformSink;
 use crate::tui::TuiMetrics;
 #[cfg(not(miri))]
 use crate::tui::spawn_tui_thread;
-use crossbeam_queue::ArrayQueue;
 use std::fmt;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -54,8 +54,16 @@ pub struct LogEvent {
 /// Owns the ring buffer, flusher thread, and TUI metrics counters.
 /// Access the global instance via [`ENGINE`].
 pub struct LockFreeEngine {
-    /// Bounded ring buffer (lock-free push/pop via `crossbeam`).
-    queue: Arc<ArrayQueue<LogEvent>>,
+    /// Bounded, sharded ring buffer.
+    ///
+    /// - Default build: one shard — semantically identical to the
+    ///   direct `ArrayQueue` use in prior releases.
+    /// - `fast-queue` feature: eight shards — reduces producer-side
+    ///   cache-line contention on the underlying atomic tag when
+    ///   many threads ingest concurrently.
+    ///
+    /// See `docs/adr/0009-sharded-producer-queue.md`.
+    queue: Arc<ShardedQueue>,
     /// Signals the flusher thread to drain and exit.
     shutdown_flag: Arc<AtomicBool>,
     /// Atomic counters consumed by the opt-in TUI dashboard.
@@ -98,7 +106,7 @@ impl LockFreeEngine {
     /// Panics if the OS cannot spawn the background flusher thread.
     #[must_use]
     pub fn new(capacity: usize) -> Self {
-        let queue = Arc::new(ArrayQueue::new(capacity));
+        let queue = Arc::new(ShardedQueue::new(capacity));
         let shutdown_flag = Arc::new(AtomicBool::new(false));
         let metrics = Arc::new(TuiMetrics::default());
         let filter_level = AtomicU8::new(0); // Default to ALL
@@ -196,11 +204,16 @@ impl LockFreeEngine {
         }
 
         // If the buffer is full, evict and retry with bounded retries.
+        //
+        // `pop_local` targets the same shard as `push` so the eviction
+        // makes room for the retry on the shard the producer is
+        // actually contending on. Under the default (1-shard) build
+        // this is identical to the historical pop-then-push loop.
         if let Err(rejected) = self.queue.push(event) {
             self.metrics.inc_dropped();
             let mut to_push = rejected;
             for _ in 0..3 {
-                let _ = self.queue.pop();
+                let _ = self.queue.pop_local();
                 match self.queue.push(to_push) {
                     Ok(()) => break,
                     Err(e) => to_push = e,

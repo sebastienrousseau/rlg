@@ -112,6 +112,12 @@ loom = "0.7"
 [features]
 default = []
 debug_enabled = []
+# Split the internal producer queue into 8 shards to reduce
+# cache-line contention under high-concurrency ingest. Off by
+# default — a single shard is byte-for-byte the same as the
+# pre-Phase-18 direct `ArrayQueue`. See
+# `docs/adr/0009-sharded-producer-queue.md`.
+fast-queue = []
 miette = ["dep:miette"]
 tokio = ["dep:tokio", "dep:notify"]
 tui = ["dep:terminal_size"]

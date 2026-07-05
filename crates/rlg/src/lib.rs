@@ -77,6 +77,10 @@ pub mod config;
 pub mod datetime;
 /// Ring buffer engine: ingestion, flushing, and the global `ENGINE`.
 pub mod engine;
+/// Internal sharded queue backing the engine's ring buffer.
+/// Behaviour switches on the `fast-queue` feature — see
+/// `docs/adr/0009-sharded-producer-queue.md`.
+pub(crate) mod sharded_queue;
 /// Error types and the `RlgResult` alias.
 pub mod error;
 /// Zero-config `init()`, builder API, and `FlushGuard`.
