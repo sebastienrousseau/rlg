@@ -31,9 +31,14 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      # Pin cargo-vet to the version that generated our
+      # supply-chain/imports.lock. Bytecode Alliance's audits use
+      # the `trusted-publisher` field (cargo-vet 0.10+), which
+      # earlier cargo-vet releases reject with "missing field
+      # `user-id`".
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-vet
+          tool: cargo-vet@0.10.2
 
       - uses: Swatinem/rust-cache@v2
         with:
