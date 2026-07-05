@@ -54,10 +54,21 @@ jobs:
         run: |
           set -euo pipefail
           fail=0
+          # List examples per crate via `cargo run --example` with
+          # no argument — cargo errors on stderr and prints
+          # "Available examples:" followed by one indented entry per
+          # example. Authoritative source; parsing TOML by hand
+          # missed multi-`[[example]]` manifests before.
           for manifest in crates/*/Cargo.toml; do
             crate="$(basename "$(dirname "$manifest")")"
-            names="$(grep -E '^name\s*=' <(sed -n '/\[\[example\]\]/,/\[\[/p' "$manifest") \
-              | sed 's/name = "\(.*\)"/\1/' | tr -d ' ')"
+            features_flag=""
+            if [ "$crate" = "rlg" ]; then
+              features_flag="--features tokio"
+            fi
+            listing="$(cargo run --quiet --manifest-path "$manifest" \
+              $features_flag --example 2>&1 || true)"
+            names="$(echo "$listing" \
+              | awk '/^Available examples:/{flag=1; next} flag && /^    /{print $1}')"
             for example in $names; do
               [ -z "$example" ] && continue
               key="${crate}/${example}"
@@ -66,10 +77,6 @@ jobs:
                 continue
               fi
               echo "::group::${key}"
-              features_flag=""
-              if [ "$crate" = "rlg" ]; then
-                features_flag="--features tokio"
-              fi
               if ! timeout 90 cargo run --quiet \
                 --manifest-path "$manifest" $features_flag \
                 --example "$example" >/dev/null 2>&1; then
