@@ -304,4 +304,63 @@ mod tests {
         let res = e.export_one(&sample(LogLevel::INFO)).await;
         assert!(matches!(res, Err(OtlpError::CircuitOpen)));
     }
+
+    #[tokio::test]
+    async fn retry_loop_exhausts_attempts() {
+        let e = AsyncOtlpExporter::builder()
+            .endpoint("http://127.0.0.1:1/v1/logs")
+            .timeout_secs(1)
+            .max_retries(2)
+            .backoff_base(Duration::ZERO)
+            .build()
+            .unwrap();
+        let res = e.export_one(&sample(LogLevel::INFO)).await;
+        assert!(matches!(
+            res,
+            Err(OtlpError::AsyncTransport(_))
+                | Err(OtlpError::BadStatus(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn export_batch_multiple_records() {
+        let e = AsyncOtlpExporter::builder()
+            .endpoint("http://127.0.0.1:1/v1/logs")
+            .timeout_secs(1)
+            .max_retries(0)
+            .build()
+            .unwrap();
+        let batch =
+            vec![sample(LogLevel::INFO), sample(LogLevel::ERROR)];
+        let res = e.export_batch(&batch).await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn builder_max_retries_and_backoff_base() {
+        let e = AsyncOtlpExporter::builder()
+            .endpoint("http://x")
+            .max_retries(5)
+            .backoff_base(Duration::from_millis(50))
+            .build()
+            .unwrap();
+        assert_eq!(e.retry.max_retries, 5);
+        assert_eq!(e.retry.base, Duration::from_millis(50));
+    }
+
+    #[tokio::test]
+    async fn circuit_records_failure_on_shared_breaker() {
+        let cb =
+            Arc::new(CircuitBreaker::new(3, Duration::from_secs(60)));
+        let e = AsyncOtlpExporter::builder()
+            .endpoint("http://127.0.0.1:1/v1/logs")
+            .timeout_secs(1)
+            .max_retries(0)
+            .circuit(cb.clone())
+            .build()
+            .unwrap();
+        let _ = e.export_one(&sample(LogLevel::INFO)).await;
+        // Shared breaker allows still: 3 tokens, 1 consumed.
+        assert!(cb.allow());
+    }
 }

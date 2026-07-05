@@ -249,4 +249,39 @@ mod tests {
         let res = e.export_batch(&[log]).await;
         assert!(matches!(res, Err(OtlpError::GrpcNotImplemented)));
     }
+
+    #[tokio::test]
+    async fn channel_accessor_returns_live_reference() {
+        let e = GrpcOtlpExporter::builder()
+            .endpoint("http://localhost:4317")
+            .build()
+            .unwrap();
+        // The accessor returns a real Channel reference.
+        let _ch: &Channel = e.channel();
+    }
+
+    #[tokio::test]
+    async fn builder_retry_and_backoff() {
+        let e = GrpcOtlpExporter::builder()
+            .endpoint("http://localhost:4317")
+            .max_retries(5)
+            .backoff_base(Duration::from_millis(50))
+            .build()
+            .unwrap();
+        assert_eq!(e.retry.max_retries, 5);
+        assert_eq!(e.retry.base, Duration::from_millis(50));
+    }
+
+    #[tokio::test]
+    async fn builder_with_circuit_breaker() {
+        let cb =
+            Arc::new(CircuitBreaker::new(3, Duration::from_secs(60)));
+        let e = GrpcOtlpExporter::builder()
+            .endpoint("http://localhost:4317")
+            .circuit(cb)
+            .build()
+            .unwrap();
+        // Just verify build succeeded with a breaker attached.
+        assert!(e.endpoint().starts_with("http://"));
+    }
 }
