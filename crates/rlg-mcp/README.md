@@ -84,7 +84,7 @@ the executable and no arguments.
 
 ## Limitations
 
-- v0.0.9 only parses the canonical `LogFormat::JSON` input
+- v0.0.11 only parses the canonical `LogFormat::JSON` input
   shape. MCP / OTLP / ECS / GELF transport-envelope parsing
   is tracked under
   [`crates/rlg-cli/doc/INPUT-FORMATS.md`](../rlg-cli/doc/INPUT-FORMATS.md)

@@ -25,7 +25,7 @@
 ---
 
 This is the Cargo workspace root. The library lives at
-[`crates/rlg`](crates/rlg). Nine companion crates ship from this
+[`crates/rlg`](crates/rlg). Ten companion crates ship from this
 workspace, all at lockstep version `0.0.11`.
 
 ## The rlg ecosystem
@@ -37,10 +37,11 @@ workspace, all at lockstep version `0.0.11`.
 | **[`rlg-mcp`](crates/rlg-mcp/README.md)** | Model Context Protocol server exposing rlg streams as tools to LLM agents. | Claude Desktop, Cursor, mcp.run agents reading your logs. |
 | **[`rlg-otlp`](crates/rlg-otlp/README.md)** | OpenTelemetry network exporter (OTLP/HTTP JSON). | Ship records to Honeycomb, Datadog, Tempo, Jaeger, otelcol. |
 | **[`rlg-tower`](crates/rlg-tower/README.md)** | `tower::Layer` emitting per-request structured access logs. | axum, tonic, hyper, `lambda_runtime` — any `tower::Service`. |
-| **[`rlg-wasm`](crates/rlg-wasm/README.md)** | `wasm-bindgen` wrapper for browser / Deno / Cloudflare Workers / Bun. | Structured logging from JS via `RlgWasm`. |
-| **[`rlg-redact`](crates/rlg-redact/README.md)** | PII / secret redaction between `Log::fire()` and the sink. | Compliance, GDPR, audit-trail safety. Built-in patterns for cards, JWTs, bearers, emails, IPs, AWS keys. |
+| **[`rlg-wasm`](crates/rlg-wasm/README.md)** | `wasm-bindgen` wrapper for browser / Deno / Cloudflare Workers / Bun, plus a WASI 0.2 component interface for wasmtime hosts. | Structured logging from JS or WASI 0.2 components. |
+| **[`rlg-redact`](crates/rlg-redact/README.md)** | PII / secret redaction between `Log::fire()` and the sink. Aho-Corasick fused alternation regex. | Compliance, GDPR, audit-trail safety. Built-in patterns for cards, JWTs, bearers, emails, IPs, AWS keys. |
 | **[`rlg-test`](crates/rlg-test/README.md)** | Test utilities — capture rlg records in a `#[test]` scope and assert on them with `assert_logged!`. | Downstream library tests verifying their structured log output. |
 | **[`rlg-report`](crates/rlg-report/README.md)** | Log digest / analytics: count by level, top components, top errors, latency percentiles. CLI + library mode. | Operational dashboards, daily error reports, oncall triage. |
+| **[`rlg-ebpf`](crates/rlg-ebpf/README.md)** | `Enricher` trait + `ProcessEnricher` (portable) + `EbpfEnricher` scaffold (Linux, behind the `ebpf` feature) for automatic PID / process-name attributes. | Automatic host-level context on every record without app code changes. |
 | `xtask` *(internal, unpublished)* | `cargo xtask check-all / coverage / audit / doc / examples / bench / release`. | Maintainer automation. |
 
 ### Install one, install all
@@ -78,10 +79,11 @@ cargo install rlg-report    # the `rlg-report` digest tool
 │   ├── rlg-mcp/          # MCP server
 │   ├── rlg-otlp/         # OTLP/HTTP exporter
 │   ├── rlg-tower/        # tower::Layer
-│   ├── rlg-wasm/         # wasm-bindgen wrapper
-│   ├── rlg-redact/       # PII / secret scrubber
+│   ├── rlg-wasm/         # wasm-bindgen + WASI 0.2 component
+│   ├── rlg-redact/       # PII / secret scrubber (Aho-Corasick)
 │   ├── rlg-test/         # test utilities
 │   ├── rlg-report/       # log digest binary + lib
+│   ├── rlg-ebpf/         # Enricher trait + eBPF (Linux) scaffold
 │   └── xtask/            # internal automation (publish = false)
 └── .github/
     └── workflows/

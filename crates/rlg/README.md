@@ -31,7 +31,7 @@
 **Library reference**
 
 - [Why this approach?](#why-this-approach) — design rationale
-- [Capabilities in 0.0.9](#capabilities-in-009) — release inventory
+- [Capabilities in 0.0.11](#capabilities-in-0011) — release inventory
 - [The fluent API](#the-fluent-api) — `Log::info(...).with(...).fire()`
 - [Output formats](#output-formats) — every `LogFormat` variant
 - [Sinks](#sinks) — `os_log`, `journald`, file, stdout
@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.9"
+rlg = "0.0.11"
 ```
 
 ### Build from source
@@ -80,15 +80,15 @@ the application needs.
 | Feature | Pulls in | Adds | Documented in |
 | :--- | :--- | :--- | :--- |
 | `tokio` | `tokio` + `notify` | `Config::load_async`, file-watcher hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
-| `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-009) |
-| `miette` | `miette` 7 | Pretty diagnostic error reports | [Library reference](#capabilities-in-009) |
+| `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
+| `miette` | `miette` 7 | Pretty diagnostic error reports | [Library reference](#capabilities-in-0011) |
 | `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups | [Bridging existing facades](#bridging-existing-facades) |
 | `debug_enabled` | — | Verbose internal engine diagnostics | — |
 
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.9", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.11", features = ["tokio", "tracing-layer"] }
 ```
 
 ---
@@ -188,7 +188,7 @@ are strictly opt-in.
 
 ---
 
-## Capabilities in 0.0.9
+## Capabilities in 0.0.11
 
 - **14 output formats.** CLF, CEF, ELF, W3C, Apache Access,
   Log4j XML, JSON, GELF, Logstash, NDJSON, MCP, OTLP, Logfmt,
