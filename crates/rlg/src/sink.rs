@@ -340,6 +340,22 @@ mod tests {
         sink.emit("INFO", b"test stdout");
     }
 
+    /// UringFile variant scaffold — currently delegates to the
+    /// sync write path. Test verifies the variant compiles,
+    /// constructs from a real `File`, and successfully emits.
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[cfg(all(target_os = "linux", feature = "uring"))]
+    fn test_platform_sink_uring_file_scaffold_emits() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let file = tmp.reopen().unwrap();
+        let mut sink = PlatformSink::UringFile(file);
+        sink.emit("INFO", b"uring scaffold test");
+        // Read back the file and confirm the payload landed.
+        let contents = std::fs::read_to_string(tmp.path()).unwrap();
+        assert!(contents.contains("uring scaffold test"));
+    }
+
     #[test]
     #[cfg_attr(miri, ignore)]
     #[allow(unsafe_code)]
