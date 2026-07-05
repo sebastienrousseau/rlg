@@ -47,6 +47,18 @@
 /// same primitives without duplicating the reliability logic.
 pub mod backoff;
 
+/// Async HTTP/JSON transport via `reqwest` + `rustls`.
+/// Enable with the `async` feature.
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub mod async_http;
+
+#[cfg(feature = "async")]
+#[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+pub use crate::async_http::{
+    AsyncOtlpExporter, AsyncOtlpExporterBuilder,
+};
+
 use crate::backoff::{
     CircuitBreaker, RetryPolicy, cheap_random_0_to_1,
 };
@@ -74,6 +86,13 @@ pub enum OtlpError {
     /// request was rejected without touching the network.
     #[error("OTLP circuit breaker tripped (too many recent failures)")]
     CircuitOpen,
+    /// The async HTTP transport failed. Only produced when the
+    /// `async` feature is enabled and an [`AsyncOtlpExporter`] is in
+    /// use.
+    #[cfg(feature = "async")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
+    #[error("OTLP async transport error: {0}")]
+    AsyncTransport(Box<reqwest::Error>),
 }
 
 /// A `Result` alias with [`OtlpError`] as the error variant.

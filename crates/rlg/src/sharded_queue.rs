@@ -55,6 +55,12 @@ thread_local! {
 fn thread_shard() -> usize {
     SHARD_INDEX.with(|slot| {
         slot.get().unwrap_or_else(|| {
+            // `% SHARD_COUNT` — under the default build
+            // (SHARD_COUNT = 1) this collapses to 0, which is
+            // exactly what we want (single shard). Clippy's
+            // modulo_one lint sees the constant collapse and warns;
+            // the allow is scoped to this expression only.
+            #[allow(clippy::modulo_one)]
             let idx = NEXT_SHARD.fetch_add(1, Ordering::Relaxed)
                 % SHARD_COUNT;
             slot.set(Some(idx));
@@ -76,8 +82,14 @@ impl ShardedQueue {
     /// shards. Per-shard capacity is `total_capacity / SHARD_COUNT`,
     /// with any remainder distributed to the first shards.
     pub(crate) fn new(total_capacity: usize) -> Self {
-        let base = total_capacity / SHARD_COUNT;
-        let remainder = total_capacity % SHARD_COUNT;
+        // Under the default build (SHARD_COUNT = 1) the divisions
+        // and modulos collapse to identity. Clippy warns; the allow
+        // is scoped to these two expressions.
+        #[allow(clippy::modulo_one)]
+        let (base, remainder) = (
+            total_capacity / SHARD_COUNT,
+            total_capacity % SHARD_COUNT,
+        );
         let shards = (0..SHARD_COUNT)
             .map(|i| {
                 let cap = base + usize::from(i < remainder);
