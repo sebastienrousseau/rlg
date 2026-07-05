@@ -130,7 +130,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [lints.rust]
 missing_copy_implementations = "warn"
 missing_docs = "deny"
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(docsrs)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(docsrs)', 'cfg(kani)'] }
 unstable_features = "warn"
 unused_extern_crates = "warn"
 

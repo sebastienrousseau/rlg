@@ -1,0 +1,36 @@
+name: Kani
+
+on:
+  push:
+    # `feat/**` included so introducing PRs validate the workflow
+    # before merge. Post-v0.1.0, prune to `main` only if per-branch
+    # runs prove noisy.
+    branches: [main, "feat/**"]
+  schedule:
+    # Weekly cron — Kani is heavyweight; not worth running per-PR.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  kani:
+    name: Kani verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Kani
+        uses: model-checking/kani-github-action@v1
+        with:
+          working-directory: crates/rlg
+          args: --tests --output-format terse

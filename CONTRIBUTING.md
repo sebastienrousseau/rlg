@@ -79,6 +79,18 @@ cargo test -p rlg-cli --test proptest_filter
 
 Failures shrink to a minimal counter-example that appears directly in the test output. Strategy and coverage boundaries in [`docs/adr/0003-property-tested-formats.md`](docs/adr/0003-property-tested-formats.md).
 
+### Kani (model-checked proofs)
+
+Three Kani proofs formally verify the `LogLevel::from_numeric` ↔ `to_numeric` bijection and the session-counter fetch_add monotonicity. Kani runs on merges to `main` and weekly cron via [`.github/workflows/kani.yml`](.github/workflows/kani.yml), not per-PR. To run locally:
+
+```bash
+cargo install --locked kani-verifier
+cargo kani setup
+cd crates/rlg && cargo kani --tests
+```
+
+Coverage boundary and what Kani does NOT prove in [`docs/adr/0004-kani-verified-invariants.md`](docs/adr/0004-kani-verified-invariants.md).
+
 ## Cryptographic Signing — Mandatory
 
 Every commit on every PR must be cryptographically verified. Unsigned commits are rejected at branch protection.

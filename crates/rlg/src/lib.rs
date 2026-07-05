@@ -102,6 +102,12 @@ pub mod tui;
 /// Timestamps, file I/O helpers, and input sanitization.
 pub mod utils;
 
+/// Kani model-checked proofs. Only compiled under `--cfg kani`
+/// (set automatically by `cargo kani`). See
+/// `docs/adr/0004-kani-verified-invariants.md`.
+#[cfg(kani)]
+mod kani_proofs;
+
 /// Shared utilities from `euxis-commons`.
 pub use euxis_commons as commons;
 
