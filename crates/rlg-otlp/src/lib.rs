@@ -47,6 +47,8 @@
 /// same primitives without duplicating the reliability logic.
 pub mod backoff;
 
+pub use crate::backoff::{CircuitBreaker, RetryPolicy};
+
 /// Async HTTP/JSON transport via `reqwest` + `rustls`.
 /// Enable with the `async` feature.
 #[cfg(feature = "async")]
@@ -69,9 +71,7 @@ pub mod grpc;
 #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
 pub use crate::grpc::{GrpcOtlpExporter, GrpcOtlpExporterBuilder};
 
-use crate::backoff::{
-    CircuitBreaker, RetryPolicy, cheap_random_0_to_1,
-};
+use crate::backoff::cheap_random_0_to_1;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use std::collections::HashMap;

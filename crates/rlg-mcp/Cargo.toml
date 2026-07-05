@@ -42,6 +42,10 @@ path = "benches/tail.rs"
 name = "library_mode"
 path = "examples/library_mode.rs"
 
+[[example]]
+name = "dispatch"
+path = "examples/dispatch.rs"
+
 [dependencies]
 rlg = { version = "0.0.11", path = "../rlg" }
 rlg-cli = { version = "0.0.11", path = "../rlg-cli" }

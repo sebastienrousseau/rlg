@@ -33,6 +33,24 @@ path = "src/lib.rs"
 name = "honeycomb"
 path = "examples/honeycomb.rs"
 
+[[example]]
+name = "circuit_breaker"
+path = "examples/circuit_breaker.rs"
+
+# Async and gRPC examples require the corresponding cargo feature.
+# Both examples ship a graceful fallback `main()` when the feature
+# is off so the examples-smoke gate can compile them without extra
+# feature flags.
+[[example]]
+name = "async_export"
+path = "examples/async_export.rs"
+required-features = ["async"]
+
+[[example]]
+name = "grpc_export"
+path = "examples/grpc_export.rs"
+required-features = ["grpc"]
+
 [[bench]]
 name = "serialise"
 harness = false

@@ -41,6 +41,10 @@ path = "benches/parse.rs"
 name = "pipeline"
 path = "examples/pipeline.rs"
 
+[[example]]
+name = "filter_by_attribute"
+path = "examples/filter_by_attribute.rs"
+
 [dependencies]
 rlg = { version = "0.0.11", path = "../rlg" }
 clap = { version = "4.6", features = ["derive"] }

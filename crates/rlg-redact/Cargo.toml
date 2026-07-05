@@ -34,6 +34,10 @@ path = "src/lib.rs"
 name = "scrub"
 path = "examples/scrub.rs"
 
+[[example]]
+name = "custom_patterns"
+path = "examples/custom_patterns.rs"
+
 [[bench]]
 name = "scrub"
 harness = false

@@ -38,6 +38,10 @@ path = "benches/enrich.rs"
 name = "enrich"
 path = "examples/enrich.rs"
 
+[[example]]
+name = "chain"
+path = "examples/chain.rs"
+
 [dependencies]
 rlg = { version = "0.0.11", path = "../rlg" }
 serde_json = "1.0"

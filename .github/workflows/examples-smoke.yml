@@ -61,10 +61,14 @@ jobs:
           # missed multi-`[[example]]` manifests before.
           for manifest in crates/*/Cargo.toml; do
             crate="$(basename "$(dirname "$manifest")")"
+            # Per-crate feature flags. Empty by default; a few
+            # crates need extra features to compile examples that
+            # exercise optional transports / integrations.
             features_flag=""
-            if [ "$crate" = "rlg" ]; then
-              features_flag="--features tokio"
-            fi
+            case "$crate" in
+              rlg)      features_flag="--features tokio" ;;
+              rlg-otlp) features_flag="--all-features" ;;
+            esac
             listing="$(cargo run --quiet --manifest-path "$manifest" \
               $features_flag --example 2>&1 || true)"
             names="$(echo "$listing" \
