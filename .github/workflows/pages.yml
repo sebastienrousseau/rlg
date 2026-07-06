@@ -1,0 +1,91 @@
+name: GitHub Pages
+
+# Publishes `cargo doc` for every workspace crate to
+# https://sebastienrousseau.github.io/rlg/. Fires on every push to
+# main plus release tags so the site tracks HEAD and each release
+# rebuilds a fresh copy.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+# Only one Pages deploy at a time; a newer run cancels an in-flight
+# older one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build cargo doc
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Nightly gives us `#[doc(cfg(feature = "…"))]` rendering,
+      # which several workspace crates use to annotate feature-gated
+      # items. The `RUSTDOCFLAGS --cfg docsrs` combo mirrors what
+      # docs.rs does.
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: pages
+
+      - name: Build workspace docs
+        env:
+          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+        run: |
+          cargo doc \
+            --workspace \
+            --all-features \
+            --no-deps
+
+      # Root redirect — GH Pages lands on `/`, but there's no `/index.html`
+      # under `target/doc` (only per-crate directories). Redirect to
+      # `/rlg/` so visitors reach the flagship crate's docs.
+      - name: Add root redirect to rlg
+        run: |
+          cat > target/doc/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=rlg/">
+          <link rel="canonical" href="rlg/">
+          <title>rlg — RustLogs</title>
+          <p>Redirecting to <a href="rlg/">rlg documentation</a>.</p>
+          HTML
+
+      # A `.nojekyll` file tells GH Pages to serve the tree
+      # verbatim — otherwise underscored directories (like
+      # `_static`, `_images`) are hidden.
+      - name: Disable Jekyll
+        run: touch target/doc/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

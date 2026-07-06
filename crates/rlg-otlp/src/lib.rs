@@ -37,6 +37,11 @@
 //! ```
 
 #![forbid(unsafe_code)]
+// Enable `#[doc(cfg(feature = "…"))]` under docs.rs so feature-gated
+// items visibly show which cargo feature they need. Requires nightly
+// (`--cfg docsrs`); stable builds skip this so they compile without
+// unstable features.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
 
 /// Retry policy + full-jitter + tokens-per-window circuit breaker.

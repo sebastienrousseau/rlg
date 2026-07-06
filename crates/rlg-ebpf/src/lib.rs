@@ -43,6 +43,12 @@
 // `#[allow(unsafe_code)]`, following the same pattern as
 // `rlg::sink` for `syslog(3)`.
 #![deny(missing_docs)]
+// Enable `#[doc(cfg(feature = "…"))]` under docs.rs so feature-gated
+// items visibly show which cargo feature they need. Requires nightly
+// (`--cfg docsrs`), which is what docs.rs and our nightly-doc builds
+// use. Guarded so stable builds — including the shared pipelines
+// docs job — don't need the unstable `doc_cfg` feature.
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use rlg::log::Log;
 use serde_json::Value;
