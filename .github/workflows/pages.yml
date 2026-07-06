@@ -72,6 +72,13 @@ jobs:
       - name: Disable Jekyll
         run: touch target/doc/.nojekyll
 
+      # A `CNAME` file in the deployed artifact tells GH Pages to
+      # serve at the custom domain. Without this, each new deploy
+      # would drop the `doc.rustlogs.com` binding and the site would
+      # fall back to `sebastienrousseau.github.io/rlg/`.
+      - name: Write CNAME for the custom domain
+        run: echo "doc.rustlogs.com" > target/doc/CNAME
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
