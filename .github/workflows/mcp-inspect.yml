@@ -37,7 +37,7 @@ jobs:
           workspaces: ". -> target-mcp-inspect"
           key: mcp-inspect
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
 
