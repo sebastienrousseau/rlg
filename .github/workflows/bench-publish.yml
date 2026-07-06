@@ -61,7 +61,7 @@ jobs:
           done
 
       - name: Upload Criterion HTML report bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: criterion-${{ github.ref_name }}
           path: target/criterion/
@@ -69,7 +69,7 @@ jobs:
           retention-days: 90
 
       - name: Upload machine-readable summary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: criterion-summary-${{ github.ref_name }}
           path: target/criterion-*.jsonl

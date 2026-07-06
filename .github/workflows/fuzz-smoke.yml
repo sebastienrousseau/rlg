@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload crash artefacts
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-crashes-${{ matrix.target }}
           path: fuzz/artifacts/${{ matrix.target }}/
