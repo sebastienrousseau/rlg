@@ -211,37 +211,66 @@ pub fn dispatch(req: &Request) -> Option<Response> {
             "tools": [
                 {
                     "name": "tail_log",
-                    "description": "Return the last N parseable rlg records from a file (Logfmt).",
+                    "title": "Tail rlg log file",
+                    // Every tool here only reads a caller-supplied log file
+                    // from disk: read-only, idempotent, never destructive,
+                    // and open-world (it touches the local filesystem). These
+                    // MCP annotations let clients and the Glama quality grader
+                    // reason about safety without executing the tool.
+                    "annotations": {
+                        "title": "Tail rlg log file",
+                        "readOnlyHint": true,
+                        "destructiveHint": false,
+                        "idempotentHint": true,
+                        "openWorldHint": true
+                    },
+                    "description": "Return the last N parseable rlg (RustLogs) records from a log file, newest last. Use this to glance at the most recent activity in a log; use `filter_log` when you need to select records by level or component, and `summarize_errors` for an aggregated error count.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "path": { "type": "string" },
-                            "n": { "type": "integer", "minimum": 1, "default": 100 }
+                            "path": { "type": "string", "description": "Filesystem path to an rlg log file (Logfmt/JSON records, one per line)." },
+                            "n": { "type": "integer", "minimum": 1, "default": 100, "description": "How many of the most recent parseable records to return (default 100)." }
                         },
                         "required": ["path"]
                     }
                 },
                 {
                     "name": "filter_log",
-                    "description": "Filter records by level/component/attribute, render in any LogFormat.",
+                    "title": "Filter rlg log records",
+                    "annotations": {
+                        "title": "Filter rlg log records",
+                        "readOnlyHint": true,
+                        "destructiveHint": false,
+                        "idempotentHint": true,
+                        "openWorldHint": true
+                    },
+                    "description": "Select rlg records by minimum severity and/or component and render them in any rlg LogFormat. Use this to narrow a log to what matters (e.g. WARN-and-above for one service); use `tail_log` for a raw recent slice and `summarize_errors` when you only need per-component error totals.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "path": { "type": "string" },
-                            "min_level": { "type": "string", "enum": ["TRACE","DEBUG","VERBOSE","INFO","WARN","ERROR","FATAL","CRITICAL"] },
-                            "component": { "type": "string" },
-                            "format": { "type": "string", "default": "Logfmt" }
+                            "path": { "type": "string", "description": "Filesystem path to an rlg log file to read." },
+                            "min_level": { "type": "string", "enum": ["TRACE","DEBUG","VERBOSE","INFO","WARN","ERROR","FATAL","CRITICAL"], "description": "Keep only records at or above this severity. Omit to keep all levels." },
+                            "component": { "type": "string", "description": "Keep only records whose component matches this exact value. Omit to keep all components." },
+                            "format": { "type": "string", "default": "Logfmt", "description": "rlg LogFormat name to render matched records in (e.g. Logfmt, JSON). Defaults to Logfmt." }
                         },
                         "required": ["path"]
                     }
                 },
                 {
                     "name": "summarize_errors",
-                    "description": "Group ERROR-and-above records by component and count them.",
+                    "title": "Summarize rlg errors by component",
+                    "annotations": {
+                        "title": "Summarize rlg errors by component",
+                        "readOnlyHint": true,
+                        "destructiveHint": false,
+                        "idempotentHint": true,
+                        "openWorldHint": true
+                    },
+                    "description": "Group ERROR-and-above rlg records by component and count them, giving a quick error taxonomy for triage. Use this for an at-a-glance failure breakdown; use `filter_log` when you need the underlying records rather than counts.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
-                            "path": { "type": "string" }
+                            "path": { "type": "string", "description": "Filesystem path to an rlg log file to scan for ERROR-and-above records." }
                         },
                         "required": ["path"]
                     }
