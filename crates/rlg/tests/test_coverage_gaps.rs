@@ -838,7 +838,7 @@ mod tests {
     // =========================================================================
 
     #[test]
-    #[cfg(not(windows))]
+    #[cfg(all(not(windows), feature = "tui"))]
     fn test_get_terminal_height_of_non_terminal() {
         // A regular file is not a terminal, so terminal_size_of returns None → fallback 24
         let file = std::fs::File::open("/dev/null").unwrap();
@@ -850,7 +850,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
+    #[cfg(all(not(windows), feature = "tui"))]
     fn test_get_terminal_height_of_with_pty() {
         // Open a PTY master to get a real terminal fd
         let result = std::fs::OpenOptions::new()

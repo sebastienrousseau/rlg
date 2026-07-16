@@ -331,7 +331,7 @@ impl Log {
         write!(
             f,
             "{} - - [{}] \"{}\" {} {}",
-            &*CACHED_HOSTNAME,
+            *CACHED_HOSTNAME,
             self.time,
             self.description,
             self.level,

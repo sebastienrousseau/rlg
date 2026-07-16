@@ -142,7 +142,7 @@ impl LockFreeEngine {
                         }
                         for event in batch.iter().flatten() {
                             fmt_buf.clear();
-                            let _ = writeln!(fmt_buf, "{}", &event.log);
+                            let _ = writeln!(fmt_buf, "{}", event.log);
                             sink.emit(event.level.as_str(), &fmt_buf);
                         }
 

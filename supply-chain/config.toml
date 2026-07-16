@@ -188,7 +188,7 @@ version = "0.8.7"
 criteria = "safe-to-run"
 
 [[exemptions.crossbeam-epoch]]
-version = "0.9.19"
+version = "0.9.20"
 criteria = "safe-to-run"
 
 [[exemptions.crossbeam-queue]]
