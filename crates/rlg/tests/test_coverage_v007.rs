@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_tui_get_terminal_height_of() {
-        #[cfg(not(windows))]
+        #[cfg(all(not(windows), feature = "tui"))]
         {
             // Test with a non-terminal handle (pipe)
             let (r, _w) =
