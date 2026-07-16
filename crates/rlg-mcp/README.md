@@ -31,11 +31,9 @@ Requires Rust **1.88.0** or newer (edition 2024).
 
 ## Tools
 
-| Tool | Inputs | Returns |
-| --- | --- | --- |
-| **`tail_log`** | `path`, optional `n` (default 100) | Last `n` parseable records, rendered in Logfmt. |
-| **`filter_log`** | `path`, optional `min_level`, `component`, `format` | Records matching every supplied filter, in the chosen `LogFormat`. |
-| **`summarize_errors`** | `path` | JSON map of `component → error_count` for ERROR-and-above records. |
+- `tail_log` — Inputs: `path`, optional `n` (default 100). Returns the last `n` parseable records, rendered in Logfmt.
+- `filter_log` — Inputs: `path`, optional `min_level`, `component`, `format`. Returns records matching every supplied filter, in the chosen `LogFormat`.
+- `summarize_errors` — Inputs: `path`. Returns a JSON map of `component → error_count` for ERROR-and-above records.
 
 ## Wire format
 

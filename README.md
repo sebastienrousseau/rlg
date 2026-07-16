@@ -65,6 +65,15 @@ cargo install rlg-mcp       # the `rlg-mcp` MCP server
 cargo install rlg-report    # the `rlg-report` digest tool
 ```
 
+## Tools
+
+The MCP server crate, [`rlg-mcp`](crates/rlg-mcp/README.md), exposes rlg
+log streams to LLM agents as three MCP tools over the stdio transport:
+
+- `tail_log` — `path`, optional `n` (default 100) → last `n` parseable records, rendered in Logfmt.
+- `filter_log` — `path`, optional `min_level` / `component` / `format` → records matching every supplied filter, in the chosen `LogFormat`.
+- `summarize_errors` — `path` → JSON map of `component → error_count` for ERROR-and-above records.
+
 ## Workspace layout
 
 ```text
