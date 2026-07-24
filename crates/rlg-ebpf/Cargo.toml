@@ -1,6 +1,6 @@
 [package]
 name = "rlg-ebpf"
-version = "0.0.11"
+version = "0.0.12"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -43,7 +43,7 @@ name = "chain"
 path = "examples/chain.rs"
 
 [dependencies]
-rlg = { version = "0.0.11", path = "../rlg" }
+rlg = { version = "0.0.12", path = "../rlg" }
 serde_json = "1.0"
 
 # Unix pid/tid/uid via libc. Cross-Unix; Windows implementation
