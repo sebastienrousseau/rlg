@@ -79,7 +79,7 @@ jobs:
       - name: Write CNAME for the custom domain
         run: echo "doc.rustlogs.com" > target/doc/CNAME
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v3
         with:
