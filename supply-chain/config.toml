@@ -17,31 +17,31 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 url = "https://raw.githubusercontent.com/zcash/zcash/master/qa/supply-chain/audits.toml"
 
 [policy.rlg]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-cli]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-mcp]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-otlp]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-redact]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-report]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-test]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-tower]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [policy.rlg-wasm]
-audit-as-crates-io = true
+audit-as-crates-io = false
 
 [[exemptions.addr2line]]
 version = "0.25.1"

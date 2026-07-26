@@ -48,13 +48,13 @@ workspace, all at lockstep version `0.0.11`.
 
 ```toml
 [dependencies]
-rlg         = "0.0.11"
-rlg-otlp    = "0.0.11"  # ship to an OTLP collector
-rlg-tower   = "0.0.11"  # HTTP middleware
-rlg-redact  = "0.0.11"  # PII redaction
+rlg         = "0.0.12"
+rlg-otlp    = "0.0.12"  # ship to an OTLP collector
+rlg-tower   = "0.0.12"  # HTTP middleware
+rlg-redact  = "0.0.12"  # PII redaction
 
 [dev-dependencies]
-rlg-test    = "0.0.11"  # assertions in your tests
+rlg-test    = "0.0.12"  # assertions in your tests
 ```
 
 CLI binaries:

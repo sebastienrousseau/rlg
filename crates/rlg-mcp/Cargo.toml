@@ -1,6 +1,6 @@
 [package]
 name = "rlg-mcp"
-version = "0.0.11"
+version = "0.0.12"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -47,8 +47,8 @@ name = "dispatch"
 path = "examples/dispatch.rs"
 
 [dependencies]
-rlg = { version = "0.0.11", path = "../rlg" }
-rlg-cli = { version = "0.0.11", path = "../rlg-cli" }
+rlg = { version = "0.0.12", path = "../rlg" }
+rlg-cli = { version = "0.0.12", path = "../rlg-cli" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
