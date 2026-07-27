@@ -107,7 +107,7 @@ proptest = "1.5"
 # resolve `rlg-cli` from crates.io — resolving the chicken-and-egg
 # with `rlg-cli`'s own dep on `rlg`.
 rlg-cli = { path = "../rlg-cli" }
-serial_test = "3"
+serial_test = "4"
 tempfile = "3.27.0"
 tokio = { version = "1.52.3", default-features = false, features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
 tokio-test = "0.4.5"
