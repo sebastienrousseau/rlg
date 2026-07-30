@@ -204,7 +204,7 @@ pub fn dispatch(req: &Request) -> Option<Response> {
     let result = match req.method.as_str() {
         "initialize" => Ok(serde_json::json!({
             "protocolVersion": "2025-06-18",
-            "capabilities": { "tools": {} },
+            "capabilities": { "tools": {}, "prompts": {}, "resources": {} },
             "serverInfo": { "name": "rlg-mcp", "version": env!("CARGO_PKG_VERSION") }
         })),
         "tools/list" => Ok(serde_json::json!({
@@ -278,6 +278,11 @@ pub fn dispatch(req: &Request) -> Option<Response> {
             ]
         })),
         "tools/call" => dispatch_tool_call(&req.params),
+        "prompts/list" => Ok(prompts_list()),
+        "prompts/get" => prompts_get(&req.params),
+        "resources/list" => Ok(resources_list()),
+        "resources/templates/list" => Ok(resource_templates_list()),
+        "resources/read" => resources_read(&req.params),
         "notifications/initialized" | "notifications/cancelled" => {
             // MCP notifications — no response required.
             return None;
@@ -369,6 +374,167 @@ fn wrap_text(s: String) -> serde_json::Value {
 }
 
 // ---------------------------------------------------------------------------
+// Prompts.
+// ---------------------------------------------------------------------------
+
+/// Descriptors returned to MCP clients via `prompts/list`.
+fn prompts_list() -> serde_json::Value {
+    serde_json::json!({
+        "prompts": [
+            {
+                "name": "triage_error_spike",
+                "title": "Triage an rlg error spike",
+                "description": "Guided SRE workflow for investigating a spike \
+                    of errors in an rlg log using tail_log, filter_log and \
+                    summarize_errors.",
+                "arguments": [
+                    {
+                        "name": "path",
+                        "description": "Filesystem path to the rlg log file to triage.",
+                        "required": false
+                    },
+                    {
+                        "name": "window_minutes",
+                        "description": "Recent time window to focus on, in minutes.",
+                        "required": false
+                    }
+                ]
+            }
+        ]
+    })
+}
+
+/// `prompts/get` handler. Returns the prompt-message payload, or an
+/// error string (mapped to a JSON-RPC error envelope).
+fn prompts_get(
+    params: &serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let name = params
+        .get("name")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "missing `name`".to_string())?;
+    match name {
+        "triage_error_spike" => Ok(triage_error_spike(params)),
+        other => Err(format!("unknown prompt: {other}")),
+    }
+}
+
+/// Build the `triage_error_spike` prompt messages, embedding the
+/// caller-supplied `path` and `window_minutes` arguments when present.
+fn triage_error_spike(params: &serde_json::Value) -> serde_json::Value {
+    let args = params.get("arguments").cloned().unwrap_or_default();
+    let path = args
+        .get("path")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
+    let window = args
+        .get("window_minutes")
+        .and_then(serde_json::Value::as_u64);
+    let target = if path.is_empty() {
+        "the rlg log".to_string()
+    } else {
+        format!("`{path}`")
+    };
+    let window_clause = match window {
+        Some(m) => format!(" Focus on roughly the last {m} minutes."),
+        None => String::new(),
+    };
+    let text = format!(
+        "Help me triage an error spike in {target}.{window_clause} Start with \
+         summarize_errors to get the ERROR-and-above count per component and \
+         spot which component spiked. Then call filter_log with \
+         min_level=ERROR (and component set to the worst offender) to read the \
+         actual failing records, and tail_log for the surrounding recent \
+         context. From the messages, group the errors by likely root cause and \
+         propose the most probable trigger (a recent deploy, a dependency \
+         outage, a config change) with the evidence for each."
+    );
+    serde_json::json!({
+        "description": "Guided rlg error-spike SRE triage workflow.",
+        "messages": [
+            { "role": "user", "content": { "type": "text", "text": text } }
+        ]
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Resources.
+// ---------------------------------------------------------------------------
+
+/// Static resource descriptors returned via `resources/list`.
+fn resources_list() -> serde_json::Value {
+    serde_json::json!({
+        "resources": [
+            {
+                "uri": "rlg://log-levels",
+                "name": "log-levels",
+                "title": "rlg severity ladder",
+                "description": "The ordered rlg log levels, lowest to highest \
+                    severity, as accepted by filter_log's min_level.",
+                "mimeType": "application/json"
+            }
+        ]
+    })
+}
+
+/// Templated resource descriptors returned via
+/// `resources/templates/list`.
+fn resource_templates_list() -> serde_json::Value {
+    serde_json::json!({
+        "resourceTemplates": [
+            {
+                "uriTemplate": "rlg://tail/{path}",
+                "name": "tail",
+                "title": "Recent rlg log tail",
+                "description": "The last 100 parseable rlg records from the log \
+                    file at {path}, newest last, as a read-only resource.",
+                "mimeType": "text/plain"
+            }
+        ]
+    })
+}
+
+/// `resources/read` handler. Serves the static severity ladder and the
+/// templated `rlg://tail/{path}` log tail; errors on an unknown URI.
+fn resources_read(
+    params: &serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    let uri = params
+        .get("uri")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "missing `uri`".to_string())?;
+    if uri == "rlg://log-levels" {
+        let text = serde_json::json!([
+            "TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR",
+            "FATAL", "CRITICAL"
+        ])
+        .to_string();
+        return Ok(resource_contents(uri, "application/json", text));
+    }
+    if let Some(path) = uri.strip_prefix("rlg://tail/") {
+        let lines = tail_log(std::path::Path::new(path), 100)
+            .map_err(|e| e.to_string())?;
+        return Ok(resource_contents(
+            uri,
+            "text/plain",
+            lines.join("\n"),
+        ));
+    }
+    Err(format!("resource not found: {uri}"))
+}
+
+/// Wrap resource text into the MCP `resources/read` reply shape.
+fn resource_contents(
+    uri: &str,
+    mime: &str,
+    text: String,
+) -> serde_json::Value {
+    serde_json::json!({
+        "contents": [ { "uri": uri, "mimeType": mime, "text": text } ]
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Tests.
 // ---------------------------------------------------------------------------
 
@@ -436,6 +602,138 @@ mod tests {
         let result = r.result.unwrap();
         assert_eq!(result["protocolVersion"], "2025-06-18");
         assert_eq!(result["serverInfo"]["name"], "rlg-mcp");
+        assert!(result["capabilities"]["prompts"].is_object());
+        assert!(result["capabilities"]["resources"].is_object());
+    }
+
+    #[test]
+    fn dispatch_prompts_list_returns_the_prompt() {
+        let r = dispatch(&req("prompts/list", serde_json::json!({})))
+            .expect("response");
+        let prompts = r.result.unwrap();
+        let names: Vec<&str> = prompts["prompts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p["name"].as_str().unwrap())
+            .collect();
+        assert!(names.contains(&"triage_error_spike"));
+    }
+
+    #[test]
+    fn dispatch_prompts_get_embeds_arguments() {
+        let r = dispatch(&req(
+            "prompts/get",
+            serde_json::json!({
+                "name": "triage_error_spike",
+                "arguments": { "path": "/var/log/app.log", "window_minutes": 15 }
+            }),
+        ))
+        .expect("response");
+        let text = r.result.unwrap()["messages"][0]["content"]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("/var/log/app.log"));
+        assert!(text.contains("15 minutes"));
+        assert!(text.contains("summarize_errors"));
+    }
+
+    #[test]
+    fn dispatch_prompts_get_without_arguments_is_generic() {
+        let r = dispatch(&req(
+            "prompts/get",
+            serde_json::json!({ "name": "triage_error_spike" }),
+        ))
+        .expect("response");
+        let text = r.result.unwrap()["messages"][0]["content"]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("the rlg log"));
+    }
+
+    #[test]
+    fn dispatch_prompts_get_unknown_errors() {
+        let r = dispatch(&req(
+            "prompts/get",
+            serde_json::json!({ "name": "nope" }),
+        ))
+        .expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_prompts_get_missing_name_errors() {
+        let r = dispatch(&req("prompts/get", serde_json::json!({})))
+            .expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_resources_list_and_templates() {
+        let r = dispatch(&req("resources/list", serde_json::json!({})))
+            .expect("response");
+        assert_eq!(
+            r.result.unwrap()["resources"][0]["uri"],
+            "rlg://log-levels"
+        );
+        let t = dispatch(&req(
+            "resources/templates/list",
+            serde_json::json!({}),
+        ))
+        .expect("response");
+        assert_eq!(
+            t.result.unwrap()["resourceTemplates"][0]["uriTemplate"],
+            "rlg://tail/{path}"
+        );
+    }
+
+    #[test]
+    fn dispatch_resources_read_log_levels() {
+        let r = dispatch(&req(
+            "resources/read",
+            serde_json::json!({ "uri": "rlg://log-levels" }),
+        ))
+        .expect("response");
+        let text = r.result.unwrap()["contents"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("ERROR"));
+    }
+
+    #[test]
+    fn dispatch_resources_read_tail_template() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n"));
+        let uri = format!("rlg://tail/{}", f.path().to_str().unwrap());
+        let r = dispatch(&req(
+            "resources/read",
+            serde_json::json!({ "uri": uri }),
+        ))
+        .expect("response");
+        let text = r.result.unwrap()["contents"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("boom"));
+    }
+
+    #[test]
+    fn dispatch_resources_read_unknown_uri_errors() {
+        let r = dispatch(&req(
+            "resources/read",
+            serde_json::json!({ "uri": "rlg://mystery" }),
+        ))
+        .expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_resources_read_missing_uri_errors() {
+        let r = dispatch(&req("resources/read", serde_json::json!({})))
+            .expect("response");
+        assert!(r.error.is_some());
     }
 
     #[test]
