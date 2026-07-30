@@ -101,6 +101,44 @@ pub fn summarize_errors(
     Ok(buckets)
 }
 
+/// Tail the last `n` records across every file matching a glob
+/// pattern (e.g. `/var/log/**/*.log`), newest last, optionally keeping
+/// only records at or above `level`. Matched files are read in sorted
+/// path order and their records concatenated before the final `n` are
+/// taken; unparseable lines are skipped.
+///
+/// # Errors
+/// Returns an error string if the glob pattern is invalid, or if a
+/// matched path cannot be read (e.g. it resolves to a directory).
+pub fn tail_logs_glob(
+    pattern: &str,
+    n: usize,
+    level: Option<LogLevel>,
+) -> Result<Vec<String>, String> {
+    let mut paths: Vec<std::path::PathBuf> = glob::glob(pattern)
+        .map_err(|e| format!("invalid glob pattern: {e}"))?
+        .filter_map(Result::ok)
+        .collect();
+    paths.sort();
+    let mut all = Vec::new();
+    for path in paths {
+        let content = std::fs::read_to_string(&path)
+            .map_err(|e| format!("read {}: {e}", path.display()))?;
+        for line in content.lines() {
+            if let Ok(record) = parse_record(line) {
+                if let Some(min) = level
+                    && record.level.to_numeric() < min.to_numeric()
+                {
+                    continue;
+                }
+                all.push(render(record, LogFormat::Logfmt));
+            }
+        }
+    }
+    let start = all.len().saturating_sub(n);
+    Ok(all.split_off(start))
+}
+
 // ---------------------------------------------------------------------------
 // JSON-RPC 2.0 transport (minimal subset of MCP).
 // ---------------------------------------------------------------------------
@@ -274,6 +312,27 @@ pub fn dispatch(req: &Request) -> Option<Response> {
                         },
                         "required": ["path"]
                     }
+                },
+                {
+                    "name": "tail_logs_glob",
+                    "title": "Tail rlg logs across a glob",
+                    "annotations": {
+                        "title": "Tail rlg logs across a glob",
+                        "readOnlyHint": true,
+                        "destructiveHint": false,
+                        "idempotentHint": true,
+                        "openWorldHint": true
+                    },
+                    "description": "Return the last N parseable rlg records across every file matching a glob pattern (e.g. `/var/log/**/*.log`), newest last, optionally filtered to a minimum level. Use this to tail many rotated or per-service log files at once; use `tail_log` for a single file and `summarize_errors` for per-component error totals.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "glob_pattern": { "type": "string", "description": "Glob pattern matching one or more rlg log files, e.g. `/var/log/**/*.log`." },
+                            "lines": { "type": "integer", "minimum": 1, "default": 100, "description": "How many of the most recent parseable records to return across all matched files (default 100)." },
+                            "level": { "type": "string", "enum": ["TRACE","DEBUG","VERBOSE","INFO","WARN","ERROR","FATAL","CRITICAL"], "description": "Keep only records at or above this severity. Omit to keep all levels." }
+                        },
+                        "required": ["glob_pattern"]
+                    }
                 }
             ]
         })),
@@ -309,6 +368,28 @@ fn dispatch_tool_call(
                 .unwrap_or(100) as usize;
             let lines =
                 tail_log(&path, n).map_err(|e| e.to_string())?;
+            Ok(wrap_text(lines.join("\n")))
+        }
+        "tail_logs_glob" => {
+            let pattern = args
+                .get("glob_pattern")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(|| "missing `glob_pattern`".to_string())?;
+            let n = args
+                .get("lines")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(100) as usize;
+            let level = match args
+                .get("level")
+                .and_then(serde_json::Value::as_str)
+            {
+                Some(s) => Some(
+                    s.parse::<LogLevel>()
+                        .map_err(|e| format!("{e:?}"))?,
+                ),
+                None => None,
+            };
+            let lines = tail_logs_glob(pattern, n, level)?;
             Ok(wrap_text(lines.join("\n")))
         }
         "filter_log" => {
@@ -420,6 +501,117 @@ mod tests {
         assert_eq!(buckets.get("svc"), None);
     }
 
+    #[test]
+    fn tail_logs_glob_merges_matched_files() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.log"), format!("{INFO}\n"))
+            .unwrap();
+        std::fs::write(
+            dir.path().join("b.log"),
+            format!("{ERROR}\n{FATAL}\n"),
+        )
+        .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let out = tail_logs_glob(&pattern, 100, None).unwrap();
+        assert_eq!(out.len(), 3);
+        let joined = out.join("\n");
+        assert!(joined.contains("hi"));
+        assert!(joined.contains("boom"));
+        assert!(joined.contains("down"));
+    }
+
+    #[test]
+    fn tail_logs_glob_filters_by_level() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("x.log"),
+            format!("{INFO}\n{ERROR}\n{FATAL}\n"),
+        )
+        .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let out = tail_logs_glob(&pattern, 100, Some(LogLevel::ERROR))
+            .unwrap();
+        assert_eq!(out.len(), 2); // INFO dropped, ERROR + FATAL kept
+    }
+
+    #[test]
+    fn tail_logs_glob_respects_n() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("x.log"),
+            format!("{INFO}\n{ERROR}\n{FATAL}\n"),
+        )
+        .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let out = tail_logs_glob(&pattern, 1, None).unwrap();
+        assert_eq!(out.len(), 1);
+        assert!(out[0].contains("down"));
+    }
+
+    #[test]
+    fn tail_logs_glob_rejects_bad_pattern() {
+        let err = tail_logs_glob("a/**b[", 10, None).unwrap_err();
+        assert!(err.contains("invalid glob pattern"));
+    }
+
+    #[test]
+    fn tail_logs_glob_reports_unreadable_match() {
+        // A pattern matching a directory: read_to_string fails on it.
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("sub")).unwrap();
+        let pattern = format!("{}/sub", dir.path().to_str().unwrap());
+        let err = tail_logs_glob(&pattern, 10, None).unwrap_err();
+        assert!(err.contains("read"));
+    }
+
+    #[test]
+    fn dispatch_tail_logs_glob_via_tools_call() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.log"), format!("{ERROR}\n"))
+            .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let r = dispatch(&req(
+            "tools/call",
+            serde_json::json!({
+                "name": "tail_logs_glob",
+                "arguments": { "glob_pattern": pattern, "level": "ERROR" }
+            }),
+        ))
+        .expect("response");
+        let text = r.result.unwrap()["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(text.contains("boom"));
+    }
+
+    #[test]
+    fn dispatch_tail_logs_glob_missing_pattern_errors() {
+        let r = dispatch(&req(
+            "tools/call",
+            serde_json::json!({ "name": "tail_logs_glob", "arguments": {} }),
+        ))
+        .expect("response");
+        assert!(r.error.is_some());
+    }
+
+    #[test]
+    fn dispatch_tail_logs_glob_bad_level_errors() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.log"), format!("{INFO}\n"))
+            .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let r = dispatch(&req(
+            "tools/call",
+            serde_json::json!({
+                "name": "tail_logs_glob",
+                "arguments": { "glob_pattern": pattern, "level": "NOPE" }
+            }),
+        ))
+        .expect("response");
+        assert!(r.error.is_some());
+    }
+
     fn req(method: &str, params: serde_json::Value) -> Request {
         Request {
             jsonrpc: "2.0".to_string(),
@@ -439,12 +631,15 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_tools_list_returns_three_tools() {
+    fn dispatch_tools_list_returns_all_tools() {
         let r = dispatch(&req("tools/list", serde_json::json!({})))
             .expect("response");
-        let tools =
-            r.result.unwrap()["tools"].as_array().unwrap().len();
-        assert_eq!(tools, 3);
+        let result = r.result.unwrap();
+        let tools = result["tools"].as_array().unwrap();
+        assert_eq!(tools.len(), 4);
+        let names: Vec<&str> =
+            tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
+        assert!(names.contains(&"tail_logs_glob"));
     }
 
     #[test]
