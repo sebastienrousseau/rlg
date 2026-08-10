@@ -292,9 +292,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.6.4"
+version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d91e0c145792ef73a6ad36d27c75ac09f1832222a3c209689d90f534685ee5b7"
+checksum = "473c7e07f409a8d772161724aa8db6a765a2532a70f9667eeb7b49d3d02fbdca"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -302,9 +302,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.6.2"
+version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f09628afdcc538b57f3c6341e9c8e9970f18e4a481690a64974d7023bd33548b"
+checksum = "7b48fea5a88e9ae728a2dcbedbfc0e730f7d60da42e1cb049a83c9fb8b789889"
 dependencies = [
  "anstream",
  "anstyle",
@@ -2021,7 +2021,7 @@ dependencies = [
 
 [[package]]
 name = "rlg"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "config",
  "criterion",
@@ -2058,7 +2058,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2073,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-ebpf"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "libc",
@@ -2083,7 +2083,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "anyhow",
  "criterion",
@@ -2097,7 +2097,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-otlp"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "prost",
@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-redact"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "regex",
@@ -2124,7 +2124,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-report"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-test"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "parking_lot",
@@ -2150,7 +2150,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-tower"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "http",
@@ -2165,7 +2165,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-wasm"
-version = "0.0.13"
+version = "0.0.14"
 dependencies = [
  "criterion",
  "rlg",
