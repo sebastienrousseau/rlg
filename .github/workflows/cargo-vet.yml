@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -36,7 +36,7 @@ jobs:
       # the `trusted-publisher` field (cargo-vet 0.10+), which
       # earlier cargo-vet releases reject with "missing field
       # `user-id`".
-      - uses: taiki-e/install-action@v2.85.10
+      - uses: taiki-e/install-action@v2.85.11
         with:
           tool: cargo-vet@0.10.2
 

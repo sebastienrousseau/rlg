@@ -58,7 +58,7 @@ jobs:
           - config_load
           - redact_scrub
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -71,7 +71,7 @@ jobs:
         with:
           components: rust-src
 
-      - uses: taiki-e/install-action@v2.85.10
+      - uses: taiki-e/install-action@v2.85.11
         with:
           tool: cargo-fuzz
 
