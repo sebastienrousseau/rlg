@@ -339,7 +339,7 @@ version = "1.0.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.http-body-util]]
-version = "0.1.4"
+version = "0.1.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.httparse]]
@@ -407,7 +407,7 @@ version = "0.1.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.io-uring]]
-version = "0.7.13"
+version = "0.7.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.ipnet]]
