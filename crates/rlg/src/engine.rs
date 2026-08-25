@@ -9,7 +9,7 @@
 //! [`LogEvent`][crate::engine::LogEvent]s via
 //! [`LockFreeEngine::ingest()`][crate::engine::LockFreeEngine::ingest]
 //! using only atomic operations. A dedicated background thread drains events
-//! in batches of 64 and writes them through [`PlatformSink`](crate::sink::PlatformSink).
+//! in batches of 64 and writes them through [`crate::sink::PlatformSink`].
 //!
 //! **The Mutex is never locked on the hot path.** It exists solely for
 //! `shutdown()` to join the flusher thread.
