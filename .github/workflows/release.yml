@@ -72,6 +72,8 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      # Mints the OIDC token crates.io exchanges for a publish token.
+      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -98,9 +100,18 @@ jobs:
       #   ├── rlg-test
       #   ├── rlg-tower
       #   └── rlg-wasm
+      # Trusted publishing: swaps this job's GitHub OIDC identity for a
+      # temporary crates.io token, revoked by the action's post step when
+      # the job ends. The config is per crate, so every crate this step
+      # walks needs its own trusted publisher on crates.io -- all ten of
+      # them, each pointing at this repository and release.yml.
+      - name: Authenticate with crates.io
+        id: auth
+        uses: rust-lang/crates-io-auth-action@v1
+
       - name: Publish workspace (idempotent, dependency-ordered)
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
