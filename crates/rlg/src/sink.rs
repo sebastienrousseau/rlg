@@ -126,7 +126,7 @@ mod syslog_ffi {
 }
 
 impl PlatformSink {
-    /// Build a sink from the given [`Config`](crate::config::Config).
+    /// Build a sink from the given [`crate::config::Config`].
     ///
     /// Inspects `logging_destinations` in order:
     /// - `File(path)` → open for append

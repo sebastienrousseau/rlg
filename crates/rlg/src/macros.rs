@@ -5,7 +5,7 @@
 
 //! Convenience macros for span tracking, latency profiling, and MCP notifications.
 //!
-//! All macros dispatch through the lock-free [`ENGINE`](crate::engine::ENGINE).
+//! All macros dispatch through the lock-free [`crate::engine::ENGINE`].
 
 /// Execute a block within an OTLP-tagged span.
 ///
