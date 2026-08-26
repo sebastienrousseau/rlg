@@ -10,7 +10,8 @@
 
 use crate::log::Log;
 use crate::log_level::LogLevel;
-use std::sync::atomic::{AtomicU64, Ordering};
+use euxis_commons::counter::Counter;
+use std::sync::atomic::Ordering;
 use tracing_core::field::{Field, Visit};
 use tracing_core::{Event, Level, Metadata, Subscriber};
 
@@ -30,7 +31,7 @@ fn map_tracing_level(level: Level) -> LogLevel {
 }
 
 /// Monotonic span ID counter for unique span identification.
-static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+static SPAN_ID_COUNTER: Counter = Counter::new(1);
 
 /// A `tracing::Subscriber` that routes events to the `RLG` engine.
 #[derive(Debug, Default, Clone, Copy)]
