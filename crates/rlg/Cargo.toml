@@ -71,7 +71,7 @@ required-features = ["tokio"]
 config = "0.15.22"
 crossbeam-queue = "0.3.12"
 envy = "0.4.2"
-euxis-commons = { version = "0.0.2", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env"], package = "euxis-commons" }
+euxis-commons = { version = "0.0.4", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env", "counter"], package = "euxis-commons" }
 hostname = "0.4.2"
 itoa = "1.0.18"
 log = "0.4.30"
