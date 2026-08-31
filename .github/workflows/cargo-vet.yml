@@ -36,7 +36,7 @@ jobs:
       # the `trusted-publisher` field (cargo-vet 0.10+), which
       # earlier cargo-vet releases reject with "missing field
       # `user-id`".
-      - uses: taiki-e/install-action@v2.86.5
+      - uses: taiki-e/install-action@v2.87.0
         with:
           tool: cargo-vet@0.10.2
 
