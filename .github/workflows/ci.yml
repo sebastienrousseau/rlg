@@ -28,3 +28,12 @@ jobs:
     with:
       type: rust
       redirect-crate: rlg
+
+  mcp-manifests:
+    name: MCP manifests name the shipped version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/check-mcp-manifests.sh

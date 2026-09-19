@@ -20,13 +20,14 @@
   <a href="https://docs.rs/rlg"><img src="https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs.rs" /></a>
   <a href="https://codecov.io/gh/sebastienrousseau/rlg"><img src="https://img.shields.io/codecov/c/github/sebastienrousseau/rlg?style=for-the-badge&logo=codecov" alt="Coverage" /></a>
   <a href="https://lib.rs/crates/rlg"><img src="https://img.shields.io/badge/lib.rs-rlg-orange.svg?style=for-the-badge" alt="lib.rs" /></a>
+  <a href="https://glama.ai/mcp/servers/sebastienrousseau/rlg"><img src="https://glama.ai/mcp/servers/sebastienrousseau/rlg/badges/score.svg" alt="Glama MCP server score" /></a>
 </p>
 
 ---
 
 This is the Cargo workspace root. The library lives at
 [`crates/rlg`](crates/rlg). Ten companion crates ship from this
-workspace, all at lockstep version `0.0.11`.
+workspace, all at lockstep version `0.0.12`.
 
 ## The rlg ecosystem
 
