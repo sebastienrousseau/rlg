@@ -5,6 +5,16 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `glama.json` and `server.json` named 0.0.11 while the workspace shipped
+  0.0.12, so the Glama listing and the registry's install command pointed
+  at the previous image. Both are stamped, the README's lockstep line with
+  them, and `scripts/check-mcp-manifests.sh` now fails CI when they drift
+  from `crates/rlg-mcp/Cargo.toml` again.
+
 ## [0.0.12] — 2026-08-26
 
 The **portability and supply-chain** cut. Fixes a build failure on
