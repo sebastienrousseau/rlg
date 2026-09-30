@@ -117,9 +117,13 @@ def check(funcs, offenders, files, base):
 def main():
     funcs, offenders, files = measure()
     if "--update" in sys.argv:
+        # Why a remaining offender is accepted, kept across updates for
+        # the offenders that are still there.
+        notes = json.loads(BASELINE.read_text()).get("notes", {}) if BASELINE.exists() else {}
+        notes = {k: v for k, v in notes.items() if k in offenders or k in files}
         BASELINE.write_text(json.dumps(
             {"ceilings": {**CEILINGS, "file_lines": FILE_CEILING},
-             "functions": offenders, "files": files},
+             "functions": offenders, "files": files, "notes": notes},
             indent=2, sort_keys=True) + "\n")
         print(f"baseline: {len(offenders)} functions, {len(files)} files")
         return 0

@@ -13,7 +13,7 @@
     "crates/rlg/src/config.rs": 1227,
     "crates/rlg/src/init.rs": 605,
     "crates/rlg/src/log.rs": 536,
-    "crates/rlg/src/tui.rs": 942
+    "crates/rlg/src/tui.rs": 931
   },
   "functions": {
     "crates/rlg-cli/src/main.rs::LogFormat::from": {
@@ -27,12 +27,6 @@
       "cyclomatic": 20.0,
       "halstead": 19.5,
       "sloc": 43.0
-    },
-    "crates/rlg-report/src/lib.rs::Report::from_lines_with_top": {
-      "cognitive": 10.0,
-      "cyclomatic": 8.0,
-      "halstead": 30.4,
-      "sloc": 49.0
     },
     "crates/rlg/src/error.rs::RlgError::diagnostic": {
       "cognitive": 1.0,
@@ -55,14 +49,16 @@
     "crates/rlg/src/tui.rs::TuiMetrics::inc_format": {
       "cognitive": 1.0,
       "cyclomatic": 15.0,
-      "halstead": 18.6,
-      "sloc": 47.0
-    },
-    "crates/rlg/src/tui.rs::render_tick": {
-      "cognitive": 0.0,
-      "cyclomatic": 1.0,
-      "halstead": 16.2,
-      "sloc": 66.0
+      "halstead": 12.6,
+      "sloc": 20.0
     }
+  },
+  "notes": {
+    "crates/rlg-cli/src/main.rs::LogFormat::from": "An exhaustive match over every CLI format flag: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
+    "crates/rlg-mcp/src/transport.rs::parse": "transport.rs is byte-identical across the suite's MCP servers (rlg, noyalib, oxml); change it in all three together.",
+    "crates/rlg/src/error.rs::RlgError::diagnostic": "An exhaustive match over every RlgError variant, so a new variant cannot compile without a code and help line; cognitive 1.",
+    "crates/rlg/src/log.rs::Log::fmt": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
+    "crates/rlg/src/log_format.rs::LogFormat::validate": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
+    "crates/rlg/src/tui.rs::TuiMetrics::inc_format": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled."
   }
 }
