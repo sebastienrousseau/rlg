@@ -34,12 +34,6 @@
       "halstead": 30.4,
       "sloc": 49.0
     },
-    "crates/rlg/src/datetime.rs::validate": {
-      "cognitive": 13.0,
-      "cyclomatic": 14.0,
-      "halstead": 28.4,
-      "sloc": 38.0
-    },
     "crates/rlg/src/engine.rs::LockFreeEngine::new": {
       "cognitive": 11.0,
       "cyclomatic": 13.0,

@@ -42,6 +42,14 @@ pub fn parse_iso8601(s: &str) -> RlgResult<String> {
 
 fn validate(s: &str) -> Result<(), &'static str> {
     let bytes = s.as_bytes();
+    validate_date_time(bytes)?;
+    // Optional fractional seconds, then mandatory zone designator.
+    let zone = skip_fraction(bytes, 19)?;
+    validate_zone(bytes, zone)
+}
+
+/// `YYYY-MM-DDTHH:MM:SS`, the fixed-width head every timestamp has.
+fn validate_date_time(bytes: &[u8]) -> Result<(), &'static str> {
     if bytes.len() < 20 {
         return Err("too short");
     }
@@ -54,18 +62,29 @@ fn validate(s: &str) -> Result<(), &'static str> {
     if !is_hms(&bytes[11..19]) {
         return Err("invalid time");
     }
-    // Optional fractional seconds, then mandatory zone designator.
-    let mut i = 19usize;
-    if bytes.get(i) == Some(&b'.') {
-        i += 1;
-        let start = i;
-        while bytes.get(i).is_some_and(u8::is_ascii_digit) {
-            i += 1;
-        }
-        if i == start {
-            return Err("empty fractional seconds");
-        }
+    Ok(())
+}
+
+/// The index after `.digits` at `i`, or `i` when there is no fraction.
+fn skip_fraction(
+    bytes: &[u8],
+    i: usize,
+) -> Result<usize, &'static str> {
+    if bytes.get(i) != Some(&b'.') {
+        return Ok(i);
     }
+    let digits = bytes[i + 1..]
+        .iter()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    if digits == 0 {
+        return Err("empty fractional seconds");
+    }
+    Ok(i + 1 + digits)
+}
+
+/// `Z` or `±HH:MM` at `i`, ending the string.
+fn validate_zone(bytes: &[u8], i: usize) -> Result<(), &'static str> {
     match bytes.get(i) {
         Some(&b'Z') if i + 1 == bytes.len() => Ok(()),
         Some(&b'+' | &b'-') if bytes.len() - i == 6 => {
