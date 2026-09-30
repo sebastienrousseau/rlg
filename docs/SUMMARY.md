@@ -41,6 +41,8 @@
 
 # Project
 
+- [Comparison](COMPARISON.md)
+- [Benchmarks](BENCHMARKS.md)
 - [Policies](POLICIES.md)
 - [Packaging](packaging.md)
 - [Release 0.0.13 highlights](releases/v0.0.13.md)
