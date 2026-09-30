@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: MIT OR Apache-2.0
-// Copyright (c) 2026 oxml. All rights reserved.
+// transport.rs
+// Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
+// SPDX-License-Identifier: Apache-2.0 OR MIT
 
 //! One command line for the three MCP transports.
 //!
