@@ -7,13 +7,9 @@
     "sloc": 60
   },
   "files": {
-    "crates/rlg-mcp/src/lib.rs": 1161,
+    "crates/rlg-mcp/src/lib.rs": 732,
     "crates/rlg-mcp/src/transport.rs": 636,
-    "crates/rlg-otlp/src/lib.rs": 564,
-    "crates/rlg/src/config.rs": 1227,
-    "crates/rlg/src/init.rs": 605,
-    "crates/rlg/src/log.rs": 536,
-    "crates/rlg/src/tui.rs": 931
+    "crates/rlg/src/config.rs": 691
   },
   "functions": {
     "crates/rlg-cli/src/main.rs::LogFormat::from": {

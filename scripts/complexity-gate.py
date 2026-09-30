@@ -9,8 +9,9 @@ baseline, or when a baselined one gets worse on any metric. Shrinking
 an offender, or fixing it outright, always passes; run with --update
 to record the improvement.
 
-Measured: crates/*/src/**/*.rs, minus `#[cfg(test)]` modules. Tests,
-examples, benches and build scripts are not production code.
+Measured: crates/*/src/**/*.rs, minus `#[cfg(test)]` modules, inline
+or in their own `tests.rs` file. Tests, examples, benches and build
+scripts are not production code.
 Metrics come from rust-code-analysis-cli (pinned in CI).
 
 Usage: scripts/complexity-gate.py [--update]
@@ -81,6 +82,9 @@ def measure_file(path):
 def measure():
     funcs, files = {}, {}
     for path in sorted(ROOT.glob("crates/*/src/**/*.rs")):
+        if path.name == "tests.rs":
+            # A `#[cfg(test)] mod tests;` kept in its own file.
+            continue
         f, lines = measure_file(path)
         funcs.update(f)
         if lines > FILE_CEILING:
