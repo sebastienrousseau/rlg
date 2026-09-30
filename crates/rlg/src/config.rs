@@ -131,65 +131,59 @@ impl FromStr for LogRotation {
     type Err = ConfigError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.trim().splitn(2, ':').collect();
-        match parts[0].to_lowercase().as_str() {
-            "size" => {
-                let size_str = parts.get(1).ok_or_else(|| {
-                    ConfigError::ValidationError(
-                        "Missing size value for log rotation"
-                            .to_string(),
-                    )
-                })?;
-                let size = size_str.parse::<u64>().map_err(|_| ConfigError::ValidationError(format!("Invalid size value for log rotation: '{size_str}'")))?;
-                Ok(Self::Size(NonZeroU64::new(size).ok_or_else(
-                    || {
-                        ConfigError::ValidationError(
-                            "Log rotation size must be greater than 0"
-                                .to_string(),
-                        )
-                    },
-                )?))
-            }
-            "time" => {
-                let time_str = parts.get(1).ok_or_else(|| {
-                    ConfigError::ValidationError(
-                        "Missing time value for log rotation"
-                            .to_string(),
-                    )
-                })?;
-                let time = time_str.parse::<u64>().map_err(|_| ConfigError::ValidationError(format!("Invalid time value for log rotation: '{time_str}'")))?;
-                Ok(Self::Time(NonZeroU64::new(time).ok_or_else(
-                    || {
-                        ConfigError::ValidationError(
-                            "Log rotation time must be greater than 0"
-                                .to_string(),
-                        )
-                    },
-                )?))
-            }
+        let trimmed = s.trim();
+        let (kind, value) = trimmed
+            .split_once(':')
+            .map_or((trimmed, None), |(k, v)| (k, Some(v)));
+        match kind.to_lowercase().as_str() {
+            "size" => rotation_amount(value, "size").map(Self::Size),
+            "time" => rotation_amount(value, "time").map(Self::Time),
             "date" => Ok(Self::Date),
-            "count" => {
-                let count = parts
-                    .get(1)
-                    .ok_or_else(|| ConfigError::ValidationError("Missing count value for log rotation".to_string()))?
-                    .parse::<usize>()
-                    .map_err(|_| ConfigError::ValidationError(format!("Invalid count value for log rotation: '{0}'", parts[1])))?;
-                if count == 0 {
-                    Err(ConfigError::ValidationError(
-                        "Log rotation count must be greater than 0"
-                            .to_string(),
-                    ))
-                } else {
-                    Ok(Self::Count(
-                        count.try_into().unwrap_or(u32::MAX),
-                    ))
-                }
-            }
+            "count" => rotation_count(value).map(Self::Count),
             _ => Err(ConfigError::ValidationError(format!(
                 "Invalid log rotation option: '{s}'"
             ))),
         }
     }
+}
+
+/// The non-zero number after `size:` or `time:`; `what` names it in
+/// the error messages.
+fn rotation_amount(
+    value: Option<&str>,
+    what: &str,
+) -> Result<NonZeroU64, ConfigError> {
+    let invalid = |msg: String| ConfigError::ValidationError(msg);
+    let text = value.ok_or_else(|| {
+        invalid(format!("Missing {what} value for log rotation"))
+    })?;
+    let n = text.parse::<u64>().map_err(|_| {
+        invalid(format!(
+            "Invalid {what} value for log rotation: '{text}'"
+        ))
+    })?;
+    NonZeroU64::new(n).ok_or_else(|| {
+        invalid(format!("Log rotation {what} must be greater than 0"))
+    })
+}
+
+/// The non-zero count after `count:`, saturating at `u32::MAX`.
+fn rotation_count(value: Option<&str>) -> Result<u32, ConfigError> {
+    let invalid = |msg: String| ConfigError::ValidationError(msg);
+    let text = value.ok_or_else(|| {
+        invalid("Missing count value for log rotation".to_string())
+    })?;
+    let n = text.parse::<usize>().map_err(|_| {
+        invalid(format!(
+            "Invalid count value for log rotation: '{text}'"
+        ))
+    })?;
+    if n == 0 {
+        return Err(invalid(
+            "Log rotation count must be greater than 0".to_string(),
+        ));
+    }
+    Ok(n.try_into().unwrap_or(u32::MAX))
 }
 
 /// Enum representing different logging destinations.
@@ -385,82 +379,15 @@ impl Config {
     ) -> Result<(), ConfigError> {
         let val = serde_json::to_value(value)
             .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
-
-        match key {
-            "version" => {
-                if let Some(s) = val.as_str() {
-                    self.version = s.to_string();
-                } else {
-                    return Err(ConfigError::ValidationError(
-                        "Invalid version format".to_string(),
-                    ));
-                }
-            }
-            "profile" => {
-                if let Some(s) = val.as_str() {
-                    self.profile = s.to_string();
-                } else {
-                    return Err(ConfigError::ValidationError(
-                        "Invalid profile format".to_string(),
-                    ));
-                }
-            }
-            "log_file_path" => {
-                self.log_file_path = serde_json::from_value(val)
-                    .map_err(|e| {
-                        ConfigError::ConfigParseError(
-                            SourceConfigError::Message(e.to_string()),
-                        )
-                    })?;
-            }
-            "log_level" => {
-                self.log_level =
-                    serde_json::from_value(val).map_err(|e| {
-                        ConfigError::ConfigParseError(
-                            SourceConfigError::Message(e.to_string()),
-                        )
-                    })?;
-            }
-            "log_rotation" => {
-                self.log_rotation = serde_json::from_value(val)
-                    .map_err(|e| {
-                        ConfigError::ConfigParseError(
-                            SourceConfigError::Message(e.to_string()),
-                        )
-                    })?;
-            }
-            "log_format" => {
-                if let Some(s) = val.as_str() {
-                    self.log_format = s.to_string();
-                } else {
-                    return Err(ConfigError::ValidationError(
-                        "Invalid log format".to_string(),
-                    ));
-                }
-            }
-            "logging_destinations" => {
-                self.logging_destinations = serde_json::from_value(val)
-                    .map_err(|e| {
-                        ConfigError::ConfigParseError(
-                            SourceConfigError::Message(e.to_string()),
-                        )
-                    })?;
-            }
-            "env_vars" => {
-                self.env_vars =
-                    serde_json::from_value(val).map_err(|e| {
-                        ConfigError::ConfigParseError(
-                            SourceConfigError::Message(e.to_string()),
-                        )
-                    })?;
-            }
-            _ => {
-                return Err(ConfigError::ValidationError(format!(
+        let (_, setter) = SETTERS
+            .iter()
+            .find(|(name, _)| *name == key)
+            .ok_or_else(|| {
+                ConfigError::ValidationError(format!(
                     "Unknown configuration key: {key}"
-                )));
-            }
-        }
-        Ok(())
+                ))
+            })?;
+        setter(self, val)
     }
 
     /// Validates the configuration settings.
@@ -704,6 +631,68 @@ impl fmt::Display for LogRotation {
             Self::Count(count) => write!(f, "Count: {count} logs"),
         }
     }
+}
+
+/// Assigns one field from a JSON value, for [`Config::set`].
+type Setter =
+    fn(&mut Config, serde_json::Value) -> Result<(), ConfigError>;
+
+/// The keys [`Config::set`] accepts, each with its setter.
+const SETTERS: [(&str, Setter); 8] = [
+    ("version", |c, v| {
+        c.version = string_field(&v, "Invalid version format")?;
+        Ok(())
+    }),
+    ("profile", |c, v| {
+        c.profile = string_field(&v, "Invalid profile format")?;
+        Ok(())
+    }),
+    ("log_format", |c, v| {
+        c.log_format = string_field(&v, "Invalid log format")?;
+        Ok(())
+    }),
+    ("log_file_path", |c, v| {
+        c.log_file_path = typed_field(v)?;
+        Ok(())
+    }),
+    ("log_level", |c, v| {
+        c.log_level = typed_field(v)?;
+        Ok(())
+    }),
+    ("log_rotation", |c, v| {
+        c.log_rotation = typed_field(v)?;
+        Ok(())
+    }),
+    ("logging_destinations", |c, v| {
+        c.logging_destinations = typed_field(v)?;
+        Ok(())
+    }),
+    ("env_vars", |c, v| {
+        c.env_vars = typed_field(v)?;
+        Ok(())
+    }),
+];
+
+/// A string-valued field for [`Config::set`]; `err` if `val` is not a
+/// string.
+fn string_field(
+    val: &serde_json::Value,
+    err: &str,
+) -> Result<String, ConfigError> {
+    val.as_str()
+        .map(str::to_string)
+        .ok_or_else(|| ConfigError::ValidationError(err.to_string()))
+}
+
+/// A structured field for [`Config::set`], deserialised from `val`.
+fn typed_field<T: serde::de::DeserializeOwned>(
+    val: serde_json::Value,
+) -> Result<T, ConfigError> {
+    serde_json::from_value(val).map_err(|e| {
+        ConfigError::ConfigParseError(SourceConfigError::Message(
+            e.to_string(),
+        ))
+    })
 }
 
 #[cfg(all(test, not(miri)))]

@@ -9,6 +9,7 @@
 //! `lib.rs` and the async one in `async_http.rs` share them, so the
 //! reliability logic lives in one place.
 
+use crate::{OtlpError, OtlpResult};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -93,6 +94,42 @@ pub(crate) fn cheap_random_0_to_1() -> f64 {
     let nanos = now.elapsed().as_nanos() as u64;
     let scrambled = nanos.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     (scrambled as f64) / (u64::MAX as f64)
+}
+
+/// The outcome of one attempt from its HTTP status: 2xx is success,
+/// anything else [`OtlpError::BadStatus`].
+pub(crate) const fn status_outcome(status: u16) -> OtlpResult<()> {
+    if status >= 200 && status < 300 {
+        Ok(())
+    } else {
+        Err(OtlpError::BadStatus(status))
+    }
+}
+
+/// Transport failures, 5xx and 429 are worth another attempt; a 4xx,
+/// success, or anything else is final.
+pub(crate) const fn is_retriable(result: &OtlpResult<()>) -> bool {
+    match result {
+        Err(OtlpError::BadStatus(status)) => {
+            *status >= 500 || *status == 429
+        }
+        Err(OtlpError::Transport(_)) => true,
+        #[cfg(feature = "async")]
+        Err(OtlpError::AsyncTransport(_)) => true,
+        _ => false,
+    }
+}
+
+/// Tell the breaker, if any, how the export ended.
+pub(crate) fn record_outcome(
+    circuit: Option<&CircuitBreaker>,
+    result: &OtlpResult<()>,
+) {
+    match (circuit, result) {
+        (Some(cb), Ok(())) => cb.record_success(),
+        (Some(cb), Err(_)) => cb.record_failure(),
+        (None, _) => {}
+    }
 }
 
 // ---------------------------------------------------------------------------

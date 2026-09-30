@@ -75,7 +75,9 @@ pub use crate::async_http::{
 /// route of a Collector on the same host.
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:4318/v1/logs";
 
-use crate::backoff::cheap_random_0_to_1;
+use crate::backoff::{
+    cheap_random_0_to_1, is_retriable, record_outcome, status_outcome,
+};
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use std::collections::HashMap;
@@ -167,73 +169,47 @@ impl OtlpExporter {
     }
 
     fn post(&self, body: &str) -> OtlpResult<()> {
-        // Consult the circuit breaker before every attempt. A tripped
-        // breaker rejects immediately without touching the network.
+        // A tripped breaker rejects without touching the network.
         if let Some(cb) = &self.circuit
             && !cb.allow()
         {
             return Err(OtlpError::CircuitOpen);
         }
-
         // ureq turns every non-2xx status into an `Err` by default,
         // which would retry a 4xx and report a 5xx as a transport
-        // error. The status is classified below instead.
+        // error. `status_outcome` classifies the status instead.
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(self.timeout))
             .http_status_as_error(false)
             .build()
             .new_agent();
-
         let mut attempt: u32 = 0;
-        loop {
-            let mut req = agent
-                .post(&self.endpoint)
-                .header("content-type", "application/json");
-            for (k, v) in &self.headers {
-                req = req.header(k.as_str(), v.as_str());
+        let result = loop {
+            let result = self.send(&agent, body);
+            if !is_retriable(&result)
+                || attempt >= self.retry.max_retries
+            {
+                break result;
             }
-            match req.send(body) {
-                Ok(response) => {
-                    let status = response.status().as_u16();
-                    // 5xx and 429 are retriable; everything else
-                    // (success or 4xx client error) is final.
-                    if status >= 500 || status == 429 {
-                        if attempt < self.retry.max_retries {
-                            self.sleep_for_attempt(attempt);
-                            attempt += 1;
-                            continue;
-                        }
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if !(200..300).contains(&status) {
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_success();
-                    }
-                    return Ok(());
-                }
-                Err(e) => {
-                    // Transport errors (timeout, connection refused,
-                    // DNS) are retriable.
-                    if attempt < self.retry.max_retries {
-                        self.sleep_for_attempt(attempt);
-                        attempt += 1;
-                        continue;
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_failure();
-                    }
-                    return Err(OtlpError::Transport(Box::new(e)));
-                }
-            }
+            self.sleep_for_attempt(attempt);
+            attempt += 1;
+        };
+        record_outcome(self.circuit.as_deref(), &result);
+        result
+    }
+
+    /// One attempt: POST `body` and classify the answer.
+    fn send(&self, agent: &ureq::Agent, body: &str) -> OtlpResult<()> {
+        let mut req = agent
+            .post(&self.endpoint)
+            .header("content-type", "application/json");
+        for (k, v) in &self.headers {
+            req = req.header(k.as_str(), v.as_str());
         }
+        let response = req
+            .send(body)
+            .map_err(|e| OtlpError::Transport(Box::new(e)))?;
+        status_outcome(response.status().as_u16())
     }
 
     /// Sleep for the delay computed by the retry policy, including

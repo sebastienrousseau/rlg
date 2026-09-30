@@ -11,7 +11,8 @@
 //! backend. See `docs/adr/0015-otlp-local-collector-transport.md`.
 
 use crate::backoff::{
-    CircuitBreaker, RetryPolicy, cheap_random_0_to_1,
+    CircuitBreaker, RetryPolicy, cheap_random_0_to_1, is_retriable,
+    record_outcome, status_outcome,
 };
 use crate::http::{self, Endpoint};
 use crate::{DEFAULT_ENDPOINT, OtlpError, OtlpResult, serialise_batch};
@@ -93,13 +94,7 @@ impl AsyncOtlpExporter {
             self.sleep_for_attempt(attempt).await;
             attempt += 1;
         };
-        if let Some(cb) = &self.circuit {
-            if result.is_ok() {
-                cb.record_success();
-            } else {
-                cb.record_failure();
-            }
-        }
+        record_outcome(self.circuit.as_deref(), &result);
         result
     }
 
@@ -117,11 +112,7 @@ impl AsyncOtlpExporter {
                 })
                 .and_then(|r| r)
                 .map_err(OtlpError::AsyncTransport)?;
-        if (200..300).contains(&status) {
-            Ok(())
-        } else {
-            Err(OtlpError::BadStatus(status))
-        }
+        status_outcome(status)
     }
 
     /// Connect, write the request, and read until the final status
@@ -161,18 +152,6 @@ impl AsyncOtlpExporter {
     #[must_use]
     pub fn endpoint(&self) -> &str {
         &self.endpoint
-    }
-}
-
-/// Transport failures, 5xx and 429 are worth another attempt; a 4xx
-/// or success is final.
-const fn is_retriable(result: &OtlpResult<()>) -> bool {
-    match result {
-        Err(OtlpError::AsyncTransport(_)) => true,
-        Err(OtlpError::BadStatus(status)) => {
-            *status >= 500 || *status == 429
-        }
-        _ => false,
     }
 }
 
