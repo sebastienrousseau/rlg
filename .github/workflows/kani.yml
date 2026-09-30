@@ -37,5 +37,11 @@ jobs:
       - name: Set up Kani
         uses: model-checking/kani-github-action@v1
         with:
+          # Pinned: 0.68.0 injects `#[macro_use] extern crate` into the
+          # crate under verification, which rlg's
+          # `macro_use_extern_crate = "deny"` lint rejects before any
+          # proof runs. 0.67.0 verifies all three harnesses. Bump
+          # deliberately, after a local `cargo kani` passes.
+          kani-version: '0.67.0'
           working-directory: crates/rlg
           args: --all-features --output-format terse
