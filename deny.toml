@@ -7,15 +7,15 @@
 # Every license the transitive tree may carry. Anything else fails
 # the build. Enterprise adopters diff this list against their own
 # licence policy.
+#
+# Pruned to the licences the tree actually carries: an entry no crate
+# uses is a pre-approval nobody reviewed. A dependency under another
+# licence fails CI until it is added here on purpose.
 allow = [
     "MIT",
     "Apache-2.0",
-    "Unicode-DFS-2016",
     "Unicode-3.0",
-    "ISC",
-    "CC0-1.0",
     "BSL-1.0",
-    "Zlib",
     "Unlicense",
     "BSD-3-Clause",
 ]
