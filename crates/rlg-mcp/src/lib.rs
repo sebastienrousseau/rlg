@@ -34,9 +34,18 @@
 #[rustfmt::skip]
 pub mod transport;
 
+mod model;
+mod ops;
+
+pub use model::{
+    ErrorSummary, FilterLogArgs, Records, SummarizeErrorsArgs,
+    TailLogArgs, TailLogsGlobArgs,
+};
+pub use ops::{filter_log, summarize_errors, tail_log, tail_logs_glob};
+
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
-use rlg_cli::{Filter, parse_record, render};
+use rlg_cli::Filter;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::{ToolCallContext, schema_for_output};
 use rmcp::handler::server::wrapper::Parameters;
@@ -54,262 +63,9 @@ use rmcp::service::RequestContext;
 use rmcp::{
     RoleServer, ServerHandler, tool, tool_handler, tool_router,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use serde::Serialize;
 use std::fmt;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::path::Path;
-
-// ---------------------------------------------------------------------------
-// Tool implementations — pure functions over a file path.
-// ---------------------------------------------------------------------------
-
-/// Return the last `n` parseable records from `path`, rendered in
-/// `Logfmt`. Unparseable lines are skipped.
-///
-/// # Errors
-/// Returns `io::Error` if the file cannot be opened or read.
-pub fn tail_log(path: &Path, n: usize) -> std::io::Result<Vec<String>> {
-    let file = File::open(path)?;
-    let mut all = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line) {
-            all.push(render(record, LogFormat::Logfmt));
-        }
-    }
-    let start = all.len().saturating_sub(n);
-    Ok(all.split_off(start))
-}
-
-/// Apply `filter` to every record in `path` and return matches
-/// rendered in `format`.
-///
-/// # Errors
-/// Returns `io::Error` if the file cannot be opened or read.
-pub fn filter_log(
-    path: &Path,
-    filter: &Filter,
-    format: LogFormat,
-) -> std::io::Result<Vec<String>> {
-    let file = File::open(path)?;
-    let mut out = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line)
-            && filter.matches(&record)
-        {
-            out.push(render(record, format));
-        }
-    }
-    Ok(out)
-}
-
-/// Count error+ records grouped by component.
-///
-/// # Errors
-/// Returns `io::Error` if the file cannot be opened or read.
-pub fn summarize_errors(
-    path: &Path,
-) -> std::io::Result<BTreeMap<String, u64>> {
-    let file = File::open(path)?;
-    let mut buckets: BTreeMap<String, u64> = BTreeMap::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line)
-            && record.level.to_numeric() >= LogLevel::ERROR.to_numeric()
-        {
-            *buckets
-                .entry(record.component.to_string())
-                .or_insert(0) += 1;
-        }
-    }
-    Ok(buckets)
-}
-
-/// Tail the last `n` records across every file matching a glob
-/// pattern (e.g. `/var/log/**/*.log`), newest last, optionally keeping
-/// only records at or above `level`. Matched files are read in sorted
-/// path order and their records concatenated before the final `n` are
-/// taken; unparseable lines are skipped.
-///
-/// # Errors
-/// Returns an error string if the glob pattern is invalid, or if a
-/// matched path cannot be read (e.g. it resolves to a directory).
-pub fn tail_logs_glob(
-    pattern: &str,
-    n: usize,
-    level: Option<LogLevel>,
-) -> Result<Vec<String>, String> {
-    let mut paths: Vec<std::path::PathBuf> = glob::glob(pattern)
-        .map_err(|e| format!("invalid glob pattern: {e}"))?
-        .filter_map(Result::ok)
-        .collect();
-    paths.sort();
-    let mut all = Vec::new();
-    for path in paths {
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| format!("read {}: {e}", path.display()))?;
-        for line in content.lines() {
-            if let Ok(record) = parse_record(line) {
-                if let Some(min) = level
-                    && record.level.to_numeric() < min.to_numeric()
-                {
-                    continue;
-                }
-                all.push(render(record, LogFormat::Logfmt));
-            }
-        }
-    }
-    let start = all.len().saturating_sub(n);
-    Ok(all.split_off(start))
-}
-
-// ---------------------------------------------------------------------------
-// Structured outputs.
-// ---------------------------------------------------------------------------
-
-/// A slice of rendered log records: what `tail_log`, `filter_log` and
-/// `tail_logs_glob` return.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-pub struct Records {
-    /// How many records are returned.
-    pub count: usize,
-    /// The records, oldest first, one rendered record each.
-    pub records: Vec<String>,
-}
-
-impl From<Vec<String>> for Records {
-    fn from(records: Vec<String>) -> Self {
-        Self {
-            count: records.len(),
-            records,
-        }
-    }
-}
-
-impl fmt::Display for Records {
-    /// One record per line. When nothing matched, say so: an empty
-    /// string would read to a model as a file with nothing in it.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.records.is_empty() {
-            return f.write_str("No parseable rlg records matched.");
-        }
-        f.write_str(&self.records.join("\n"))
-    }
-}
-
-/// ERROR-and-above records counted per component: what
-/// `summarize_errors` returns.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-pub struct ErrorSummary {
-    /// How many ERROR-and-above records the file holds.
-    pub total: u64,
-    /// The count per component, sorted by component name.
-    pub by_component: BTreeMap<String, u64>,
-}
-
-impl From<BTreeMap<String, u64>> for ErrorSummary {
-    fn from(by_component: BTreeMap<String, u64>) -> Self {
-        Self {
-            total: by_component.values().sum(),
-            by_component,
-        }
-    }
-}
-
-impl fmt::Display for ErrorSummary {
-    /// The `component → count` map as pretty-printed JSON, which is
-    /// the text this tool has always returned.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let text = serde_json::to_string_pretty(&self.by_component)
-            .unwrap_or_default();
-        f.write_str(&text)
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Tool arguments.
-// ---------------------------------------------------------------------------
-//
-// The doc comments on the fields are the descriptions a client shows
-// the model, kept word for word from the previous release. The
-// examples are what an auditor or a client with no log of its own
-// sends: a path a log file can be written to on any Unix host.
-
-fn default_count() -> usize {
-    100
-}
-
-fn default_format() -> String {
-    "Logfmt".to_owned()
-}
-
-/// Arguments of `tail_log`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct TailLogArgs {
-    /// Filesystem path to an rlg log file (Logfmt/JSON records, one per line).
-    #[schemars(example = &"/tmp/rlg/app.ndjson")]
-    pub path: String,
-    /// How many of the most recent parseable records to return (default 100).
-    #[serde(default = "default_count")]
-    #[schemars(range(min = 1), example = &10)]
-    pub n: usize,
-}
-
-/// Arguments of `filter_log`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct FilterLogArgs {
-    /// Filesystem path to an rlg log file to read.
-    #[schemars(example = &"/tmp/rlg/app.ndjson")]
-    pub path: String,
-    /// Keep only records at or above this severity. Omit to keep all levels.
-    #[serde(default)]
-    #[schemars(
-        with = "String",
-        extend("enum" = ["TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR", "FATAL", "CRITICAL"]),
-        example = &"WARN"
-    )]
-    pub min_level: Option<String>,
-    /// Keep only records whose component matches this exact value. Omit to keep all components.
-    #[serde(default)]
-    #[schemars(with = "String", example = &"db")]
-    pub component: Option<String>,
-    /// rlg LogFormat name to render matched records in (e.g. Logfmt, JSON). Defaults to Logfmt.
-    #[serde(default = "default_format")]
-    #[schemars(example = &"JSON")]
-    pub format: String,
-}
-
-/// Arguments of `summarize_errors`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct SummarizeErrorsArgs {
-    /// Filesystem path to an rlg log file to scan for ERROR-and-above records.
-    #[schemars(example = &"/tmp/rlg/app.ndjson")]
-    pub path: String,
-}
-
-/// Arguments of `tail_logs_glob`.
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct TailLogsGlobArgs {
-    /// Glob pattern matching one or more rlg log files, e.g. `/var/log/**/*.log`.
-    #[schemars(example = &"/tmp/rlg/*.ndjson")]
-    pub glob_pattern: String,
-    /// How many of the most recent parseable records to return across all matched files (default 100).
-    #[serde(default = "default_count")]
-    #[schemars(range(min = 1), example = &10)]
-    pub lines: usize,
-    /// Keep only records at or above this severity. Omit to keep all levels.
-    #[serde(default)]
-    #[schemars(
-        with = "String",
-        extend("enum" = ["TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR", "FATAL", "CRITICAL"]),
-        example = &"ERROR"
-    )]
-    pub level: Option<String>,
-}
 
 /// A failure to read `path`, worded for a model: the path is what
 /// makes the message actionable.

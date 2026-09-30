@@ -7,7 +7,6 @@
     "sloc": 60
   },
   "files": {
-    "crates/rlg-mcp/src/lib.rs": 732,
     "crates/rlg-mcp/src/transport.rs": 636
   },
   "functions": {
