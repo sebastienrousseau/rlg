@@ -48,6 +48,8 @@ path = "examples/filter_by_attribute.rs"
 [dependencies]
 rlg = { version = "0.0.13", path = "../rlg" }
 clap = { version = "4.6", features = ["derive"] }
+# Shell completions, generated from the same `Cli` definition.
+clap_complete = "4.6"
 serde_json = "1.0"
 anyhow = "1.0"
 

@@ -26,7 +26,28 @@ verify: ## Run the full local pre-PR verification pipeline.
 	@echo "▶ version references"
 	@scripts/check-doc-versions.sh
 	@scripts/check-mcp-manifests.sh
+	@scripts/check-readme.py
 	@echo "✓ Local verification passed."
+
+# Shell completions for packagers, generated from the CLI definitions
+# into target/completions/ (never committed).
+.PHONY: completions
+completions: ## Generate shell completions for rlg and rlg-report.
+	@cargo build --release -p rlg-cli -p rlg-report
+	@mkdir -p target/completions
+	@for bin in rlg rlg-report; do \
+	  for shell in bash zsh fish elvish powershell; do \
+	    target/release/$$bin --completions $$shell > target/completions/$$bin.$$shell; \
+	  done; \
+	done
+	@ls target/completions
+
+# Render the README demo (.github/demo.gif) from .github/demo.tape
+# with VHS, running the freshly built binaries.
+.PHONY: demo
+demo: ## Render the README demo GIF with VHS.
+	@cargo build --release -p rlg-cli -p rlg-report
+	@PATH="$(CURDIR)/target/release:$$PATH" vhs .github/demo.tape
 
 # Build the project including all workspace members.
 .PHONY: build

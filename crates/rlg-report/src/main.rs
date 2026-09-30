@@ -7,7 +7,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
 use rlg_report::Report;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader};
@@ -17,6 +17,10 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "rlg-report", version, about, long_about = None)]
 struct Cli {
+    /// Print the completion script for SHELL and exit.
+    #[arg(long, value_name = "SHELL", exclusive = true)]
+    completions: Option<clap_complete::Shell>,
+
     /// Input file. Reads from stdin when omitted.
     input: Option<PathBuf>,
 
@@ -40,6 +44,15 @@ enum OutputShape {
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    if let Some(shell) = cli.completions {
+        clap_complete::generate(
+            shell,
+            &mut Cli::command(),
+            "rlg-report",
+            &mut io::stdout(),
+        );
+        return Ok(());
+    }
     let stdin = io::stdin();
     let lines: Vec<String> = match cli.input.as_ref() {
         Some(path) => BufReader::new(File::open(path)?)

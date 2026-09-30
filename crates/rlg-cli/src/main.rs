@@ -13,7 +13,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg_cli::{Filter, parse_record, render};
@@ -25,6 +25,10 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "rlg", version, about, long_about = None)]
 struct Cli {
+    /// Print the completion script for SHELL and exit.
+    #[arg(long, value_name = "SHELL", exclusive = true)]
+    completions: Option<clap_complete::Shell>,
+
     /// Input file. Reads from stdin if omitted.
     input: Option<PathBuf>,
 
@@ -167,6 +171,15 @@ fn run<R: BufRead, W: Write>(
 
 fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
+    if let Some(shell) = cli.completions {
+        clap_complete::generate(
+            shell,
+            &mut Cli::command(),
+            "rlg",
+            &mut io::stdout(),
+        );
+        return Ok(());
+    }
     let filter = build_filter(&cli)?;
     let format: LogFormat = cli.format.into();
 
