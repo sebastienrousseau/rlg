@@ -29,5 +29,12 @@ done < <(git ls-files '*.md' |
   grep -vE '^(CHANGELOG\.md|RELEASE-NOTES|docs/adr/)' |
   xargs grep -nE "$pattern" /dev/null || true)
 
-[ "$status" -eq 0 ] && echo "ok: every install snippet names $want"
+# The Arch recipe carries the version too.
+pkgver=$(sed -n 's/^pkgver=//p' PKGBUILD)
+if [ "$pkgver" != "$want" ]; then
+  echo "STALE PKGBUILD: pkgver=$pkgver (workspace is $want)"
+  status=1
+fi
+
+[ "$status" -eq 0 ] && echo "ok: every install snippet and PKGBUILD names $want"
 exit $status
