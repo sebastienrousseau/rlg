@@ -23,7 +23,7 @@ Application Thread → Log::fire() → ArrayQueue (65k ring buffer)
 - `session_id` is `u64` — avoids allocation on the hot path.
 - `component` and `time` use `Cow<'static, str>` — static strings stay on the stack.
 - Config files use TOML for both load and save.
-- `notify` and `terminal_size` are optional, gated behind `tokio` and `tui` features.
+- `tokio` and `terminal_size` are optional, gated behind the `tokio` and `tui` features. Config hot-reload polls the file; there is no `notify` dependency.
 
 ## Development
 

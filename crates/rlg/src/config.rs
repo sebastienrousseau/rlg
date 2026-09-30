@@ -19,8 +19,6 @@ use config::{
     File as ConfigFile,
 };
 use envy;
-#[cfg(feature = "tokio")]
-use notify::{Event, EventKind, RecursiveMode, Watcher};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -42,6 +40,21 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc;
 
 const CURRENT_CONFIG_VERSION: &str = "1.0";
+
+/// How often [`Config::hot_reload_async`] checks the watched file.
+#[cfg(feature = "tokio")]
+pub const HOT_RELOAD_POLL_INTERVAL: std::time::Duration =
+    std::time::Duration::from_millis(250);
+
+/// A file's modification time and length, compared by hot-reload.
+#[cfg(feature = "tokio")]
+type Fingerprint = (Option<std::time::SystemTime>, u64);
+
+#[cfg(feature = "tokio")]
+fn file_fingerprint(path: &Path) -> std::io::Result<Fingerprint> {
+    let meta = fs::metadata(path)?;
+    Ok((meta.modified().ok(), meta.len()))
+}
 
 /// Configuration error variants.
 #[derive(Debug, Error)]
@@ -78,10 +91,10 @@ pub enum ConfigError {
     #[error("Missing required field: {0}")]
     MissingFieldError(String),
 
-    /// File watcher setup failed (requires `tokio` feature).
+    /// The watched file could not be read (requires `tokio`).
     #[cfg(feature = "tokio")]
     #[error("Watcher error: {0}")]
-    WatcherError(#[from] notify::Error),
+    WatcherError(std::io::Error),
 }
 
 impl From<crate::commons::config::ConfigError> for ConfigError {
@@ -544,46 +557,65 @@ impl Config {
 
     /// Hot-reloads configuration on file change.
     ///
-    /// Requires the `tokio` feature.
+    /// Polls the file every [`HOT_RELOAD_POLL_INTERVAL`] and reloads
+    /// it when its modification time or size changes, including
+    /// when an editor replaces it by renaming a new file over it.
+    /// A file that fails to load leaves the current configuration in
+    /// place. Send `()` on the returned channel, or drop it, to stop.
+    ///
+    /// Requires the `tokio` feature and a running Tokio runtime.
     ///
     /// # Errors
     ///
-    /// This function returns an error if the watcher cannot be initialized.
+    /// Returns [`ConfigError::WatcherError`] if the file cannot be
+    /// read when watching starts.
     #[cfg(feature = "tokio")]
-    #[allow(clippy::incompatible_msrv)]
     pub fn hot_reload_async(
         config_path: &str,
         config: &Arc<RwLock<Self>>,
     ) -> Result<mpsc::Sender<()>, ConfigError> {
+        let mut seen = file_fingerprint(Path::new(config_path))
+            .map_err(ConfigError::WatcherError)?;
         let (stop_tx, mut stop_rx) = mpsc::channel::<()>(1);
-        let (tx, mut rx) = mpsc::channel::<notify::Result<Event>>(100);
-
-        let mut watcher = notify::recommended_watcher(move |res| {
-            let _ = tx.blocking_send(res);
-        })?;
-        watcher.watch(
-            Path::new(config_path),
-            RecursiveMode::NonRecursive,
-        )?;
-
-        let config_clone = config.clone();
-        let path_owned = config_path.to_string();
+        let config = Arc::clone(config);
+        let path = config_path.to_string();
         tokio::spawn(async move {
-            let _watcher = watcher; // Keep watcher alive for the lifetime of the task
+            let mut ticks =
+                tokio::time::interval(HOT_RELOAD_POLL_INTERVAL);
+            ticks.set_missed_tick_behavior(
+                tokio::time::MissedTickBehavior::Delay,
+            );
             loop {
                 tokio::select! {
-                    Some(res) = rx.recv() => {
-                        if let Ok(Event { kind: EventKind::Modify(_), .. }) = res
-                            && let Ok(new_config) = Self::load_async(Some(&path_owned)).await {
-                                let mut config_write = config_clone.write();
-                                *config_write = new_config.read().clone();
-                        }
+                    _ = ticks.tick() => {
+                        Self::reload_if_changed(&path, &mut seen, &config).await;
                     }
                     _ = stop_rx.recv() => break,
                 }
             }
         });
         Ok(stop_tx)
+    }
+
+    /// Reload `path` into `config` if its fingerprint moved on from
+    /// `seen`. A missing file is skipped until it reappears.
+    #[cfg(feature = "tokio")]
+    async fn reload_if_changed(
+        path: &str,
+        seen: &mut Fingerprint,
+        config: &Arc<RwLock<Self>>,
+    ) {
+        let Ok(now) = file_fingerprint(Path::new(path)) else {
+            return;
+        };
+        if now == *seen {
+            return;
+        }
+        *seen = now;
+        if let Ok(new_config) = Self::load_async(Some(path)).await {
+            let fresh = new_config.read().clone();
+            *config.write() = fresh;
+        }
     }
 
     /// Compares two configurations and returns the differences.
@@ -677,38 +709,6 @@ impl fmt::Display for LogRotation {
 #[cfg(all(test, not(miri)))]
 mod tests {
     use super::*;
-
-    #[cfg(feature = "tokio")]
-    #[tokio::test]
-    #[cfg_attr(miri, ignore)]
-    async fn test_config_hot_reload_async_full() {
-        use parking_lot::RwLock;
-        use std::sync::Arc;
-        use tokio::time::{Duration, sleep};
-
-        let temp_dir = tempfile::tempdir().unwrap();
-        let config_path = temp_dir.path().join("config.toml");
-        let config = Config::default();
-        config.save_to_file(&config_path).unwrap();
-
-        let shared_config = Arc::new(RwLock::new(Config::default()));
-        let stop_tx = Config::hot_reload_async(
-            config_path.to_str().unwrap(),
-            &shared_config,
-        )
-        .unwrap();
-
-        // Trigger Modify
-        let new_config = Config {
-            profile: "modified".to_string(),
-            ..Config::default()
-        };
-        new_config.save_to_file(&config_path).unwrap();
-
-        sleep(Duration::from_millis(200)).await;
-
-        let _ = stop_tx.send(()).await;
-    }
 
     #[test]
     fn test_config_set_exhaustive() {

@@ -9,10 +9,13 @@ Install RLG, emit your first log, and verify output — all in under five minute
 rlg = "0.0.7"
 ```
 
-For OTLP streaming to Grafana Loki or similar collectors, enable the `reqwest` feature:
+To ship records to an OpenTelemetry Collector (which forwards them to
+Grafana Loki, Honeycomb and others), add the `rlg-otlp` crate. It sends
+plain OTLP/HTTP to a Collector on `localhost:4318`; the Collector owns
+TLS towards the backend:
 
 ```toml
-rlg = { version = "0.0.7", features = ["reqwest"] }
+rlg-otlp = "0.0.12"
 ```
 
 ## 2. Initialise and Log

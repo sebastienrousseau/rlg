@@ -79,9 +79,8 @@ the application needs.
 
 | Feature | Pulls in | Adds | Documented in |
 | :--- | :--- | :--- | :--- |
-| `tokio` | `tokio` + `notify` | `Config::load_async`, file-watcher hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
+| `tokio` | `tokio` | `Config::load_async`, polling hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
 | `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
-| `miette` | `miette` 7 | Pretty diagnostic error reports | [Library reference](#capabilities-in-0011) |
 | `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups | [Bridging existing facades](#bridging-existing-facades) |
 | `debug_enabled` | — | Verbose internal engine diagnostics | — |
 
@@ -182,9 +181,10 @@ A few features built on top of those choices:
 The runtime default profile carries **seven runtime crates**
 plus the well-vetted `serde` family. Disabling all optional
 features keeps the engine compiling to the same seven; the
-`tokio` runtime, `terminal_size` for the TUI, `miette` for
-diagnostics, and `tracing-subscriber` for the layer bridge
-are strictly opt-in.
+`tokio` runtime, `terminal_size` for the TUI and
+`tracing-subscriber` for the layer bridge are strictly opt-in.
+Diagnostic codes and help text (`RlgError::code`, `help`,
+`report`) are built in, with no extra dependency.
 
 ---
 
@@ -213,8 +213,9 @@ are strictly opt-in.
   `spanId` / `traceId` so an `otelcol` pipeline picks up rlg
   records without an adapter.
 - **TOML configuration with hot-reload.** `Config::load_async`
-  + the `notify` file watcher (behind the `tokio` feature)
-  picks up `/etc/rlg.toml` mutations without a restart.
+  + `Config::hot_reload_async` (behind the `tokio` feature)
+  polls `/etc/rlg.toml` and picks up edits, including
+  editor-style atomic replaces, without a restart.
 - **Bridges for `log` and `tracing`.** `rlg::init()`
   installs a `log::Log` implementation; the `tracing-layer`
   feature exposes a `tracing_subscriber::Layer` you can stack

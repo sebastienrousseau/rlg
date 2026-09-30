@@ -75,8 +75,6 @@ euxis-commons = { version = "0.0.4", default-features = false, features = ["erro
 hostname = "0.4.2"
 itoa = "1.0.18"
 log = "0.4.30"
-miette = { version = "7.5.0", features = ["fancy"], optional = true }
-notify = { version = "8.2.0", optional = true }
 parking_lot = "0.12.5"
 regex = "1.12.3"
 ryu = "1.0.23"
@@ -128,13 +126,12 @@ debug_enabled = []
 # pre-Phase-18 direct `ArrayQueue`. See
 # `docs/adr/0009-sharded-producer-queue.md`.
 fast-queue = []
-miette = ["dep:miette"]
 # io_uring file sink. Enables the `PlatformSink::UringFile`
 # variant when targeting Linux. On non-Linux targets the feature
 # is a no-op (the variant is cfg-gated out). See
 # `docs/adr/0011-io-uring-file-sink.md`.
 uring = ["dep:io-uring"]
-tokio = ["dep:tokio", "dep:notify"]
+tokio = ["dep:tokio"]
 tui = ["dep:terminal_size"]
 tracing-layer = ["dep:tracing-subscriber"]
 

@@ -4,144 +4,54 @@
 // SPDX-License-Identifier: MIT
 
 use crate::config::ConfigError;
-#[cfg(feature = "miette")]
-use miette::Diagnostic;
 use std::fmt;
 use std::io;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[cfg_attr(feature = "miette", derive(Diagnostic))]
 /// Error variants for the RLG logging pipeline.
 pub enum RlgError {
     #[error("I/O error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::io_error),
-            help("Ensure the log directory exists and is writable.")
-        )
-    )]
     /// I/O error
     IoError(#[from] io::Error),
 
     #[error("Configuration error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::config_error),
-            help(
-                "Check your configuration file or environment variables."
-            )
-        )
-    )]
     /// Configuration error
     ConfigError(#[from] ConfigError),
 
     #[error("Log format parse error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::format_parse_error),
-            help(
-                "Ensure the format string matches supported variants (JSON, OTLP, MCP, etc.)."
-            )
-        )
-    )]
     /// Log format parse error
     FormatParseError(String),
 
     #[error("Log level parse error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::level_parse_error),
-            help(
-                "Supported levels: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL."
-            )
-        )
-    )]
     /// Log level parse error
     LevelParseError(String),
 
     #[error("Unsupported log format: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::unsupported_format),
-            help(
-                "Visit docs.rs/rlg for a list of supported industry formats."
-            )
-        )
-    )]
     /// Unsupported log format
     UnsupportedFormat(String),
 
     #[error("Log formatting error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::formatting_error),
-            help(
-                "This may happen if attributes contain non-serializable data."
-            )
-        )
-    )]
     /// Log formatting error
     FormattingError(String),
 
     #[error("Log rotation error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::rotation_error),
-            help(
-                "Ensure RLG has permission to rename or delete old log files."
-            )
-        )
-    )]
     /// Log rotation error
     RotationError(String),
 
     #[error("Network error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::network_error),
-            help(
-                "Check your network connection or the OTLP collector endpoint."
-            )
-        )
-    )]
     /// Network error
     NetworkError(String),
 
     #[error("DateTime parse error: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::datetime_parse_error),
-            help("RLG expects RFC 3339 / ISO 8601 timestamps.")
-        )
-    )]
     /// `DateTime` parse error
     DateTimeParseError(String),
 
     #[error("{0}")]
-    #[cfg_attr(feature = "miette", diagnostic(code(rlg::custom_error)))]
     /// Custom error
     Custom(String),
 
     #[error("Native OS sink failure: {0}")]
-    #[cfg_attr(
-        feature = "miette",
-        diagnostic(
-            code(rlg::native_sink_failure),
-            help(
-                "Check if systemd-journald is running (Linux) or if 'com.rlg.logger' subsystem is registered (macOS). Ensure RLG_FALLBACK_STDOUT is set if you want to bypass native hooks."
-            )
-        )
-    )]
     /// Native OS sink failure
     NativeSinkError(String),
 }
@@ -157,6 +67,131 @@ impl RlgError {
     #[must_use]
     pub fn custom<T: fmt::Display>(msg: T) -> Self {
         Self::Custom(msg.to_string())
+    }
+
+    /// A stable, machine-readable code for this error, such as
+    /// `rlg::io_error`. Suitable for matching in tooling and for
+    /// indexing error documentation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rlg::error::RlgError;
+    /// let err = RlgError::RotationError("disk full".into());
+    /// assert_eq!(err.code(), "rlg::rotation_error");
+    /// ```
+    #[must_use]
+    pub const fn code(&self) -> &'static str {
+        self.diagnostic().0
+    }
+
+    /// A one-line hint on how to resolve this error, when there is
+    /// one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rlg::error::RlgError;
+    /// let err = RlgError::LevelParseError("LOUD".into());
+    /// assert!(err.help().unwrap().contains("TRACE"));
+    /// assert!(RlgError::custom("x").help().is_none());
+    /// ```
+    #[must_use]
+    pub const fn help(&self) -> Option<&'static str> {
+        self.diagnostic().1
+    }
+
+    /// Render the error as a multi-line report: the code, the
+    /// message and, when there is one, the help line.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rlg::error::RlgError;
+    /// let err = RlgError::NetworkError("timeout".into());
+    /// assert_eq!(
+    ///     err.report().to_string(),
+    ///     "error[rlg::network_error]: Network error: timeout\n  \
+    ///      help: Check your network connection or the OTLP collector endpoint.",
+    /// );
+    /// ```
+    #[must_use]
+    pub const fn report(&self) -> Report<'_> {
+        Report(self)
+    }
+
+    /// The code and help line of each variant. One exhaustive match,
+    /// so a new variant cannot compile without a diagnostic.
+    const fn diagnostic(&self) -> Diagnostic {
+        match self {
+            Self::IoError(_) => ("rlg::io_error", Some(HELP_IO)),
+            Self::ConfigError(_) => {
+                ("rlg::config_error", Some(HELP_CONFIG))
+            }
+            Self::FormatParseError(_) => {
+                ("rlg::format_parse_error", Some(HELP_FORMAT_PARSE))
+            }
+            Self::LevelParseError(_) => {
+                ("rlg::level_parse_error", Some(HELP_LEVEL_PARSE))
+            }
+            Self::UnsupportedFormat(_) => (
+                "rlg::unsupported_format",
+                Some(HELP_UNSUPPORTED_FORMAT),
+            ),
+            Self::FormattingError(_) => {
+                ("rlg::formatting_error", Some(HELP_FORMATTING))
+            }
+            Self::RotationError(_) => {
+                ("rlg::rotation_error", Some(HELP_ROTATION))
+            }
+            Self::NetworkError(_) => {
+                ("rlg::network_error", Some(HELP_NETWORK))
+            }
+            Self::DateTimeParseError(_) => {
+                ("rlg::datetime_parse_error", Some(HELP_DATETIME_PARSE))
+            }
+            Self::Custom(_) => ("rlg::custom_error", None),
+            Self::NativeSinkError(_) => {
+                ("rlg::native_sink_failure", Some(HELP_NATIVE_SINK))
+            }
+        }
+    }
+}
+
+/// An error's stable code and optional help line.
+type Diagnostic = (&'static str, Option<&'static str>);
+
+const HELP_IO: &str =
+    "Ensure the log directory exists and is writable.";
+const HELP_CONFIG: &str =
+    "Check your configuration file or environment variables.";
+const HELP_FORMAT_PARSE: &str = "Ensure the format string matches supported variants (JSON, OTLP, MCP, etc.).";
+const HELP_LEVEL_PARSE: &str =
+    "Supported levels: ALL, TRACE, DEBUG, INFO, WARN, ERROR, FATAL.";
+const HELP_UNSUPPORTED_FORMAT: &str =
+    "Visit docs.rs/rlg for a list of supported industry formats.";
+const HELP_FORMATTING: &str =
+    "This may happen if attributes contain non-serializable data.";
+const HELP_ROTATION: &str =
+    "Ensure RLG has permission to rename or delete old log files.";
+const HELP_NETWORK: &str =
+    "Check your network connection or the OTLP collector endpoint.";
+const HELP_DATETIME_PARSE: &str =
+    "RLG expects RFC 3339 / ISO 8601 timestamps.";
+const HELP_NATIVE_SINK: &str = "Check if systemd-journald is running (Linux) or if 'com.rlg.logger' subsystem is registered (macOS). Ensure RLG_FALLBACK_STDOUT is set if you want to bypass native hooks.";
+
+/// A displayable diagnostic report for an [`RlgError`], returned by
+/// [`RlgError::report`].
+#[derive(Debug, Clone, Copy)]
+pub struct Report<'a>(&'a RlgError);
+
+impl fmt::Display for Report<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "error[{}]: {}", self.0.code(), self.0)?;
+        if let Some(help) = self.0.help() {
+            write!(f, "\n  help: {help}")?;
+        }
+        Ok(())
     }
 }
 
@@ -284,6 +319,49 @@ mod tests {
             let dbg = format!("{err:?}");
             assert!(!dbg.is_empty());
         }
+    }
+
+    #[test]
+    fn test_every_variant_has_a_distinct_code() {
+        let variants: Vec<RlgError> = vec![
+            RlgError::IoError(io::Error::other("test")),
+            RlgError::ConfigError(ConfigError::ValidationError(
+                "v".into(),
+            )),
+            RlgError::FormatParseError("f".into()),
+            RlgError::LevelParseError("l".into()),
+            RlgError::UnsupportedFormat("u".into()),
+            RlgError::FormattingError("fm".into()),
+            RlgError::RotationError("r".into()),
+            RlgError::NetworkError("n".into()),
+            RlgError::DateTimeParseError("d".into()),
+            RlgError::Custom("c".into()),
+            RlgError::NativeSinkError("ns".into()),
+        ];
+        let codes: std::collections::HashSet<_> =
+            variants.iter().map(RlgError::code).collect();
+        assert_eq!(codes.len(), variants.len());
+        for err in &variants {
+            assert!(err.code().starts_with("rlg::"));
+            let report = err.report().to_string();
+            assert!(
+                report.starts_with(&format!("error[{}]: ", err.code()))
+            );
+            assert_eq!(
+                report.contains("\n  help: "),
+                err.help().is_some()
+            );
+        }
+    }
+
+    #[test]
+    fn test_custom_error_has_no_help() {
+        let err = RlgError::custom("boom");
+        assert_eq!(err.help(), None);
+        assert_eq!(
+            err.report().to_string(),
+            "error[rlg::custom_error]: boom"
+        );
     }
 
     #[test]

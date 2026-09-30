@@ -40,9 +40,8 @@
 //!
 //! | Feature | Effect |
 //! |---------|--------|
-//! | `tokio` | Async config loading, hot-reload via `notify`. |
+//! | `tokio` | Async config loading and polling hot-reload. |
 //! | `tui` | Live terminal dashboard via `terminal_size`. |
-//! | `miette` | Pretty diagnostic error reports. |
 //! | `tracing-layer` | Composable `tracing_subscriber::Layer`. |
 //! | `debug_enabled` | Verbose internal engine diagnostics. |
 //!

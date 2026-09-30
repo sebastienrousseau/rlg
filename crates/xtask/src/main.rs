@@ -149,7 +149,7 @@ fn examples() -> Result<()> {
                 "--example",
                 name,
                 "--features",
-                "tokio,tui,miette,tracing-layer",
+                "tokio,tui,tracing-layer",
             ])?,
         )?;
     }
