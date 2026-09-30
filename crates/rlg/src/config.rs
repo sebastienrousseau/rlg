@@ -33,10 +33,6 @@ use std::{
 use thiserror::Error;
 
 #[cfg(feature = "tokio")]
-use tokio::fs::File;
-#[cfg(feature = "tokio")]
-use tokio::io::AsyncReadExt;
-#[cfg(feature = "tokio")]
 use tokio::sync::mpsc;
 
 const CURRENT_CONFIG_VERSION: &str = "1.0";
@@ -273,30 +269,14 @@ impl Config {
     pub fn load<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Self>>, ConfigError> {
-        let config = if let Some(path) = config_path {
-            let contents =
-                fs::read_to_string(path.as_ref()).map_err(|e| {
-                    ConfigError::FileReadError(e.to_string())
-                })?;
-            let config_source = ConfigSource::builder()
-                .add_source(ConfigFile::from_str(
-                    &contents,
-                    config::FileFormat::Toml,
-                ))
-                .build()?;
-            let version: String = config_source.get("version")?;
-            if version != CURRENT_CONFIG_VERSION {
-                return Err(ConfigError::VersionError(format!(
-                    "Unsupported configuration version: {version}"
-                )));
-            }
-            config_source.try_deserialize()?
-        } else {
-            Self::default()
+        let config = match config_path {
+            Some(path) => Self::from_toml(
+                &fs::read_to_string(path.as_ref())
+                    .map_err(|e| read_error(&e))?,
+            )?,
+            None => Self::default(),
         };
-        config.validate()?;
-        config.ensure_paths()?;
-        Ok(Arc::new(RwLock::new(config)))
+        config.activate()
     }
 
     /// Loads configuration from a file or environment variables (async).
@@ -311,34 +291,42 @@ impl Config {
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Self>>, ConfigError> {
-        let path_buf = config_path.map(|p| p.as_ref().to_path_buf());
-        let config = if let Some(path) = path_buf {
-            let mut file = File::open(&path).await.map_err(|e| {
-                ConfigError::FileReadError(e.to_string())
-            })?;
-            let mut contents = String::new();
-            file.read_to_string(&mut contents).await.map_err(|e| {
-                ConfigError::FileReadError(e.to_string())
-            })?;
-            let config_source = ConfigSource::builder()
-                .add_source(ConfigFile::from_str(
-                    &contents,
-                    config::FileFormat::Toml,
-                ))
-                .build()?;
-            let version: String = config_source.get("version")?;
-            if version != CURRENT_CONFIG_VERSION {
-                return Err(ConfigError::VersionError(format!(
-                    "Unsupported configuration version: {version}"
-                )));
-            }
-            config_source.try_deserialize()?
-        } else {
-            Self::default()
+        // Owned before the first await, so the future does not borrow
+        // the caller's path.
+        let path = config_path.map(|p| p.as_ref().to_path_buf());
+        let config = match path {
+            Some(path) => Self::from_toml(
+                &tokio::fs::read_to_string(&path)
+                    .await
+                    .map_err(|e| read_error(&e))?,
+            )?,
+            None => Self::default(),
         };
-        config.validate()?;
-        config.ensure_paths()?;
-        Ok(Arc::new(RwLock::new(config)))
+        config.activate()
+    }
+
+    /// Parse a TOML configuration and check its version.
+    fn from_toml(contents: &str) -> Result<Self, ConfigError> {
+        let source = ConfigSource::builder()
+            .add_source(ConfigFile::from_str(
+                contents,
+                config::FileFormat::Toml,
+            ))
+            .build()?;
+        let version: String = source.get("version")?;
+        if version != CURRENT_CONFIG_VERSION {
+            return Err(ConfigError::VersionError(format!(
+                "Unsupported configuration version: {version}"
+            )));
+        }
+        Ok(source.try_deserialize()?)
+    }
+
+    /// Validate, create the log paths, and share the result.
+    fn activate(self) -> Result<Arc<RwLock<Self>>, ConfigError> {
+        self.validate()?;
+        self.ensure_paths()?;
+        Ok(Arc::new(RwLock::new(self)))
     }
 
     /// Saves the current configuration to a file in TOML format.
@@ -396,22 +384,27 @@ impl Config {
     ///
     /// This function returns an error if any configuration setting is invalid.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        use crate::commons::validation::{
-            Validator, validate_not_empty,
-        };
-
-        let mut v = Validator::new();
-        v.check("version", || {
-            validate_not_empty(self.version.trim()).map(|_| ())
+        let mut v = crate::commons::validation::Validator::new();
+        v.check("version", || not_empty(&self.version))
+            .check("profile", || not_empty(&self.profile))
+            .check("log_format", || not_empty(&self.log_format));
+        // Path and destination checks are not string validations, and
+        // fail on their own.
+        self.validate_destinations()?;
+        for (key, value) in &self.env_vars {
+            v.check(&format!("env_var_key_{key}"), || not_empty(key));
+            v.check(&format!("env_var_val_{key}"), || not_empty(value));
+        }
+        v.finish().map_err(|errors| {
+            let msgs: Vec<String> = errors
+                .iter()
+                .map(|(f, e)| format!("{f}: {e}"))
+                .collect();
+            ConfigError::ValidationError(msgs.join("; "))
         })
-        .check("profile", || {
-            validate_not_empty(self.profile.trim()).map(|_| ())
-        })
-        .check("log_format", || {
-            validate_not_empty(self.log_format.trim()).map(|_| ())
-        });
+    }
 
-        // Path and destination checks remain manual (not string validations)
+    fn validate_destinations(&self) -> Result<(), ConfigError> {
         if self.log_file_path.as_os_str().is_empty() {
             return Err(ConfigError::ValidationError(
                 "Log file path cannot be empty".into(),
@@ -423,22 +416,7 @@ impl Config {
                     .into(),
             ));
         }
-        for (key, value) in &self.env_vars {
-            v.check(&format!("env_var_key_{key}"), || {
-                validate_not_empty(key.trim()).map(|_| ())
-            });
-            v.check(&format!("env_var_val_{key}"), || {
-                validate_not_empty(value.trim()).map(|_| ())
-            });
-        }
-
-        v.finish().map_err(|errors| {
-            let msgs: Vec<String> = errors
-                .iter()
-                .map(|(f, e)| format!("{f}: {e}"))
-                .collect();
-            ConfigError::ValidationError(msgs.join("; "))
-        })
+        Ok(())
     }
 
     /// Creates directories and log files required by the configuration.
@@ -631,6 +609,19 @@ impl fmt::Display for LogRotation {
             Self::Count(count) => write!(f, "Count: {count} logs"),
         }
     }
+}
+
+/// A trimmed value must not be empty, for [`Config::validate`].
+fn not_empty(
+    value: &str,
+) -> crate::commons::validation::ValidationResult<()> {
+    crate::commons::validation::validate_not_empty(value.trim())
+        .map(|_| ())
+}
+
+/// A config file that could not be read.
+fn read_error(e: &std::io::Error) -> ConfigError {
+    ConfigError::FileReadError(e.to_string())
 }
 
 /// Assigns one field from a JSON value, for [`Config::set`].

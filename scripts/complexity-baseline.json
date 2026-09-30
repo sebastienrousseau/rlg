@@ -10,7 +10,7 @@
     "crates/rlg-mcp/src/lib.rs": 1161,
     "crates/rlg-mcp/src/transport.rs": 636,
     "crates/rlg-otlp/src/lib.rs": 564,
-    "crates/rlg/src/config.rs": 1236,
+    "crates/rlg/src/config.rs": 1227,
     "crates/rlg/src/init.rs": 605,
     "crates/rlg/src/log.rs": 536,
     "crates/rlg/src/tui.rs": 942
@@ -33,18 +33,6 @@
       "cyclomatic": 8.0,
       "halstead": 30.4,
       "sloc": 49.0
-    },
-    "crates/rlg/src/config.rs::Config::load_async": {
-      "cognitive": 4.0,
-      "cyclomatic": 13.0,
-      "halstead": 17.1,
-      "sloc": 32.0
-    },
-    "crates/rlg/src/config.rs::Config::validate": {
-      "cognitive": 3.0,
-      "cyclomatic": 16.0,
-      "halstead": 19.0,
-      "sloc": 45.0
     },
     "crates/rlg/src/datetime.rs::validate": {
       "cognitive": 13.0,
