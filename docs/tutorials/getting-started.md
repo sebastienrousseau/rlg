@@ -55,11 +55,13 @@ The dashboard shows throughput, error rates, active spans, and format distributi
 RLG routes logs to your OS-native sink automatically:
 
 - **macOS** — appears in Console.app via `os_log`:
+
   ```bash
   log show --predicate 'subsystem == "com.rlg.logger"' --last 1m
   ```
 
 - **Linux** — appears in the systemd journal via `journald`:
+
   ```bash
   journalctl -t rlg --since "1 min ago"
   ```

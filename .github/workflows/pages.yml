@@ -1,7 +1,7 @@
 name: GitHub Pages
 
-# Publishes `cargo doc` for every workspace crate to
-# https://sebastienrousseau.github.io/rlg/. Fires on every push to
+# Publishes `cargo doc` for every workspace crate, and the mdBook user
+# manual under /manual/, to https://doc.rustlogs.com/. Fires on every push to
 # main plus release tags so the site tracks HEAD and each release
 # rebuilds a fresh copy.
 
@@ -65,6 +65,14 @@ jobs:
           <title>rlg — RustLogs</title>
           <p>Redirecting to <a href="rlg/">rlg documentation</a>.</p>
           HTML
+
+      # The user manual, built with mdBook from `docs/`, served at
+      # /manual/ beside the API reference.
+      - uses: taiki-e/install-action@v2.87.15
+        with:
+          tool: mdbook@0.5.4
+      - name: Build the user manual
+        run: mdbook build --dest-dir target/doc/manual
 
       # A `.nojekyll` file tells GH Pages to serve the tree
       # verbatim — otherwise underscored directories (like

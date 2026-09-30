@@ -17,7 +17,7 @@ This PR ...
 
 ## What's Changed
 
-* `<commit subject>` by @<author>
+* `COMMIT_SUBJECT` by @AUTHOR
 
 ## Validation
 
@@ -27,8 +27,8 @@ This PR ...
 
 SHA-256 of the artifacts built from this branch:
 
-```
-<sha256>  <artifact>
+```text
+SHA256  ARTIFACT
 ```
 
-**Full Changelog**: https://github.com/sebastienrousseau/rlg/compare/main...<branch>
+**Full Changelog**: <https://github.com/sebastienrousseau/rlg/compare/main...BRANCH>

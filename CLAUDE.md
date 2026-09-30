@@ -41,7 +41,7 @@ cargo bench --bench competitive_bench     # Benchmarks
 ## Module Map
 
 | Module | Purpose |
-|--------|---------|
+| -------- | --------- |
 | `engine.rs` | Ring buffer, flusher thread, global `ENGINE` |
 | `log.rs` | `Log` struct, fluent builder, 14-format `Display` impl |
 | `config.rs` | TOML config loading, validation, hot-reload |

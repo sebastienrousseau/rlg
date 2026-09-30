@@ -1,6 +1,6 @@
 [book]
 title = "RLG Documentation"
-authors = ["Sebastian Rousseau"]
+authors = ["Sebastien Rousseau"]
 language = "en"
 src = "docs"
 
@@ -11,3 +11,4 @@ build-dir = "target/book"
 git-repository-url = "https://github.com/sebastienrousseau/rlg"
 edit-url-template = "https://github.com/sebastienrousseau/rlg/edit/main/docs/{path}"
 no-section-label = true
+site-url = "/manual/"

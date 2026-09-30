@@ -15,7 +15,7 @@ lands as an ADR under this directory. The convention:
 ## Index
 
 | ADR | Title | Phase | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [0001](0001-loom-verified-ring-buffer.md) | Loom-Verified Shutdown Handshake | 10 | Accepted |
 | [0002](0002-fuzz-strategy.md) | Fuzz Strategy | 11 | Accepted |
 | [0003](0003-property-tested-formats.md) | Property-Tested Formats & Filter | 12 | Accepted |

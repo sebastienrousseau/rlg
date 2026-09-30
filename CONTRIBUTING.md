@@ -52,7 +52,7 @@ See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-r
 Four `cargo-fuzz` targets cover the deserialisation and scan entry points that accept untrusted input:
 
 | Target | Exercises |
-|---|---|
+| --- | --- |
 | `parse_record` | `rlg_cli::parse_record` |
 | `log_format_from_str` | `<LogFormat as FromStr>::from_str` |
 | `config_load` | `toml::from_str::<Config>` |

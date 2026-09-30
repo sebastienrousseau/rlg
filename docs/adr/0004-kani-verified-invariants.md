@@ -90,11 +90,13 @@ correctness surface.
 - **CI cost.** Weekly + on-merge. Two Kani jobs at ~10 min each
   = ~20 min per week. Negligible.
 - **Contributor cost.** Local reproducer:
+
   ```bash
   cargo install --locked kani-verifier
   cargo kani setup
   cd crates/rlg && cargo kani --tests
   ```
+
   Documented in `CONTRIBUTING.md`.
 - **Toolchain pinning.** Kani ships its own rustc build. This is
   contained to the `kani` job; the rest of CI runs on stable.

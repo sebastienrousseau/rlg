@@ -48,7 +48,7 @@ rlg-report --top 3 /var/log/app.ndjson
 
 ### Sample output
 
-```
+```text
 ── rlg report ───────────────────────────────────────────
 total records:      18421
 unparseable lines:  0

@@ -57,7 +57,7 @@ v0.1.0 is the next major milestone. It closes the gaps identified in the
 2026 Strategic Audit across five waves:
 
 | Wave | Phases | Theme | Landing target |
-|------|--------|-------|----------------|
+| ------ | -------- | ------- | ---------------- |
 | 1 | 8 → 16 | Correctness, compliance, supply-chain moat | v0.0.12 → v0.0.13 |
 | 2 | 17 → 20 | Performance & concurrency rewrites | v0.0.14 |
 | 3 | 21 → 23 | Ecosystem expansion (eBPF, WASI 0.2, `no_std`) | v0.0.15 → v0.0.17 |
@@ -80,6 +80,7 @@ Goal: earn enterprise trust before touching performance-critical code.
 `semver-checks`. Fix the docs.rs discoverability of feature-gated items.
 
 **Files touched.**
+
 - Every `crates/*/Cargo.toml` — flip `missing_docs = "warn"` to `"forbid"` in
   `[lints.rust]`. Add `clippy::missing_docs_in_private_items = "warn"` in
   `[lints.clippy]`.
@@ -103,6 +104,7 @@ runs on every PR.
 `cargo doc --workspace --all-features --no-deps -- -D warnings`.
 
 **Success criteria.**
+
 - `cargo doc --workspace --all-features` completes with zero warnings.
 - `cargo semver-checks check-release` passes on the PR that introduces it.
 - `docs.rs` renders `rlg` with feature-gate annotations visible.
@@ -117,6 +119,7 @@ runs on every PR.
 catch UB in the ring-buffer hot path and the `sink.rs` FFI boundary.
 
 **Files touched.**
+
 - `.github/workflows/ci.yml` (or the reusable `pipelines/rust-ci.yml`) — new
   job `miri` matrix over `ubuntu-latest`, `macos-latest`; runs
   `cargo +nightly miri test -p rlg --lib --all-features`.
@@ -150,6 +153,7 @@ I/O.
 the existing matrix, so wall-clock impact is zero.
 
 **Success criteria.**
+
 - New Miri job green on the introducing PR.
 - README badge added: `Miri` status.
 
@@ -163,6 +167,7 @@ the existing matrix, so wall-clock impact is zero.
 engine are race-free.
 
 **Files touched.**
+
 - `crates/rlg/Cargo.toml` — new `[target.'cfg(loom)'.dev-dependencies]`
   block adding `loom = "0.7"`.
 - `crates/rlg/tests/loom_engine.rs` — new file. Three `#[cfg(loom)]`
@@ -184,6 +189,7 @@ proved invariants and known model limitations.
 **CI.** ~3 min added, runs on the Linux matrix only.
 
 **Success criteria.**
+
 - All three Loom proofs pass.
 - Adding a deliberate race (verified locally, not committed) causes at
   least one proof to fail.
@@ -197,6 +203,7 @@ proved invariants and known model limitations.
 **Objective.** Continuous fuzzing of every parser and every redaction regex.
 
 **Files touched.**
+
 - `fuzz/` (new top-level workspace) — cargo-fuzz layout:
   - `fuzz/Cargo.toml`
   - `fuzz/fuzz_targets/parse_record.rs` — driver for `rlg_cli::parse_record`.
@@ -221,6 +228,7 @@ crash-triage runbook.
 **CI.** ~2 min per target × 4 = 8 min per PR for the smoke fuzz.
 
 **Success criteria.**
+
 - Four fuzz targets build and run.
 - OSS-Fuzz submission PR opened (may not merge in this phase; landing is
   Google's timeline).
@@ -236,6 +244,7 @@ formats where round-trip is meaningful (JSON, NDJSON, Logfmt, MCP, OTLP,
 ECS).
 
 **Files touched.**
+
 - `crates/rlg/Cargo.toml` — add `proptest = "1"` to `[dev-dependencies]`.
 - `crates/rlg/tests/proptest_round_trip.rs` — new file. One `proptest!` per
   round-trippable format. Strategy: generate a `Log` with arbitrary
@@ -254,6 +263,7 @@ ECS).
 **CI.** ~30 s added.
 
 **Success criteria.**
+
 - All property tests pass with default case counts.
 - Increasing the case count to 100 000 in a local run still passes.
 
@@ -264,11 +274,13 @@ ECS).
 ### Phase 13 — Kani proof harnesses
 
 **Objective.** Prove two invariants formally:
+
 1. `Log::ingest()` never leaves the ring buffer in an inconsistent state.
 2. `session_id: u64` wraparound cannot violate the monotonicity contract
    that the flusher relies on.
 
 **Files touched.**
+
 - `crates/rlg/kani/Cargo.toml` — sub-package layout per Kani convention.
 - `crates/rlg/kani/proofs/ring_buffer.rs` — `#[kani::proof]` harnesses.
 - `crates/rlg/kani/proofs/session_id.rs` — `#[kani::proof]` for u64
@@ -287,6 +299,7 @@ model and what is *not* verified.
 every PR (too slow).
 
 **Success criteria.**
+
 - Both Kani proofs complete without a counter-example.
 - Introducing a deliberate off-by-one (verified locally, not committed)
   produces a Kani counter-example.
@@ -301,6 +314,7 @@ every PR (too slow).
 verifiable end-to-end.
 
 **Files touched.**
+
 - `.github/workflows/release.yml` — new steps:
   1. `cargo sbom` (or `cargo cyclonedx`) generates CycloneDX SBOM per crate.
   2. `cosign sign-blob --yes --output-signature <artefact>.sig` on every
@@ -321,6 +335,7 @@ against `cargo audit`.
 **CI.** ~2 min added on release only.
 
 **Success criteria.**
+
 - First release under this phase carries a `cosign`-verifiable signature.
 - CycloneDX SBOM lists every dependency version present in `Cargo.lock`.
 - The `Makefile install` target refuses to install an artefact with a
@@ -335,6 +350,7 @@ against `cargo audit`.
 **Objective.** Verifiable provenance for every transitive dependency.
 
 **Files touched.**
+
 - `supply-chain/config.toml` — bootstrap importing the Google, Mozilla, and
   Bytecode Alliance audit sets.
 - `supply-chain/audits.toml` — audits authored in this workspace.
@@ -350,6 +366,7 @@ against `cargo audit`.
 **CI.** ~15 s per PR.
 
 **Success criteria.**
+
 - `cargo vet` is clean.
 - New dependencies fail CI until audited.
 
@@ -362,6 +379,7 @@ against `cargo audit`.
 **Objective.** Turn advisory-mode dependency policy into enforced policy.
 
 **Files touched.**
+
 - `deny.toml`:
   - `[bans] multiple-versions = "deny"` (was `"warn"`).
   - `deny = [{ name = "openssl-sys" }, { name = "native-tls" }, { name = "chrono", wrappers = ["hyper"] }]` — force `rustls` everywhere and pin transitive uses of chrono to explicit wrappers.
@@ -382,6 +400,7 @@ resolved).
 `pipelines/security.yml`).
 
 **Success criteria.**
+
 - `cargo deny check` green with the tightened policy.
 
 **Estimated size.** ~1 commit, ~1 file + Cargo.lock churn, +30/-5 LOC.
@@ -400,6 +419,7 @@ with a single `regex-automata::meta::Regex` (DFA-fused Aho-Corasick).
 Publish before/after Criterion charts.
 
 **Files touched.**
+
 - `crates/rlg-redact/src/lib.rs` — rewrite the `Redactor` internals; keep
   the public API surface identical.
 - `crates/rlg-redact/benches/scrub.rs` — extend with a comparative case
@@ -421,6 +441,7 @@ correctness).
 **CI.** No change.
 
 **Success criteria.**
+
 - All 16 existing tests continue to pass.
 - Criterion shows ≥3× throughput on `heavy_pii_match`.
 - Criterion shows ≤0 % regression on `no_pii_match`.
@@ -435,6 +456,7 @@ correctness).
 with per-producer `rtrb` SPSC rings, aggregated by the flusher.
 
 **Files touched.**
+
 - `crates/rlg/src/engine.rs` — new module `engine::sharded` behind a
   `fast-queue` feature (default off). Retain the ArrayQueue path as the
   default for one release cycle.
@@ -453,6 +475,7 @@ with per-producer `rtrb` SPSC rings, aggregated by the flusher.
 **Docs.** ADR: `docs/adr/0009-sharded-producer-queue.md`.
 
 **Success criteria.**
+
 - Loom proofs cover both variants.
 - Criterion shows ≥1.4× ingest throughput at 4 producers on Skylake+ / M-series
   vs. the ArrayQueue baseline.
@@ -470,6 +493,7 @@ as `blocking` feature (default). Add `async` feature using `reqwest` +
 tokens-per-window circuit breaker.
 
 **Files touched.**
+
 - `crates/rlg-otlp/src/lib.rs` — introduce a `Transport` trait.
 - `crates/rlg-otlp/src/transport/blocking.rs` — existing ureq path.
 - `crates/rlg-otlp/src/transport/async_http.rs` — new reqwest-based.
@@ -496,6 +520,7 @@ tokens-per-window circuit breaker.
 across `rlg-otlp/README.md`.
 
 **Success criteria.**
+
 - `wiremock` tests green.
 - Bench shows async transport competitive with sync at 1× record; wins at
   ≥16× parallel exports.
@@ -512,6 +537,7 @@ review is dense), ~15 files, +1 500/-100 LOC.
 `std::fs::File::write_all` for `tokio-uring`.
 
 **Files touched.**
+
 - `crates/rlg/src/sink.rs` — new `PlatformSink::UringFile(...)` variant
   behind `#[cfg(all(target_os = "linux", feature = "uring"))]`.
 - `crates/rlg/Cargo.toml` — new optional dep `tokio-uring`, new feature
@@ -529,6 +555,7 @@ review is dense), ~15 files, +1 500/-100 LOC.
 **CI.** New Linux matrix leg with `--features uring`.
 
 **Success criteria.**
+
 - Criterion shows ≥1.3× throughput at ≥100 k records/s file writes on
   Linux 6.x.
 - macOS + Windows builds unaffected.
@@ -546,6 +573,7 @@ review is dense), ~15 files, +1 500/-100 LOC.
 adapter or a separate `Enricher` trait.
 
 **Files touched.**
+
 - `crates/rlg-ebpf/Cargo.toml`, `crates/rlg-ebpf/src/lib.rs`,
   `crates/rlg-ebpf/tests/`, `crates/rlg-ebpf/README.md`,
   `crates/rlg-ebpf/examples/enrich.rs`.
@@ -562,6 +590,7 @@ plus an all-platforms unit test for the trait.
 capability requirements (`CAP_BPF`).
 
 **Success criteria.**
+
 - Compiles on Linux stable and nightly.
 - Enrichment test attaches expected `pid`, `tid`, `uid` fields.
 - Criterion bench under `crates/rlg-ebpf/benches/enrich.rs` shows
@@ -577,6 +606,7 @@ capability requirements (`CAP_BPF`).
 `wasi:logging/logging` and consuming `wasi:cli/stderr`.
 
 **Files touched.**
+
 - `crates/rlg-wasm/wit/rlg.wit` — WIT interface.
 - `crates/rlg-wasm/src/wasi.rs` — implementation.
 - `crates/rlg-wasm/Cargo.toml` — new target section for
@@ -593,6 +623,7 @@ smoke against it.
 **Docs.** ADR: `docs/adr/0013-wasi-0.2-component.md`.
 
 **Success criteria.**
+
 - `wasm32-wasip2` build produces a component.
 - `wasmtime` smoke test runs.
 
@@ -608,6 +639,7 @@ smoke against it.
 those legitimately require `std`.
 
 **Files touched.**
+
 - `crates/rlg/src/lib.rs` — `#![cfg_attr(not(feature = "std"), no_std)]`.
 - `crates/rlg/Cargo.toml` — new `default = ["std"]`, new `std` feature,
   everything currently in `[dependencies]` migrated behind conditional
@@ -626,6 +658,7 @@ those legitimately require `std`.
 `docs/adr/0014-no-std-core.md`.
 
 **Success criteria.**
+
 - Cortex-M4 target compiles.
 - Feature matrix passes for `default`, `std`, `no_std` combinations.
 
@@ -642,6 +675,7 @@ runnable doctest or has an entry under `examples/`. CI verifies every
 example runs to a clean exit.
 
 **Files touched.**
+
 - Every `crates/*/src/lib.rs` and its sub-modules — audit and add doctests
   where missing.
 - New `examples/` entries where the function is too complex for a doctest.
@@ -660,6 +694,7 @@ example runs to a clean exit.
 **Docs.** ADR: `docs/adr/0015-examples-are-tests.md`.
 
 **Success criteria.**
+
 - Every `examples/*.rs` file across the workspace runs green under CI.
 - A coverage-tracker script (`xtask coverage-examples`) reports 100 % of
   public items either doc-tested or example-covered.
@@ -675,6 +710,7 @@ example runs to a clean exit.
 publish first-class migration guides.
 
 **Files touched.**
+
 - Every `crates/*/README.md` — regenerate the Install / Feature / Usage
   sections against the current Cargo.toml. Add a Benchmarks section
   linking `rustlogs.com/bench/`. Add a "Related" section pointing at
@@ -698,6 +734,7 @@ publish first-class migration guides.
 **Docs.** This *is* the docs phase.
 
 **Success criteria.**
+
 - `xtask verify-readmes` green.
 - Every crate README has: badges row (5 badges), MSRV, Install, Quick
   Start, Features, Examples index, Benchmarks link, License.
@@ -715,6 +752,7 @@ publish first-class migration guides.
 publish the first authority-building whitepaper.
 
 **Files touched.**
+
 - `README.md` — new tagline; hero paragraph pivots to MCP.
 - GitHub repository description — updated to reflect the pivot (already
   done partially in the last session; refresh again with the
@@ -731,6 +769,7 @@ publish the first authority-building whitepaper.
 **Docs.** The whitepaper *is* the deliverable.
 
 **Success criteria.**
+
 - Whitepaper published, discoverable from the workspace README, and
   cross-posted to at least two Rust community channels (r/rust,
   This Week in Rust, or a Rust newsletter).
@@ -745,6 +784,7 @@ publish the first authority-building whitepaper.
 **Objective.** Continuously publish bench results.
 
 **Files touched.**
+
 - `.github/workflows/bench-publish.yml` — new workflow. On tag push, runs
   `cargo criterion --workspace --message-format=json`, converts to HTML,
   syncs to `rustlogs.com/bench/<tag>/`, and updates `bench/latest/` to
@@ -758,6 +798,7 @@ publish the first authority-building whitepaper.
 **Docs.** Update the workspace README with the live bench URL.
 
 **Success criteria.**
+
 - First tag under this phase publishes reports at the live URL.
 - The workspace README displays the throughput number pulled from the
   latest report.
@@ -772,6 +813,7 @@ publish the first authority-building whitepaper.
 regression-proof.
 
 **Files touched.**
+
 - `.github/workflows/ci.yml` — add the codecov PR gate (fail on ≥2 %
   coverage drop).
 - `.github/renovate.json` — Renovate config with batched dependency PRs
@@ -788,6 +830,7 @@ regression-proof.
 **Docs.** Update `CONTRIBUTING.md` with the `make verify` step.
 
 **Success criteria.**
+
 - Codecov gate blocks a synthetic coverage-drop PR.
 - Renovate opens the first batched dep PR.
 
@@ -854,7 +897,7 @@ By the end of Phase 24, the invariant is:
 
 ## 3. Rollout order and dependency chain
 
-```
+```text
 Phase 8 ─→ 9 ─→ 10 ─→ 11 ─→ 12 ─→ 13 ──┐
                                         │
                              14 ─→ 15 ─→ 16 ──┐
@@ -882,7 +925,7 @@ Notes:
 ## 4. Risk register
 
 | Risk | Impact | Likelihood | Mitigation |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Kani proofs (Phase 13) exceed 20 min CI budget | Cron-only fallback | Medium | Budget each proof to ≤10 min; run only on `main` + weekly cron. |
 | Aho-Corasick fusion (Phase 17) breaks pattern semantics for custom regex | Silent scrub misses | Low | Property tests from Phase 12 cover this. Enforcement: block Phase 17 on Phase 12 landing. |
 | Sharded queue (Phase 18) regresses single-producer case | Common case degrades | Medium | Behind `fast-queue` feature, default off, for one release cycle. Criterion gate on the introducing PR. |

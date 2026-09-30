@@ -36,7 +36,7 @@ Flip every advisory to enforced. Concretely:
   ecosystem forces on us:
 
   | Skip | Cause |
-  |---|---|
+  | --- | --- |
   | `toml 0.8.*` | `config` crate depends on old toml |
   | `toml_datetime 0.6.*` | (same) |
   | `serde_spanned 0.6.*` | (same) |
@@ -51,7 +51,7 @@ Flip every advisory to enforced. Concretely:
   careless dep bump would fail CI and force a discussion:
 
   | Deny | Reason |
-  |---|---|
+  | --- | --- |
   | `openssl-sys` | rlg-otlp carries no TLS (a local collector owns it, ADR 0015); libssl on the target host is a supply-chain footgun |
   | `native-tls` | Same reason as openssl-sys |
   | `chrono` | rlg uses `jiff` and in-house datetime helpers; chrono has a history of breakage and a large-attack-surface C locale path |
@@ -114,6 +114,6 @@ CI stays green on the introducing PR.
 ## References
 
 - [cargo-deny book](https://embarkstudios.github.io/cargo-deny/)
-- [`deny.toml`](../../deny.toml)
+- [`deny.toml`](https://github.com/sebastienrousseau/rlg/blob/main/deny.toml)
 - Prior ADRs in this series: 0005 (sigstore + SBOM), 0006
   (cargo-vet).

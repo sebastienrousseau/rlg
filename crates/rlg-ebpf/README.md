@@ -58,7 +58,7 @@ let pipeline = Chain::new(ProcessEnricher::new(), AddService);
 ## Enrichers
 
 | Enricher | Fields attached | Platform | Feature |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `ProcessEnricher` | `pid`, `tid` (Unix), `uid` (Unix) | Portable | (default) |
 | `EbpfEnricher` | delegates to `ProcessEnricher` (Phase 21.1: adds `cgroup`, `caps`, network 4-tuple) | Linux | `ebpf` |
 | `Chain<A, B>` | union of the two enrichers, applied left-to-right | Portable | (default) |

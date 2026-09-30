@@ -118,13 +118,15 @@ Phase 11 lands the local + smoke-gate coverage regardless.
 
 ## Consequences
 
-- **CI cost.** ~2 min per PR (30 s × 4 targets, plus nightly install
-  + cache priming).
+- **CI cost.** ~2 min per PR (30 s × 4 targets, plus nightly install +
+  cache priming).
 - **Contributor cost.** Local reproducer:
+
   ```bash
   cargo install cargo-fuzz --locked
   cd fuzz && cargo +nightly fuzz run parse_record
   ```
+
   Documented in `CONTRIBUTING.md` and `fuzz/README.md`.
 - **Nightly dependency.** libFuzzer requires nightly. This is
   contained to the fuzz workflow — no impact on the rest of CI

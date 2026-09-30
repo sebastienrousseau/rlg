@@ -54,7 +54,7 @@ Signing runs on the `github-release` job of
 `id-token: write` permission required for GHA-issued OIDC tokens
 that sigstore's Fulcio CA consumes.
 
-Consumer runbook: [`pkg/VERIFY.md`](../../pkg/VERIFY.md).
+Consumer runbook: [`pkg/VERIFY.md`](https://github.com/sebastienrousseau/rlg/blob/main/pkg/VERIFY.md).
 Maintainer convenience: `make verify-release TAG=v0.1.0`.
 
 ## Trust root

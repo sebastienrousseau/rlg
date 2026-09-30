@@ -96,7 +96,7 @@ the executable and no arguments.
 Sibling developer-tools MCP servers by the same author — open-source, Apache-2.0 / MIT dual-licensed, targeting AI agents that need structured access to code, config, and observability data:
 
 | Server | Purpose |
-|---|---|
+| --- | --- |
 | [`noyalib-mcp`](https://github.com/sebastienrousseau/noyalib) | Lossless YAML 1.2 parsing, formatting & validation (Rust, 100% spec compliance) |
 | [`pain001-mcp`](https://github.com/sebastienrousseau/pain001-mcp) | Generate & validate ISO 20022 pain.001 payment initiation files |
 | [`bankstatementparser-mcp`](https://github.com/sebastienrousseau/bankstatementparser-mcp) | Parse bank statements (BAI2, MT940/MT942, CAMT.053, OFX, CSV) |

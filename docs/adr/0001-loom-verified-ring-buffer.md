@@ -99,9 +99,11 @@ threading primitives. Our proofs model:
   on the same ref; bounded by `LOOM_MAX_PREEMPTIONS=3` and
   `LOOM_MAX_BRANCHES=200000`.
 - **Contributor cost.** Local reproducer:
+
   ```bash
   RUSTFLAGS="--cfg loom" cargo test --release --test loom_engine -p rlg
   ```
+
   Documented in `CONTRIBUTING.md`.
 - **Refactor gate.** Phase 18 (sharded producer queue) will replace
   `ArrayQueue` with `rtrb` behind a `fast-queue` feature. The Loom

@@ -32,7 +32,7 @@ workspace, all at lockstep version `0.0.13`.
 ## The rlg ecosystem
 
 | Crate | What it does | Use case |
-|---|---|---|
+| --- | --- | --- |
 | **[`rlg`](crates/rlg/README.md)** | Near-lock-free structured logging engine. 65k-slot ring buffer, deferred formatting, 14 output formats, native OS sinks (`os_log` via `syslog(3)`, `journald`). | Embed structured logging in any Rust binary or library. |
 | **[`rlg-cli`](crates/rlg-cli/README.md)** | `rlg` binary — `jq` for structured logs. Tail, filter, convert across all 14 formats. | Pipe `my-service \| rlg --min-level error --format ecs` from the shell. |
 | **[`rlg-mcp`](crates/rlg-mcp/README.md)** | Model Context Protocol server exposing rlg streams as tools to LLM agents. | Claude Desktop, Cursor, mcp.run agents reading your logs. |

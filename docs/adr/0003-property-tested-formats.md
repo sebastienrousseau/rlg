@@ -95,10 +95,12 @@ one-release deprecation window.
 
 - **CI cost.** Negligible: ~200 ms per proptest suite at 256 cases.
 - **Contributor cost.** Local reproducer:
+
   ```bash
   cargo test -p rlg --test proptest_round_trip
   cargo test -p rlg-cli --test proptest_filter
   ```
+
 - **Shrinking output.** Proptest counter-examples appear directly in
   test failure output. No extra tooling required.
 - **v0.1.0 breaking-change ticket.** The Display/serde asymmetry

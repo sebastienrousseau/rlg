@@ -40,4 +40,4 @@ fn main() {
 - **[Fluent API](how-to/fluent-api.md)** — chain `.with()`, `.component()`, `.format()`, then `.fire()`
 - **[Engine Design](explanation/engine-design.md)** — how the ring buffer and background flusher work
 - **[Safety](explanation/safety.md)** — MIRI verification and FFI boundary guarantees
-- **[API Reference](api/rlg/index.html)** — auto-generated Rustdoc
+- **[API Reference](https://docs.rs/rlg)** — auto-generated Rustdoc

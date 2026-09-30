@@ -76,3 +76,25 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: scripts/check-doc-versions.sh
+
+  # Markdown lint, the user manual build, and a link check over it.
+  docs-lint:
+    name: Docs lint, manual and links
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: "**/*.md"
+      - uses: taiki-e/install-action@v2.87.15
+        with:
+          tool: mdbook@0.5.4
+      - name: Build the user manual
+        run: mdbook build
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --no-progress --exclude-path target/book/404.html target/book
+          fail: true
+

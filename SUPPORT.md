@@ -5,7 +5,7 @@
 ## Where to look first
 
 - **API reference**: <https://docs.rs/rlg> (and one page per crate).
-- **User manual**: <https://sebastienrousseau.github.io/rlg/manual/>,
+- **User manual**: <https://doc.rustlogs.com/manual/>,
   built from [`docs/`](docs/).
 - **Examples**: `crates/*/examples/`, run with
   `cargo run -p <crate> --example <name>`.

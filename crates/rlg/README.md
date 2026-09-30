@@ -213,7 +213,7 @@ Diagnostic codes and help text (`RlgError::code`, `help`,
   `spanId` / `traceId` so an `otelcol` pipeline picks up rlg
   records without an adapter.
 - **TOML configuration with hot-reload.** `Config::load_async`
-  + `Config::hot_reload_async` (behind the `tokio` feature)
+  and `Config::hot_reload_async` (behind the `tokio` feature)
   polls `/etc/rlg.toml` and picks up edits, including
   editor-style atomic replaces, without a restart.
 - **Bridges for `log` and `tracing`.** `rlg::init()`
@@ -528,11 +528,11 @@ for security problems.
 
 | Document | Covers |
 | :--- | :--- |
-| [`doc/introduction.md`](doc/introduction.md) | Motivation and design overview. |
-| [`doc/tutorials/getting-started.md`](doc/tutorials/getting-started.md) | Step-by-step first integration. |
-| [`doc/how-to/fluent-api.md`](doc/how-to/fluent-api.md) | Building entries with the fluent builder. |
-| [`doc/explanation/engine-design.md`](doc/explanation/engine-design.md) | LMAX Disruptor pattern as applied in rlg. |
-| [`doc/explanation/safety.md`](doc/explanation/safety.md) | UB-free FFI design, MIRI posture. |
+| [Introduction](https://doc.rustlogs.com/manual/introduction.html) | Motivation and design overview. |
+| [Getting started](https://doc.rustlogs.com/manual/tutorials/getting-started.html) | Step-by-step first integration. |
+| [The fluent API](https://doc.rustlogs.com/manual/how-to/fluent-api.html) | Building entries with the fluent builder. |
+| [Engine design](https://doc.rustlogs.com/manual/explanation/engine-design.html) | LMAX Disruptor pattern as applied in rlg. |
+| [Safety: Miri and FFI](https://doc.rustlogs.com/manual/explanation/safety.html) | UB-free FFI design, MIRI posture. |
 | [`SECURITY.md`](../../SECURITY.md) | Disclosure policy, supported versions, contact. |
 | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | Signed-commit policy, PR guidelines, local-test recipe. |
 
