@@ -5,11 +5,9 @@
 //! Retry policy, jitter, and a tokens-per-window circuit breaker
 //! for the OTLP exporter.
 //!
-//! These primitives are transport-agnostic — the sync `HttpTransport`
-//! in `lib.rs` uses them today, and the deferred async / gRPC
-//! transports (see `docs/adr/0010-otlp-pluggable-transport.md`)
-//! will use the same primitives without duplicating the reliability
-//! logic.
+//! These primitives are transport-agnostic: the blocking exporter in
+//! `lib.rs` and the async one in `async_http.rs` share them, so the
+//! reliability logic lives in one place.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

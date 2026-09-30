@@ -2,11 +2,14 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 //
-// Demonstrates exporting a batch of rlg records to a Honeycomb-style
-// OTLP/HTTP endpoint.
+// Demonstrates exporting a batch of rlg records to Honeycomb through
+// a local OpenTelemetry Collector. The exporter speaks plain HTTP to
+// the Collector on localhost:4318; the Collector holds the API key
+// and the TLS connection to Honeycomb (see the crate docs for its
+// configuration).
 //
-// Run with:
-//   HONEYCOMB_API_KEY=… cargo run -p rlg-otlp --example honeycomb
+// Run with a Collector listening on 127.0.0.1:4318:
+//   cargo run -p rlg-otlp --example honeycomb
 
 #![allow(missing_docs)]
 
@@ -16,12 +19,8 @@ use rlg_otlp::OtlpExporter;
 use std::time::Duration;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let api_key = std::env::var("HONEYCOMB_API_KEY")
-        .unwrap_or_else(|_| "no-key-supplied".into());
-
     let exporter = OtlpExporter::builder()
-        .endpoint("https://api.honeycomb.io/v1/logs")
-        .header("x-honeycomb-team", api_key)
+        .endpoint(rlg_otlp::DEFAULT_ENDPOINT)
         .timeout_secs(10)
         .max_retries(3)
         .backoff_base(Duration::from_millis(200))
@@ -45,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Err(e) = exporter.export_batch(&records) {
         eprintln!(
-            "export failed (expected without a real API key): {e}"
+            "export failed (expected without a local Collector): {e}"
         );
     } else {
         println!("export ok");

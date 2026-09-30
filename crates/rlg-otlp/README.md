@@ -25,7 +25,7 @@
 
 The core `rlg` crate renders records in `LogFormat::OTLP` shape but only writes them to local sinks (stdout, file, `os_log`, `journald`). To actually *ship* the records to a collector you need a network transport. `rlg-otlp` is that transport.
 
-OTLP/HTTP JSON is the v0.0.11 wire format. Protobuf is on the v0.0.12 roadmap.
+The wire format is OTLP/HTTP with JSON encoding.
 
 ## Install
 
@@ -44,11 +44,8 @@ use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg_otlp::OtlpExporter;
 
-let exporter = OtlpExporter::builder()
-    .endpoint("https://api.honeycomb.io/v1/logs")
-    .header("x-honeycomb-team", std::env::var("HONEYCOMB_API_KEY").unwrap())
-    .timeout_secs(10)
-    .build();
+// Defaults to a Collector on this host: http://localhost:4318/v1/logs
+let exporter = OtlpExporter::builder().timeout_secs(10).build();
 
 let record = Log::error("payment-service down")
     .component("orders")
@@ -58,15 +55,47 @@ let record = Log::error("payment-service down")
 exporter.export_one(&record).unwrap();
 ```
 
-## Endpoint examples
+The `async` feature adds `AsyncOtlpExporter`, the same API on Tokio.
 
-| Collector | URL |
-| --- | --- |
-| Honeycomb | `https://api.honeycomb.io/v1/logs` (set `x-honeycomb-team`) |
-| Datadog | `https://http-intake.logs.datadoghq.com/api/v2/logs` (set `dd-api-key`) |
-| Grafana Tempo | `https://tempo-prod-04-prod-us-east-0.grafana.net/v1/logs` |
-| Jaeger | `http://jaeger-collector:4318/v1/logs` |
-| Otelcol | `http://localhost:4318/v1/logs` |
+## Deployment: send to a local Collector
+
+`rlg-otlp` carries no TLS stack and no crypto dependencies. It speaks
+plain OTLP/HTTP to an [OpenTelemetry Collector][otelcol] (or any
+OTLP/HTTP forwarder) on the same host or in the same pod, and the
+Collector owns everything between it and the backend: TLS, API keys,
+batching, retries and buffering during an outage.
+
+```text
+app (rlg + rlg-otlp) --http--> Collector :4318 --https--> Honeycomb / Datadog / Grafana / …
+```
+
+An `https://` endpoint is rejected when the exporter is built instead
+of being sent in the clear. A minimal Collector configuration that
+forwards to Honeycomb:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 127.0.0.1:4318
+exporters:
+  otlphttp:
+    endpoint: https://api.honeycomb.io
+    headers:
+      x-honeycomb-team: ${env:HONEYCOMB_API_KEY}
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [otlphttp]
+```
+
+On Kubernetes, run the Collector as a sidecar or DaemonSet and point
+the exporter at it (`http://localhost:4318/v1/logs` for a sidecar,
+`http://$(NODE_IP):4318/v1/logs` for a DaemonSet).
+
+[otelcol]: https://opentelemetry.io/docs/collector/
 
 ## License
 

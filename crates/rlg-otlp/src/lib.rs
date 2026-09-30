@@ -4,15 +4,21 @@
 
 //! OpenTelemetry (OTLP) network exporter for rlg.
 //!
-//! Today rlg renders records in `LogFormat::OTLP` shape but only
-//! writes them to the configured `PlatformSink` (stdout, file,
-//! `os_log`, `journald`). This crate adds an **HTTP exporter** that
-//! POSTs OTLP-shaped records to a real collector endpoint —
-//! Honeycomb, Datadog, Tempo, Jaeger, or any `otelcol` instance with
-//! the OTLP/HTTP receiver enabled.
+//! rlg renders records in `LogFormat::OTLP` shape and writes them to
+//! the configured `PlatformSink` (stdout, file, `os_log`,
+//! `journald`). This crate adds an **HTTP exporter** that POSTs
+//! OTLP-shaped records to an OpenTelemetry Collector.
 //!
 //! Wire format: **OTLP/HTTP JSON encoding** (`Content-Type:
-//! application/json`). Protobuf encoding is on the v0.0.11 roadmap.
+//! application/json`), over plain `http://`.
+//!
+//! # Deployment: a local collector owns TLS
+//!
+//! The exporter carries no TLS stack. It sends to a Collector (or
+//! any OTLP/HTTP forwarder) on the same host or pod, by default
+//! [`DEFAULT_ENDPOINT`], and the Collector holds the TLS connection
+//! and credentials for the backend. `https://` endpoints are refused.
+//! The README has a minimal Collector configuration.
 //!
 //! # Example
 //!
@@ -21,11 +27,8 @@
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //!
-//! let exporter = OtlpExporter::builder()
-//!     .endpoint("https://api.honeycomb.io/v1/logs")
-//!     .header("x-honeycomb-team", "<api-key>")
-//!     .timeout_secs(10)
-//!     .build();
+//! // Defaults to the Collector at http://localhost:4318/v1/logs.
+//! let exporter = OtlpExporter::builder().timeout_secs(10).build();
 //!
 //! let record = Log::error("payment-service down")
 //!     .component("orders")
@@ -46,15 +49,17 @@
 
 /// Retry policy + full-jitter + tokens-per-window circuit breaker.
 ///
-/// Transport-agnostic reliability primitives — the sync HTTP path
-/// in this crate uses them; the deferred async / gRPC transports
-/// (see `docs/adr/0010-otlp-pluggable-transport.md`) will use the
-/// same primitives without duplicating the reliability logic.
+/// Transport-agnostic reliability primitives shared by the blocking
+/// and async exporters.
 pub mod backoff;
 
 pub use crate::backoff::{CircuitBreaker, RetryPolicy};
 
-/// Async HTTP/JSON transport via `reqwest` + `rustls`.
+/// The in-house HTTP/1.1 exchange behind the async exporter.
+#[cfg(feature = "async")]
+mod http;
+
+/// Async HTTP/JSON transport over Tokio and plain `http://`.
 /// Enable with the `async` feature.
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
@@ -66,15 +71,9 @@ pub use crate::async_http::{
     AsyncOtlpExporter, AsyncOtlpExporterBuilder,
 };
 
-/// OTLP/gRPC transport scaffold via `tonic` + `rustls`.
-/// Enable with the `grpc` feature.
-#[cfg(feature = "grpc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-pub mod grpc;
-
-#[cfg(feature = "grpc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-pub use crate::grpc::{GrpcOtlpExporter, GrpcOtlpExporterBuilder};
+/// The endpoint a builder uses when given none: the OTLP/HTTP logs
+/// route of a Collector on the same host.
+pub const DEFAULT_ENDPOINT: &str = "http://localhost:4318/v1/logs";
 
 use crate::backoff::cheap_random_0_to_1;
 use rlg::log::Log;
@@ -88,7 +87,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum OtlpError {
     /// The HTTP transport failed before a response arrived (DNS, TCP,
-    /// TLS, timeout).
+    /// timeout, or an `https://` endpoint, which is not supported).
     #[error("OTLP transport error: {0}")]
     Transport(#[from] Box<ureq::Error>),
     /// The collector responded with a non-2xx status code.
@@ -101,28 +100,22 @@ pub enum OtlpError {
     /// request was rejected without touching the network.
     #[error("OTLP circuit breaker tripped (too many recent failures)")]
     CircuitOpen,
-    /// The async HTTP transport failed. Only produced when the
-    /// `async` feature is enabled and an [`AsyncOtlpExporter`] is in
-    /// use.
+    /// The async HTTP transport failed: the collector could not be
+    /// reached, timed out, or did not answer with HTTP/1.x. Only
+    /// produced when the `async` feature is enabled and an
+    /// [`AsyncOtlpExporter`] is in use.
     #[cfg(feature = "async")]
     #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
     #[error("OTLP async transport error: {0}")]
-    AsyncTransport(Box<reqwest::Error>),
-    /// gRPC endpoint URL could not be parsed or the tonic channel
-    /// could not be built. Only produced when the `grpc` feature
-    /// is enabled.
-    #[cfg(feature = "grpc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-    #[error("OTLP gRPC endpoint error: {0}")]
-    GrpcEndpoint(String),
-    /// The gRPC transport's protobuf-encoded send is not yet
-    /// implemented. Scaffolding shipped in Phase 19c; the wire
-    /// path lands in Phase 19c.1. See
-    /// `docs/adr/0010-otlp-pluggable-transport.md`.
-    #[cfg(feature = "grpc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-    #[error("OTLP gRPC send not implemented (Phase 19c.1)")]
-    GrpcNotImplemented,
+    AsyncTransport(std::io::Error),
+    /// The endpoint is not a usable `http://` URL. `https://` is
+    /// refused: TLS belongs to the local collector.
+    #[error("OTLP endpoint error: {0}")]
+    InvalidEndpoint(String),
+    /// A caller-supplied header has an invalid name, a line break
+    /// in its value, or is one the exporter sets itself.
+    #[error("OTLP header error: {0}")]
+    InvalidHeader(String),
 }
 
 /// A `Result` alias with [`OtlpError`] as the error variant.
@@ -267,7 +260,9 @@ pub struct OtlpExporterBuilder {
 }
 
 impl OtlpExporterBuilder {
-    /// Set the collector endpoint URL.
+    /// Set the collector endpoint URL. The default is
+    /// [`DEFAULT_ENDPOINT`], a Collector on this host. Use `http://`:
+    /// this transport has no TLS.
     #[must_use]
     pub fn endpoint(mut self, url: impl Into<String>) -> Self {
         self.endpoint = Some(url.into());
@@ -327,9 +322,6 @@ impl OtlpExporterBuilder {
     }
 
     /// Finalise the builder.
-    ///
-    /// # Panics
-    /// Panics if `.endpoint()` was not called.
     #[must_use]
     pub fn build(self) -> OtlpExporter {
         let retry = RetryPolicy {
@@ -343,7 +335,7 @@ impl OtlpExporterBuilder {
         OtlpExporter {
             endpoint: self
                 .endpoint
-                .expect("OtlpExporterBuilder::endpoint is required"),
+                .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string()),
             headers: self.headers,
             timeout: self
                 .timeout
@@ -572,9 +564,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "endpoint is required")]
-    fn builder_without_endpoint_panics() {
-        let _ = OtlpExporter::builder().build();
+    fn builder_without_endpoint_uses_the_local_collector() {
+        let e = OtlpExporter::builder().build();
+        assert_eq!(e.endpoint(), DEFAULT_ENDPOINT);
+        assert_eq!(e.endpoint(), "http://localhost:4318/v1/logs");
     }
 
     #[test]

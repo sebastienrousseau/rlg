@@ -2,26 +2,32 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Async HTTP transport for OTLP/JSON via `reqwest` + `rustls`.
+//! Async HTTP transport for OTLP/JSON over plain `http://`.
 //!
-//! Only compiled when the `async` feature is enabled. See
-//! `docs/adr/0010-otlp-pluggable-transport.md`.
+//! Only compiled when the `async` feature is enabled. The HTTP/1.1
+//! exchange is the crate's own (`src/http.rs`) over a Tokio
+//! `TcpStream`; there is no TLS. Point the exporter at a local
+//! OpenTelemetry Collector and let it handle TLS towards the
+//! backend. See `docs/adr/0015-otlp-local-collector-transport.md`.
 
 use crate::backoff::{
     CircuitBreaker, RetryPolicy, cheap_random_0_to_1,
 };
-use crate::{OtlpError, OtlpResult, serialise_batch};
+use crate::http::{self, Endpoint};
+use crate::{DEFAULT_ENDPOINT, OtlpError, OtlpResult, serialise_batch};
 use rlg::log::Log;
 use std::collections::HashMap;
+use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
 
 /// Async HTTP/JSON exporter to an OTLP-compatible collector.
 ///
 /// Same wire format and reliability primitives as the blocking
 /// [`OtlpExporter`](crate::OtlpExporter); the difference is the
-/// I/O path — `reqwest` + a caller-provided Tokio runtime instead
-/// of `ureq`.
+/// I/O path, which runs on the caller's Tokio runtime.
 ///
 /// Retry with full jitter and the tokens-per-window circuit
 /// breaker are shared with the blocking exporter via
@@ -29,11 +35,11 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 pub struct AsyncOtlpExporter {
     endpoint: String,
+    target: Endpoint,
     headers: HashMap<String, String>,
     timeout: Duration,
     retry: RetryPolicy,
     circuit: Option<Arc<CircuitBreaker>>,
-    client: reqwest::Client,
 }
 
 impl AsyncOtlpExporter {
@@ -57,68 +63,89 @@ impl AsyncOtlpExporter {
     /// Returns [`OtlpError::Serialise`] on serialisation failure,
     /// [`OtlpError::BadStatus`] on non-2xx response,
     /// [`OtlpError::CircuitOpen`] if the breaker is tripped, or
-    /// [`OtlpError::Transport`] on a `reqwest` transport failure.
+    /// [`OtlpError::AsyncTransport`] when the collector cannot be
+    /// reached, times out, or answers with something other than
+    /// HTTP/1.x.
     pub async fn export_batch(
         &self,
         records: &[Log],
     ) -> OtlpResult<()> {
         let body = serialise_batch(records)?;
-        self.post(body).await
+        self.post(&body).await
     }
 
-    async fn post(&self, body: String) -> OtlpResult<()> {
+    async fn post(&self, body: &str) -> OtlpResult<()> {
         if let Some(cb) = &self.circuit
             && !cb.allow()
         {
             return Err(OtlpError::CircuitOpen);
         }
-
+        let request =
+            http::encode_post(&self.target, &self.headers, body);
         let mut attempt: u32 = 0;
-        loop {
-            let mut req = self
-                .client
-                .post(&self.endpoint)
-                .header("content-type", "application/json")
-                .timeout(self.timeout);
-            for (k, v) in &self.headers {
-                req = req.header(k.as_str(), v.as_str());
+        let result = loop {
+            let result = self.send(&request).await;
+            if !is_retriable(&result)
+                || attempt >= self.retry.max_retries
+            {
+                break result;
             }
-            match req.body(body.clone()).send().await {
-                Ok(response) => {
-                    let status = response.status().as_u16();
-                    if status >= 500 || status == 429 {
-                        if attempt < self.retry.max_retries {
-                            self.sleep_for_attempt(attempt).await;
-                            attempt += 1;
-                            continue;
-                        }
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if !(200..300).contains(&status) {
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_success();
-                    }
-                    return Ok(());
-                }
-                Err(e) => {
-                    if attempt < self.retry.max_retries {
-                        self.sleep_for_attempt(attempt).await;
-                        attempt += 1;
-                        continue;
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_failure();
-                    }
-                    return Err(OtlpError::AsyncTransport(Box::new(e)));
-                }
+            self.sleep_for_attempt(attempt).await;
+            attempt += 1;
+        };
+        if let Some(cb) = &self.circuit {
+            if result.is_ok() {
+                cb.record_success();
+            } else {
+                cb.record_failure();
+            }
+        }
+        result
+    }
+
+    /// One attempt: 2xx is success, any other status is
+    /// [`OtlpError::BadStatus`].
+    async fn send(&self, request: &[u8]) -> OtlpResult<()> {
+        let status =
+            tokio::time::timeout(self.timeout, self.exchange(request))
+                .await
+                .map_err(|_| {
+                    io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        "collector timed out",
+                    )
+                })
+                .and_then(|r| r)
+                .map_err(OtlpError::AsyncTransport)?;
+        if (200..300).contains(&status) {
+            Ok(())
+        } else {
+            Err(OtlpError::BadStatus(status))
+        }
+    }
+
+    /// Connect, write the request, and read until the final status
+    /// line and headers have arrived.
+    async fn exchange(&self, request: &[u8]) -> io::Result<u16> {
+        let target = (self.target.host.as_str(), self.target.port);
+        let mut stream = TcpStream::connect(target).await?;
+        stream.write_all(request).await?;
+        let mut buf = Vec::with_capacity(512);
+        let mut chunk = [0_u8; 1024];
+        loop {
+            let n = stream.read(&mut chunk).await?;
+            if n == 0 {
+                return Err(io::ErrorKind::UnexpectedEof.into());
+            }
+            buf.extend_from_slice(&chunk[..n]);
+            if let Some(status) = http::parse_status(&buf)? {
+                return Ok(status);
+            }
+            if buf.len() > http::MAX_RESPONSE_HEAD {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "collector response headers too large",
+                ));
             }
         }
     }
@@ -137,6 +164,18 @@ impl AsyncOtlpExporter {
     }
 }
 
+/// Transport failures, 5xx and 429 are worth another attempt; a 4xx
+/// or success is final.
+const fn is_retriable(result: &OtlpResult<()>) -> bool {
+    match result {
+        Err(OtlpError::AsyncTransport(_)) => true,
+        Err(OtlpError::BadStatus(status)) => {
+            *status >= 500 || *status == 429
+        }
+        _ => false,
+    }
+}
+
 /// Fluent builder for [`AsyncOtlpExporter`].
 #[derive(Debug, Default, Clone)]
 pub struct AsyncOtlpExporterBuilder {
@@ -149,7 +188,8 @@ pub struct AsyncOtlpExporterBuilder {
 }
 
 impl AsyncOtlpExporterBuilder {
-    /// Set the collector endpoint URL.
+    /// Set the collector endpoint URL. Must be `http://`; the
+    /// default is [`DEFAULT_ENDPOINT`], a Collector on this host.
     #[must_use]
     pub fn endpoint(mut self, url: impl Into<String>) -> Self {
         self.endpoint = Some(url.into());
@@ -167,7 +207,8 @@ impl AsyncOtlpExporterBuilder {
         self
     }
 
-    /// Per-request timeout. Default is 10 s.
+    /// Per-request timeout, covering connect, send and the
+    /// response head. Default is 10 s.
     #[must_use]
     pub fn timeout_secs(mut self, secs: u64) -> Self {
         self.timeout = Some(Duration::from_secs(secs));
@@ -198,14 +239,20 @@ impl AsyncOtlpExporterBuilder {
 
     /// Finalise the builder.
     ///
-    /// # Panics
-    /// Panics if `.endpoint()` was not called.
-    ///
     /// # Errors
-    /// Returns [`OtlpError::AsyncTransport`] if the underlying
-    /// `reqwest::Client` cannot be constructed (e.g. rustls TLS
-    /// stack initialisation failure).
+    /// Returns [`OtlpError::InvalidEndpoint`] if the endpoint is not
+    /// an `http://` URL (`https://` included: TLS belongs to the
+    /// collector), or [`OtlpError::InvalidHeader`] if a header name
+    /// is invalid, a value holds a line break, or the header is one
+    /// the exporter sets itself.
     pub fn build(self) -> OtlpResult<AsyncOtlpExporter> {
+        let endpoint = self
+            .endpoint
+            .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string());
+        let target = Endpoint::parse(&endpoint)
+            .map_err(OtlpError::InvalidEndpoint)?;
+        http::validate_headers(&self.headers)
+            .map_err(OtlpError::InvalidHeader)?;
         let retry = RetryPolicy {
             max_retries: self.max_retries.unwrap_or(3),
             base: self
@@ -214,21 +261,15 @@ impl AsyncOtlpExporterBuilder {
             max_delay: Duration::from_secs(30),
             jitter: 1.0,
         };
-        let timeout =
-            self.timeout.unwrap_or_else(|| Duration::from_secs(10));
-        let client = reqwest::Client::builder()
-            .timeout(timeout)
-            .build()
-            .map_err(|e| OtlpError::AsyncTransport(Box::new(e)))?;
         Ok(AsyncOtlpExporter {
-            endpoint: self.endpoint.expect(
-                "AsyncOtlpExporterBuilder::endpoint is required",
-            ),
+            endpoint,
+            target,
             headers: self.headers,
-            timeout,
+            timeout: self
+                .timeout
+                .unwrap_or_else(|| Duration::from_secs(10)),
             retry,
             circuit: self.circuit,
-            client,
         })
     }
 }

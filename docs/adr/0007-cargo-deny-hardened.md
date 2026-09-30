@@ -52,7 +52,7 @@ Flip every advisory to enforced. Concretely:
 
   | Deny | Reason |
   |---|---|
-  | `openssl-sys` | rlg-otlp uses `rustls`; libssl on the target host is a supply-chain footgun |
+  | `openssl-sys` | rlg-otlp carries no TLS (a local collector owns it, ADR 0015); libssl on the target host is a supply-chain footgun |
   | `native-tls` | Same reason as openssl-sys |
   | `chrono` | rlg uses `jiff` and in-house datetime helpers; chrono has a history of breakage and a large-attack-surface C locale path |
 

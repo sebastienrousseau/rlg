@@ -26,7 +26,7 @@ fn builder_accepts_multiple_headers() {
     // internal map directly, but a successful build + roundtrip via
     // clone proves the fluent API is chainable and stable.
     let exporter = OtlpExporter::builder()
-        .endpoint("https://api.example.com/v1/logs")
+        .endpoint("http://collector.internal:4318/v1/logs")
         .header("x-tenant", "acme")
         .header("authorization", "Bearer test-token")
         .timeout_secs(5)
