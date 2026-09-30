@@ -44,6 +44,9 @@ jobs:
           RLG_FALLBACK_STDOUT: "1"
         run: |
           set -euo pipefail
+          # Nothing is built before this step, so target/ does not exist
+          # yet; without it every redirect below fails before cargo runs.
+          mkdir -p target
           for manifest in crates/*/Cargo.toml; do
             crate="$(basename "$(dirname "$manifest")")"
             # xtask has no benches; skip.
