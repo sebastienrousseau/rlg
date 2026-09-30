@@ -3,8 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-use crate::datetime;
-use crate::{LogFormat, LogLevel};
+use crate::{LogFormat, LogLevel, datetime};
 use euxis_commons::counter::Counter;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -12,6 +11,10 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
+
+mod write;
+use write::Part::{Map, Num, Raw, Str, Value};
+use write::{write_logfmt_value, write_parts};
 
 /// Monotonic session ID counter. Incremented atomically per `build()` call.
 static SESSION_COUNTER: Counter = Counter::new(1);
@@ -213,69 +216,20 @@ impl Log {
     }
 
     fn write_logfmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("level=")?;
-        f.write_str(self.level.as_str_lowercase())?;
-        f.write_str(" msg=\"")?;
-        f.write_str(&self.description.replace('"', "\\\""))?;
-        write!(f, "\" session_id={}", self.session_id)?;
-        f.write_str(" component=\"")?;
-        f.write_str(&self.component)?;
-        f.write_str("\"")?;
-
+        write!(
+            f,
+            "level={} msg=\"{}\" session_id={} component=\"{}\"",
+            self.level.as_str_lowercase(),
+            self.description.replace('"', "\\\""),
+            self.session_id,
+            self.component,
+        )?;
         for (key, value) in &self.attributes {
             write!(f, " {key}=")?;
-            match value {
-                serde_json::Value::String(s) => {
-                    if s.contains(' ')
-                        || s.contains('"')
-                        || s.is_empty()
-                    {
-                        write!(f, "\"{0}\"", s.replace('"', "\\\""))?;
-                    } else {
-                        write!(f, "{s}")?;
-                    }
-                }
-                _ => write!(f, "{value}")?,
-            }
+            write_logfmt_value(f, value)?;
         }
         Ok(())
     }
-}
-
-/// Writes a JSON-escaped string (with surrounding quotes) to the formatter.
-fn write_json_str(f: &mut fmt::Formatter<'_>, s: &str) -> fmt::Result {
-    f.write_str("\"")?;
-    for c in s.chars() {
-        match c {
-            '"' => f.write_str("\\\"")?,
-            '\\' => f.write_str("\\\\")?,
-            '\n' => f.write_str("\\n")?,
-            '\r' => f.write_str("\\r")?,
-            '\t' => f.write_str("\\t")?,
-            c if c.is_control() => write!(f, "\\u{:04x}", c as u32)?,
-            c => write!(f, "{c}")?,
-        }
-    }
-    f.write_str("\"")
-}
-
-/// Writes a `BTreeMap<String, serde_json::Value>` as a JSON object.
-fn write_json_map(
-    f: &mut fmt::Formatter<'_>,
-    map: &BTreeMap<String, serde_json::Value>,
-) -> fmt::Result {
-    f.write_str("{")?;
-    let mut first = true;
-    for (key, value) in map {
-        if !first {
-            f.write_str(",")?;
-        }
-        first = false;
-        write_json_str(f, key)?;
-        // serde_json::Value Display already produces valid JSON
-        write!(f, ":{value}")?;
-    }
-    f.write_str("}")
 }
 
 // --- Per-format serialization methods ---
@@ -353,78 +307,110 @@ impl Log {
     }
 
     fn fmt_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"Attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"Component\":")?;
-        write_json_str(f, &self.component)?;
-        f.write_str(",\"Description\":")?;
-        write_json_str(f, &self.description)?;
-        f.write_str(",\"Format\":\"JSON\",\"Level\":")?;
-        write_json_str(f, self.level.as_str())?;
-        write!(f, ",\"SessionID\":{}", self.session_id)?;
-        f.write_str(",\"Timestamp\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str("}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"Attributes\":"),
+                Map(&self.attributes),
+                Raw(",\"Component\":"),
+                Str(&self.component),
+                Raw(",\"Description\":"),
+                Str(&self.description),
+                Raw(",\"Format\":\"JSON\",\"Level\":"),
+                Str(self.level.as_str()),
+                Raw(",\"SessionID\":"),
+                Num(self.session_id),
+                Raw(",\"Timestamp\":"),
+                Str(&self.time),
+                Raw("}"),
+            ],
+        )
     }
 
     fn fmt_gelf(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"_attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        write!(f, ",\"_session_id\":{}", self.session_id)?;
-        f.write_str(",\"full_message\":")?;
-        write_json_str(f, &self.description)?;
-        f.write_str(",\"host\":")?;
-        write_json_str(f, &self.component)?;
-        write!(f, ",\"level\":{}", self.level.to_numeric())?;
-        f.write_str(",\"short_message\":")?;
-        write_json_str(f, &self.description)?;
-        f.write_str(",\"timestamp\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str(",\"version\":\"1.1\"}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"_attributes\":"),
+                Map(&self.attributes),
+                Raw(",\"_session_id\":"),
+                Num(self.session_id),
+                Raw(",\"full_message\":"),
+                Str(&self.description),
+                Raw(",\"host\":"),
+                Str(&self.component),
+                Raw(",\"level\":"),
+                Num(u64::from(self.level.to_numeric())),
+                Raw(",\"short_message\":"),
+                Str(&self.description),
+                Raw(",\"timestamp\":"),
+                Str(&self.time),
+                Raw(",\"version\":\"1.1\"}"),
+            ],
+        )
     }
 
     fn fmt_logstash(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"@timestamp\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str(",\"attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"component\":")?;
-        write_json_str(f, &self.component)?;
-        f.write_str(",\"level\":")?;
-        write_json_str(f, self.level.as_str())?;
-        f.write_str(",\"message\":")?;
-        write_json_str(f, &self.description)?;
-        write!(f, ",\"session_id\":{}", self.session_id)?;
-        f.write_str("}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"@timestamp\":"),
+                Str(&self.time),
+                Raw(",\"attributes\":"),
+                Map(&self.attributes),
+                Raw(",\"component\":"),
+                Str(&self.component),
+                Raw(",\"level\":"),
+                Str(self.level.as_str()),
+                Raw(",\"message\":"),
+                Str(&self.description),
+                Raw(",\"session_id\":"),
+                Num(self.session_id),
+                Raw("}"),
+            ],
+        )
     }
 
     fn fmt_ndjson(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"component\":")?;
-        write_json_str(f, &self.component)?;
-        f.write_str(",\"level\":")?;
-        write_json_str(f, self.level.as_str())?;
-        f.write_str(",\"message\":")?;
-        write_json_str(f, &self.description)?;
-        f.write_str(",\"timestamp\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str("}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"attributes\":"),
+                Map(&self.attributes),
+                Raw(",\"component\":"),
+                Str(&self.component),
+                Raw(",\"level\":"),
+                Str(self.level.as_str()),
+                Raw(",\"message\":"),
+                Str(&self.description),
+                Raw(",\"timestamp\":"),
+                Str(&self.time),
+                Raw("}"),
+            ],
+        )
     }
 
     fn fmt_mcp(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/log\",\"params\":{\"data\":{\"attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"component\":")?;
-        write_json_str(f, &self.component)?;
-        f.write_str(",\"description\":")?;
-        write_json_str(f, &self.description)?;
-        write!(f, ",\"session_id\":{}", self.session_id)?;
-        f.write_str(",\"time\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str("},\"level\":")?;
-        write_json_str(f, self.level.as_str_lowercase())?;
-        f.write_str("}}")
+        write_parts(
+            f,
+            &[
+                Raw(
+                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/log\",\"params\":{\"data\":{\"attributes\":",
+                ),
+                Map(&self.attributes),
+                Raw(",\"component\":"),
+                Str(&self.component),
+                Raw(",\"description\":"),
+                Str(&self.description),
+                Raw(",\"session_id\":"),
+                Num(self.session_id),
+                Raw(",\"time\":"),
+                Str(&self.time),
+                Raw("},\"level\":"),
+                Str(self.level.as_str_lowercase()),
+                Raw("}}"),
+            ],
+        )
     }
 
     fn fmt_otlp(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -432,31 +418,45 @@ impl Log {
         let trace_id =
             self.attributes.get("trace_id").unwrap_or(&empty);
         let span_id = self.attributes.get("span_id").unwrap_or(&empty);
-        f.write_str("{\"attributes\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"body\":{\"stringValue\":")?;
-        write_json_str(f, &self.description)?;
-        write!(f, "}},\"severityNumber\":{}", self.level.to_numeric())?;
-        f.write_str(",\"severityText\":")?;
-        write_json_str(f, self.level.as_str())?;
-        write!(f, ",\"spanId\":{span_id}")?;
-        f.write_str(",\"timeUnixNano\":")?;
-        write_json_str(f, &self.time)?;
-        write!(f, ",\"traceId\":{trace_id}}}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"attributes\":"),
+                Map(&self.attributes),
+                Raw(",\"body\":{\"stringValue\":"),
+                Str(&self.description),
+                Raw("},\"severityNumber\":"),
+                Num(u64::from(self.level.to_numeric())),
+                Raw(",\"severityText\":"),
+                Str(self.level.as_str()),
+                Raw(",\"spanId\":"),
+                Value(span_id),
+                Raw(",\"timeUnixNano\":"),
+                Str(&self.time),
+                Raw(",\"traceId\":"),
+                Value(trace_id),
+                Raw("}"),
+            ],
+        )
     }
 
     fn fmt_ecs(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("{\"@timestamp\":")?;
-        write_json_str(f, &self.time)?;
-        f.write_str(",\"labels\":")?;
-        write_json_map(f, &self.attributes)?;
-        f.write_str(",\"log.level\":")?;
-        write_json_str(f, self.level.as_str_lowercase())?;
-        f.write_str(",\"log.logger\":\"rlg\",\"message\":")?;
-        write_json_str(f, &self.description)?;
-        f.write_str(",\"process.name\":")?;
-        write_json_str(f, &self.component)?;
-        f.write_str("}")
+        write_parts(
+            f,
+            &[
+                Raw("{\"@timestamp\":"),
+                Str(&self.time),
+                Raw(",\"labels\":"),
+                Map(&self.attributes),
+                Raw(",\"log.level\":"),
+                Str(self.level.as_str_lowercase()),
+                Raw(",\"log.logger\":\"rlg\",\"message\":"),
+                Str(&self.description),
+                Raw(",\"process.name\":"),
+                Str(&self.component),
+                Raw("}"),
+            ],
+        )
     }
 }
 
