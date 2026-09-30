@@ -130,7 +130,7 @@ platform sink. This block is compiled and run by `cargo test`.
 
 ## The rlg ecosystem
 
-Ten crates, one version, released together.
+Ten crates at lockstep version `0.0.13`, released together.
 
 | Component | Purpose | Use case |
 | :--- | :--- | :--- |
