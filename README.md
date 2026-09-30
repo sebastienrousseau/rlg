@@ -190,7 +190,12 @@ artifacts.
 
 | Scenario | Result | Environment |
 | :--- | ---: | :--- |
-| Every scenario | see [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) | GitHub-hosted `ubuntu-latest`, release profile |
+| rlg `fire()`, one record | 848 ns | GitHub-hosted `ubuntu-latest`, release profile |
+| `tracing::info!` to a discarding writer | 353 ns | same run |
+| rlg `fire()`, 10,000-record burst | 9.44 ms | same run |
+
+On the calling thread rlg costs more per record than `tracing`; what it
+buys is that the caller never waits on the sink's I/O.
 
 See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for methodology and full results.
 

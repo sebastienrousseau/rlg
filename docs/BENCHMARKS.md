@@ -48,6 +48,26 @@ results from the same machine, back to back.
 `ubuntu-latest` runner for each release tag, and uploads the Criterion
 report and a JSON summary as workflow artifacts (kept 90 days). Until
 0.0.13 that workflow ran no benchmarks at all: its output directory did
-not exist, and the failure was swallowed. The first published results
-are from the 0.0.13 release branch and appear below once that run
-completes.
+not exist, and the failure was swallowed.
+
+### 0.0.13 (release branch)
+
+[Run 36773354952](https://github.com/sebastienrousseau/rlg/actions/runs/36773354952),
+GitHub-hosted `ubuntu-latest`, stable Rust, release profile. Typical
+time per iteration with Criterion's 95% confidence interval.
+
+| Scenario | rlg `fire()` | `tracing::info!` | `log::info!` (no-op) |
+| :--- | ---: | ---: | ---: |
+| Simple Emission | 848 ns (833–864) | 353 ns (351–355) | 1.7 ns |
+| Structured Emission, 3 attributes | 1,145 ns (1,128–1,162) | 676 ns (672–679) | 1.9 ns |
+| Burst of 10,000 records | 9.44 ms (9.18–9.83) | 4.00 ms (3.98–4.02) | 0.02 ms |
+| Latency Distribution | 793 ns (787–800) | 333 ns (332–333) | 1.5 ns |
+
+**Reading these honestly.** On the calling thread, rlg's `fire()` costs
+about 2.4 times what `tracing::info!` costs, even though `tracing`
+formats the event there and rlg does not. rlg's advantage is not a
+cheaper call; it is that the caller never waits on a sink's I/O, which
+this suite's discarding writer does not exercise. The per-record cost
+has not been profiled yet; the likely candidates are the flusher
+wake-up (`unpark`) on every `fire()` and the per-record metrics
+counters.

@@ -27,6 +27,14 @@ but nothing was ever tagged or published under it.
 
 ### Added
 
+- `rlg --completions <SHELL>` and `rlg-report --completions <SHELL>`
+  print shell completions (bash, zsh, fish, elvish, PowerShell)
+  generated from the CLI definition; `make completions` writes them all.
+- A user manual built with mdBook from `docs/` and published at
+  <https://doc.rustlogs.com/manual/>, with `ARCHITECTURE.md`,
+  `POLICIES.md`, `packaging.md`, `COMPARISON.md` and `BENCHMARKS.md`.
+- CI gates: the 1.88.0 MSRV build, markdownlint, an offline link check
+  of the manual and README, the README template, and OpenSSF Scorecard.
 - `rlg-mcp` runs on the official MCP SDK (`rmcp`) and serves stdio (the
   default), streamable HTTP (`--transport streamable-http`) or the older
   HTTP+SSE transport (`--transport sse`), covering protocol revisions
@@ -70,6 +78,20 @@ but nothing was ever tagged or published under it.
 
 ### Fixed
 
+- The configuration example in the `rlg` README did not load
+  (`LogRotation` and `LoggingDestination` use `{ Size = N }` and
+  `{ type = "File", value = ... }`); it does now, and a test loads it.
+- `bench-publish.yml` never ran a benchmark: its output directory did
+  not exist and the error was swallowed. Release benchmarks now run and
+  publish.
+- The `rlg` README and crate docs claimed `fire()` takes ~1.4 µs against
+  ~20 µs for mainstream loggers. Measured in CI it is ~0.85 µs, and
+  `tracing` formatting to a discarding writer is ~0.35 µs; the claims
+  are replaced by the published numbers.
+- `.github/SECURITY.md`, the copy GitHub shows first, was a template
+  with no reporting channel; the real policy is now the one shown.
+- `PKGBUILD` said 0.0.7 and `debian/debcargo.toml` named a feature that
+  does not exist; both are fixed and the `PKGBUILD` version is CI-checked.
 - Install snippets in thirteen places (every crate README, the getting
   started tutorial, the introduction and the tracing migration guide)
   named 0.0.11 or 0.0.7. They name 0.0.12, and

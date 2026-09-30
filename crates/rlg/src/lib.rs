@@ -7,7 +7,7 @@
 //!
 //! `rlg` pushes structured log events through a 65k-slot ring buffer
 //! ([LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) pattern)
-//! in ~1.4 µs. A background flusher thread handles serialization and
+//! with a few atomic operations. A background flusher thread handles serialization and
 //! dispatch to platform-native sinks (`os_log`, `journald`, files, stdout).
 //!
 //! ## Why RLG

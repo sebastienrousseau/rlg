@@ -118,9 +118,9 @@ Output (MCP / JSON-RPC 2.0 notification):
 {"jsonrpc":"2.0","method":"notifications/log","params":{"data":{"attributes":{"caller":"src/main.rs:9","session_uuid":"a1b2c3d4","user_id":42},"component":"auth-service","description":"User authenticated","session_id":1,"time":"2026-05-29T22:18:04.123456789Z"},"level":"info"}}
 ```
 
-The default ingestion path runs in **~1.4 µs** — `Log::fire()`
-pushes a fully-built event into the `crossbeam::ArrayQueue` and
-returns. A dedicated flusher thread picks the event up, runs the
+`Log::fire()` pushes a fully-built event into the ring buffer and
+returns; on a GitHub-hosted runner that costs about 0.85 µs per
+record ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)). A dedicated flusher thread picks the event up, runs the
 chosen `LogFormat`'s `Display` impl, and dispatches to the
 configured `PlatformSink`.
 
@@ -133,8 +133,8 @@ rlg targets the niche `log` / `tracing` / `env_logger` /
 threads, route them somewhere durable — and is written
 **lock-free on the hot path** against the LMAX Disruptor
 pattern. The engine runs MIRI-clean under
-`-Zmiri-tree-borrows`; 99.07 % of source lines and 99.30 % of
-functions are covered by tests.
+`-Zmiri-tree-borrows`, and CI fails any change that takes
+workspace line coverage below 95%.
 
 Two architectural choices motivate the design:
 
@@ -144,11 +144,13 @@ Two architectural choices motivate the design:
    metrics counter, and push into the ring buffer. The
    serialisation (`fmt_json`, `fmt_mcp`, `fmt_otlp`, …) and the
    `os_log` / `journald` / `write_all` syscalls all run on the
-   flusher thread, off the caller's critical path. The pattern
-   that mainstream Rust loggers use — *take a Mutex, format
-   into a String, write to a Writer* — is ~20 µs at p50 and
-   pathologically variable under contention. rlg measures
-   ~1.4 µs at p50 with no Mutex anywhere on the hot path.
+   flusher thread, off the caller's critical path, with no
+   Mutex anywhere on the hot path. What that buys is the I/O:
+   the caller never waits on a sink's syscalls. It is not a
+   cheaper call in isolation: in the published benchmarks
+   `fire()` costs about 0.85 µs on the calling thread against
+   0.35 µs for `tracing::info!` formatting into a discarding
+   writer ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)).
 
 2. **POSIX `syslog(3)` for the macOS sink, not `_os_log_impl`.**
    Apple's `os_log` macro expands into a binary-trailer
@@ -220,8 +222,8 @@ Diagnostic codes and help text (`RlgError::code`, `help`,
   installs a `log::Log` implementation; the `tracing-layer`
   feature exposes a `tracing_subscriber::Layer` you can stack
   with the rest of your subscriber.
-- **99.07 % line coverage.** Measured by `cargo llvm-cov`.
-  Run on every PR via the centralised
+- **A 95% line-coverage floor.** Measured by `cargo tarpaulin`
+  on every PR via the centralised
   [`sebastienrousseau/pipelines`](https://github.com/sebastienrousseau/pipelines)
   reusable workflows.
 
@@ -500,7 +502,7 @@ signed-commit policy and PR flow.
   call with a static `c"%s"` format string and exactly one
   argument — no varargs UB, no
   `_os_log_impl`-style private-symbol calls.
-- 99.07 % line coverage on the engine path, including the
+- Tests cover the engine path, including the
   concurrent queue retry, the shutdown idempotency, and the
   `OsLog` priority mapping.
 
