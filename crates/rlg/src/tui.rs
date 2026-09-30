@@ -181,50 +181,23 @@ impl TuiMetrics {
     /// Increments the counter for the given log format.
     pub fn inc_format(&self, format: crate::log_format::LogFormat) {
         use crate::log_format::LogFormat;
-        match format {
-            LogFormat::CLF => {
-                self.fmt_clf.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::JSON => {
-                self.fmt_json.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::CEF => {
-                self.fmt_cef.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::ELF => {
-                self.fmt_elf.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::W3C => {
-                self.fmt_w3c.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::GELF => {
-                self.fmt_gelf.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::ApacheAccessLog => {
-                self.fmt_apache.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::Logstash => {
-                self.fmt_logstash.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::Log4jXML => {
-                self.fmt_log4j.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::NDJSON => {
-                self.fmt_ndjson.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::MCP => {
-                self.fmt_mcp.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::OTLP => {
-                self.fmt_otlp.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::Logfmt => {
-                self.fmt_logfmt.fetch_add(1, Ordering::Relaxed);
-            }
-            LogFormat::ECS => {
-                self.fmt_ecs.fetch_add(1, Ordering::Relaxed);
-            }
-        }
+        let counter = match format {
+            LogFormat::CLF => &self.fmt_clf,
+            LogFormat::JSON => &self.fmt_json,
+            LogFormat::CEF => &self.fmt_cef,
+            LogFormat::ELF => &self.fmt_elf,
+            LogFormat::W3C => &self.fmt_w3c,
+            LogFormat::GELF => &self.fmt_gelf,
+            LogFormat::ApacheAccessLog => &self.fmt_apache,
+            LogFormat::Logstash => &self.fmt_logstash,
+            LogFormat::Log4jXML => &self.fmt_log4j,
+            LogFormat::NDJSON => &self.fmt_ndjson,
+            LogFormat::MCP => &self.fmt_mcp,
+            LogFormat::OTLP => &self.fmt_otlp,
+            LogFormat::Logfmt => &self.fmt_logfmt,
+            LogFormat::ECS => &self.fmt_ecs,
+        };
+        let _ = counter.fetch_add(1, Ordering::Relaxed);
     }
 }
 
@@ -351,7 +324,6 @@ pub fn compute_level_bars(
 /// Performs one tick of the TUI dashboard, returning the ANSI-formatted frame.
 ///
 /// This function is extracted from the render loop for testability.
-#[allow(clippy::cast_possible_truncation)]
 pub fn render_tick(
     metrics: &TuiMetrics,
     last_total: &mut usize,
@@ -362,30 +334,14 @@ pub fn render_tick(
     let errors = metrics.error_count.load(Ordering::Relaxed);
     let spans = metrics.active_spans.load(Ordering::Relaxed);
     let dropped = metrics.dropped_events.load(Ordering::Relaxed);
-
-    // Calculate throughput (events per ~16ms tick -> scale to second)
-    let diff = total.saturating_sub(*last_total);
-    *last_total = total;
-    let tps = diff * 60;
-    metrics.throughput.store(tps, Ordering::Relaxed);
-
-    // Track peak throughput
-    let _ = metrics.peak_throughput.fetch_max(tps, Ordering::Relaxed);
-    let peak = metrics.peak_throughput.load(Ordering::Relaxed);
-
-    // Update sparkline ring buffer
-    sparkline_ring[*spark_cursor % SPARKLINE_RING_SIZE] = tps;
-    *spark_cursor = spark_cursor.wrapping_add(1);
-
-    // Uptime
-    let now_secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as usize;
-    let uptime_secs = now_secs.saturating_sub(
-        metrics.start_epoch_secs.load(Ordering::Relaxed),
+    let (tps, peak) = update_throughput(
+        metrics,
+        total,
+        last_total,
+        sparkline_ring,
+        spark_cursor,
     );
-    let uptime = format_uptime(uptime_secs as u64);
+    let uptime = uptime(metrics);
 
     // Level bars
     let (info_bar, info_pct, error_bar, error_pct) =
@@ -417,6 +373,39 @@ pub fn render_tick(
 \x1b[1mFormats:\x1b[0m {fmt_line}\n\
 \x1b[38;5;239m{separator}\x1b[0m\x1b8"
     )
+}
+
+/// Record this tick's throughput: events since the last tick, scaled
+/// from a ~16 ms tick to a second, into the metrics, the peak, and the
+/// sparkline ring. Returns the throughput and the peak.
+fn update_throughput(
+    metrics: &TuiMetrics,
+    total: usize,
+    last_total: &mut usize,
+    sparkline_ring: &mut [usize; SPARKLINE_RING_SIZE],
+    spark_cursor: &mut usize,
+) -> (usize, usize) {
+    let diff = total.saturating_sub(*last_total);
+    *last_total = total;
+    let tps = diff * 60;
+    metrics.throughput.store(tps, Ordering::Relaxed);
+    let _ = metrics.peak_throughput.fetch_max(tps, Ordering::Relaxed);
+    let peak = metrics.peak_throughput.load(Ordering::Relaxed);
+    sparkline_ring[*spark_cursor % SPARKLINE_RING_SIZE] = tps;
+    *spark_cursor = spark_cursor.wrapping_add(1);
+    (tps, peak)
+}
+
+/// Time since the metrics started, as `HH:MM:SS`.
+fn uptime(metrics: &TuiMetrics) -> String {
+    let now_secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let start =
+        u64::try_from(metrics.start_epoch_secs.load(Ordering::Relaxed))
+            .unwrap_or(u64::MAX);
+    format_uptime(now_secs.saturating_sub(start))
 }
 
 /// Spawns the background TUI renderer thread.
