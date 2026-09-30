@@ -313,16 +313,14 @@ unset environment is valid.
 # rlg.toml
 version              = "1.0"
 profile              = "production"
+log_file_path        = "/var/log/rlg.log"
 log_level            = "INFO"
 log_format           = "%level - %message"
 logging_destinations = [
-    { type = "file",   path = "/var/log/rlg.log" },
-    { type = "stdout" },
+    { type = "File", value = "/var/log/rlg.log" },
+    { type = "Stdout" },
 ]
-
-[log_rotation]
-type      = "size"
-threshold = 10485760            # 10 MiB
+log_rotation         = { Size = 10485760 }  # 10 MiB
 ```
 
 ```rust,ignore
