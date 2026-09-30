@@ -49,7 +49,7 @@ skip = [
 
     # `syn` is mid-migration from 2 to 3 across the ecosystem:
     # `clap_derive` and `darling` (behind the MCP SDK's macros) are on
-    # 3, while `tokio-macros`, `tracing-attributes`, `prost-derive`,
+    # 3, while `tokio-macros`, `tracing-attributes`, `async-trait`,
     # `zerocopy-derive` and other proc macros are still on 2. Both are
     # build-time only. Drop this once the 2.x dependents move.
     { name = "syn", version = "2.*" },

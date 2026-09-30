@@ -7,6 +7,49 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `rlg-mcp` runs on the official MCP SDK (`rmcp`) and serves stdio (the
+  default), streamable HTTP (`--transport streamable-http`) or the older
+  HTTP+SSE transport (`--transport sse`), covering protocol revisions
+  2024-11-05 through 2026-07-28.
+- `RlgError::code`, `RlgError::help` and `RlgError::report`: stable error
+  codes (`rlg::io_error`, …), a resolution hint, and a multi-line report,
+  with no extra dependency.
+- `rlg_otlp::DEFAULT_ENDPOINT` (`http://localhost:4318/v1/logs`), and
+  `OtlpError::InvalidEndpoint` / `OtlpError::InvalidHeader`.
+- CI runs `cargo deny --all-features check` as a failing gate. The shared
+  security workflow's run is `continue-on-error`, so policy violations
+  had gone unreported.
+
+### Changed
+
+- `rlg-otlp` sends plain OTLP/HTTP to a local OpenTelemetry Collector,
+  which owns TLS and credentials towards the backend
+  ([ADR 0015](docs/adr/0015-otlp-local-collector-transport.md)).
+  `AsyncOtlpExporter` now runs on an in-house HTTP/1.1 client over Tokio
+  instead of `reqwest`, and rejects `https://` endpoints and unsafe
+  headers at `build()`. Both builders default to `DEFAULT_ENDPOINT`
+  instead of panicking when no endpoint is set. **Breaking:**
+  `OtlpError::AsyncTransport` wraps `std::io::Error`. Deployments that
+  exported straight to a SaaS `https://` endpoint must add a Collector;
+  the crate docs carry a minimal configuration.
+- `Config::hot_reload_async` polls the file (`HOT_RELOAD_POLL_INTERVAL`,
+  250 ms) instead of using `notify`, and now also picks up editor-style
+  saves that rename a new file over the old one. **Breaking:**
+  `ConfigError::WatcherError` wraps `std::io::Error`.
+- rlg builds `config` with the TOML format only; YAML, JSON5, RON and INI
+  parsers it never used are no longer compiled.
+
+### Removed
+
+- The `rlg-otlp` `grpc` feature, `GrpcOtlpExporter` and its error
+  variants. It was a scaffold whose send path returned
+  `GrpcNotImplemented`; collectors accept OTLP/HTTP on port 4318.
+- The `rlg` `miette` feature; use `RlgError::code`, `help` and `report`.
+- `reqwest`, `tonic`, `prost`, `rustls`, `ring`, `webpki-roots`,
+  `miette` and `notify` from the dependency tree (82 crates in all).
+
 ### Fixed
 
 - `glama.json` and `server.json` named 0.0.11 while the workspace shipped
