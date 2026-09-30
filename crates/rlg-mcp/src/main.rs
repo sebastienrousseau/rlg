@@ -13,13 +13,10 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-#[rustfmt::skip]
-pub mod transport;
-
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
-    transport::run(
+    rlg_mcp::transport::run(
         "rlg-mcp",
         env!("CARGO_PKG_VERSION"),
         std::env::args().skip(1),

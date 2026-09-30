@@ -28,6 +28,12 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+// The same file in every Rust MCP server of the suite, so it keeps
+// its own formatting. Declared here rather than in `main.rs` so the
+// transports can be served, and tested, in-process.
+#[rustfmt::skip]
+pub mod transport;
+
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg_cli::{Filter, parse_record, render};

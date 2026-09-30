@@ -2,11 +2,14 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! The two HTTP transports, through the real binary.
+//! The two HTTP transports.
 //!
-//! Each test starts `rlg-mcp --transport ... --port 0`, reads the
-//! port the server announces, and talks HTTP/1.1 to it over a plain
-//! socket. The client here is deliberately small and literal — one
+//! The session tests serve [`rlg_mcp::transport`] in-process — the
+//! code the binary runs — on a free port, and talk HTTP/1.1 to it
+//! over a plain socket. In-process, the transport's lines count
+//! towards coverage, which a spawned binary's cannot. Two tests still run the real binary: one
+//! that it starts and announces its address, one that a port in use
+//! is reported. The client here is deliberately small and literal — one
 //! request, one response, chunked bodies decoded by hand — because
 //! what is being checked is the wire format a client will see, and a
 //! client library would hide it.
@@ -16,10 +19,12 @@
 use std::fmt::Write as _;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
-use std::process::{Child, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use serde_json::{Value, json};
+
+use rlg_mcp::transport;
 
 const ERROR: &str = r#"{"session_id":2,"time":"t","level":"ERROR","component":"db","description":"boom","format":"JSON","attributes":{}}"#;
 
@@ -30,57 +35,90 @@ fn log_file() -> tempfile::NamedTempFile {
     f
 }
 
-/// A running server, killed when dropped.
+/// A server running in-process on its own runtime, stopped when
+/// dropped.
 struct Server {
-    child: Child,
     addr: String,
+    stop: Option<tokio::sync::oneshot::Sender<()>>,
+    thread: Option<std::thread::JoinHandle<()>>,
 }
+
+/// Held while a server picks a port and starts listening, so two
+/// tests starting at once cannot be handed the same free port.
+static STARTING: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 impl Server {
     fn start(transport: &str) -> Self {
-        let mut child = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
-            .args(["--transport", transport, "--port", "0"])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-            .expect("server starts");
-        // The port is announced on stderr, which is the one line a
-        // test needs and the reason `--port 0` exists.
-        let stderr = child.stderr.take().expect("stderr");
-        let mut line = String::new();
-        let _ =
-            BufReader::new(stderr).read_line(&mut line).expect("read");
-        let addr = line
-            .trim()
-            .strip_prefix("listening on http://")
-            .and_then(|rest| rest.split('/').next())
-            .unwrap_or_else(|| panic!("no address in {line:?}"))
-            .to_owned();
-        Self { child, addr }
+        let _starting = STARTING
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        // Another process can still take the port between release and
+        // bind; a failed bind is reported back and retried.
+        for _ in 0..5 {
+            if let Some(server) = Self::try_start(transport) {
+                return server;
+            }
+        }
+        panic!("no free port for the {transport} server after 5 tries");
+    }
+
+    /// Serve on a port the system just handed out and released: the
+    /// in-process twin of `--port 0`. `None` if the bind failed.
+    fn try_start(transport: &str) -> Option<Self> {
+        let port = std::net::TcpListener::bind("127.0.0.1:0")
+            .and_then(|l| l.local_addr())
+            .expect("free port")
+            .port();
+        let args =
+            ["--transport", transport, "--port", &port.to_string()]
+                .map(String::from);
+        let transport::Command::Serve(options) =
+            transport::parse(args).expect("valid arguments")
+        else {
+            panic!("expected a serve command");
+        };
+        let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+        let (failed_tx, failed) = std::sync::mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            let runtime =
+                tokio::runtime::Runtime::new().expect("runtime");
+            runtime.block_on(async move {
+                tokio::select! {
+                    served = transport::serve(&options, rlg_mcp::LogServer::new) => {
+                        let _ = failed_tx.send(served);
+                    }
+                    _ = stopped => {}
+                }
+            });
+        });
+        let addr = format!("127.0.0.1:{port}");
+        for _ in 0..100 {
+            if let Ok(result) = failed.try_recv() {
+                let _ = thread.join();
+                assert!(result.is_err(), "server stopped on its own");
+                return None;
+            }
+            if TcpStream::connect(&addr).is_ok() {
+                return Some(Self {
+                    addr,
+                    stop: Some(stop),
+                    thread: Some(thread),
+                });
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        panic!("server did not start listening on {addr}");
     }
 }
 
 impl Drop for Server {
     fn drop(&mut self) {
-        // Ask first, with the interrupt the transport handles, and only
-        // then kill. A server killed outright never writes its coverage
-        // profile, which is how the HTTP paths read as untested while
-        // every test drove them.
-        #[cfg(unix)]
-        {
-            let _ = Command::new("kill")
-                .args(["-INT", &self.child.id().to_string()])
-                .status();
-            for _ in 0..50 {
-                if matches!(self.child.try_wait(), Ok(Some(_))) {
-                    return;
-                }
-                std::thread::sleep(Duration::from_millis(100));
-            }
+        if let Some(stop) = self.stop.take() {
+            let _ = stop.send(());
         }
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
     }
 }
 
@@ -714,6 +752,29 @@ fn sse_refuses_what_it_cannot_route() {
         std::thread::sleep(Duration::from_millis(100));
     }
     assert_eq!(gone, 404, "the session outlived its stream");
+}
+
+#[test]
+fn the_binary_announces_where_it_listens() {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+        .args(["--transport", "sse", "--port", "0"])
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("server starts");
+    let mut line = String::new();
+    let _ = BufReader::new(child.stderr.take().expect("stderr"))
+        .read_line(&mut line)
+        .expect("read");
+    let _ = child.kill();
+    let _ = child.wait();
+    let addr = line
+        .trim()
+        .strip_prefix("listening on http://127.0.0.1:")
+        .and_then(|rest| rest.strip_suffix("/sse"))
+        .unwrap_or_else(|| panic!("no address in {line:?}"));
+    assert!(addr.parse::<u16>().is_ok_and(|port| port > 0), "{line:?}");
 }
 
 #[test]
