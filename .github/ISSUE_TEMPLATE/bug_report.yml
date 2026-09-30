@@ -1,0 +1,36 @@
+name: Bug report
+description: Something in rlg behaves differently from its documentation.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security issues go through SECURITY.md, not here.
+  - type: input
+    id: crate
+    attributes:
+      label: Crate and version
+      description: For example `rlg 0.0.13` or `rlg-mcp 0.0.13`.
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and Rust version
+      description: Output of `rustc --version` and your OS.
+    validations:
+      required: true
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: The smallest code or command that shows the problem.
+      render: rust
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behaviour
+    validations:
+      required: true

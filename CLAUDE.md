@@ -1,5 +1,8 @@
 # CLAUDE.md — RLG Contributor Guide
 
+The repository's rules, release model and single gate (`make verify`)
+are in [`AGENTS.md`](AGENTS.md); this file is the quick reference.
+
 ## Project
 
 RLG (RustLogs) is a near-lock-free structured logging library for Rust, built on a 65k-slot ring buffer (LMAX Disruptor pattern).

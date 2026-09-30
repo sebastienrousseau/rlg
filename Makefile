@@ -6,7 +6,7 @@ all: help ## Display this help.
 
 # Local verification pipeline. Runs everything a contributor needs
 # to pass locally before opening a PR — fmt, clippy, tests,
-# semver-checks, deny, vet.
+# semver-checks, deny, vet, complexity and version checks.
 .PHONY: verify
 verify: ## Run the full local pre-PR verification pipeline.
 	@echo "▶ cargo fmt --check"
@@ -21,6 +21,11 @@ verify: ## Run the full local pre-PR verification pipeline.
 	@cargo deny check
 	@echo "▶ cargo vet check"
 	@cargo vet check
+	@echo "▶ complexity ceilings"
+	@scripts/complexity-gate.py
+	@echo "▶ version references"
+	@scripts/check-doc-versions.sh
+	@scripts/check-mcp-manifests.sh
 	@echo "✓ Local verification passed."
 
 # Build the project including all workspace members.
