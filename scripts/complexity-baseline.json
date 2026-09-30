@@ -8,8 +8,7 @@
   },
   "files": {
     "crates/rlg-mcp/src/lib.rs": 732,
-    "crates/rlg-mcp/src/transport.rs": 636,
-    "crates/rlg/src/config.rs": 691
+    "crates/rlg-mcp/src/transport.rs": 636
   },
   "functions": {
     "crates/rlg-cli/src/main.rs::LogFormat::from": {

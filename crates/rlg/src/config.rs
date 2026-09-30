@@ -23,34 +23,25 @@ use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    env, fmt,
+    env,
     fs::{self, OpenOptions},
     num::NonZeroU64,
     path::{Path, PathBuf},
-    str::FromStr,
     sync::Arc,
 };
 use thiserror::Error;
 
-#[cfg(feature = "tokio")]
-use tokio::sync::mpsc;
-
 const CURRENT_CONFIG_VERSION: &str = "1.0";
 
-/// How often [`Config::hot_reload_async`] checks the watched file.
 #[cfg(feature = "tokio")]
-pub const HOT_RELOAD_POLL_INTERVAL: std::time::Duration =
-    std::time::Duration::from_millis(250);
-
-/// A file's modification time and length, compared by hot-reload.
-#[cfg(feature = "tokio")]
-type Fingerprint = (Option<std::time::SystemTime>, u64);
+mod hot_reload;
+mod log_rotation;
+mod set;
 
 #[cfg(feature = "tokio")]
-fn file_fingerprint(path: &Path) -> std::io::Result<Fingerprint> {
-    let meta = fs::metadata(path)?;
-    Ok((meta.modified().ok(), meta.len()))
-}
+pub use hot_reload::HOT_RELOAD_POLL_INTERVAL;
+pub use log_rotation::LogRotation;
+use set::SETTERS;
 
 /// Configuration error variants.
 #[derive(Debug, Error)]
@@ -97,89 +88,6 @@ impl From<crate::commons::config::ConfigError> for ConfigError {
     fn from(err: crate::commons::config::ConfigError) -> Self {
         Self::ValidationError(err.to_string())
     }
-}
-
-/// Log rotation policy variants.
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Deserialize,
-    Serialize,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-)]
-pub enum LogRotation {
-    /// Size-based log rotation.
-    Size(NonZeroU64),
-    /// Time-based log rotation.
-    Time(NonZeroU64),
-    /// Date-based log rotation.
-    Date,
-    /// Count-based log rotation.
-    Count(u32),
-}
-
-impl FromStr for LogRotation {
-    type Err = ConfigError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let trimmed = s.trim();
-        let (kind, value) = trimmed
-            .split_once(':')
-            .map_or((trimmed, None), |(k, v)| (k, Some(v)));
-        match kind.to_lowercase().as_str() {
-            "size" => rotation_amount(value, "size").map(Self::Size),
-            "time" => rotation_amount(value, "time").map(Self::Time),
-            "date" => Ok(Self::Date),
-            "count" => rotation_count(value).map(Self::Count),
-            _ => Err(ConfigError::ValidationError(format!(
-                "Invalid log rotation option: '{s}'"
-            ))),
-        }
-    }
-}
-
-/// The non-zero number after `size:` or `time:`; `what` names it in
-/// the error messages.
-fn rotation_amount(
-    value: Option<&str>,
-    what: &str,
-) -> Result<NonZeroU64, ConfigError> {
-    let invalid = |msg: String| ConfigError::ValidationError(msg);
-    let text = value.ok_or_else(|| {
-        invalid(format!("Missing {what} value for log rotation"))
-    })?;
-    let n = text.parse::<u64>().map_err(|_| {
-        invalid(format!(
-            "Invalid {what} value for log rotation: '{text}'"
-        ))
-    })?;
-    NonZeroU64::new(n).ok_or_else(|| {
-        invalid(format!("Log rotation {what} must be greater than 0"))
-    })
-}
-
-/// The non-zero count after `count:`, saturating at `u32::MAX`.
-fn rotation_count(value: Option<&str>) -> Result<u32, ConfigError> {
-    let invalid = |msg: String| ConfigError::ValidationError(msg);
-    let text = value.ok_or_else(|| {
-        invalid("Missing count value for log rotation".to_string())
-    })?;
-    let n = text.parse::<usize>().map_err(|_| {
-        invalid(format!(
-            "Invalid count value for log rotation: '{text}'"
-        ))
-    })?;
-    if n == 0 {
-        return Err(invalid(
-            "Log rotation count must be greater than 0".to_string(),
-        ));
-    }
-    Ok(n.try_into().unwrap_or(u32::MAX))
 }
 
 /// Enum representing different logging destinations.
@@ -460,69 +368,6 @@ impl Config {
         new_config
     }
 
-    /// Hot-reloads configuration on file change.
-    ///
-    /// Polls the file every [`HOT_RELOAD_POLL_INTERVAL`] and reloads
-    /// it when its modification time or size changes, including
-    /// when an editor replaces it by renaming a new file over it.
-    /// A file that fails to load leaves the current configuration in
-    /// place. Send `()` on the returned channel, or drop it, to stop.
-    ///
-    /// Requires the `tokio` feature and a running Tokio runtime.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ConfigError::WatcherError`] if the file cannot be
-    /// read when watching starts.
-    #[cfg(feature = "tokio")]
-    pub fn hot_reload_async(
-        config_path: &str,
-        config: &Arc<RwLock<Self>>,
-    ) -> Result<mpsc::Sender<()>, ConfigError> {
-        let mut seen = file_fingerprint(Path::new(config_path))
-            .map_err(ConfigError::WatcherError)?;
-        let (stop_tx, mut stop_rx) = mpsc::channel::<()>(1);
-        let config = Arc::clone(config);
-        let path = config_path.to_string();
-        tokio::spawn(async move {
-            let mut ticks =
-                tokio::time::interval(HOT_RELOAD_POLL_INTERVAL);
-            ticks.set_missed_tick_behavior(
-                tokio::time::MissedTickBehavior::Delay,
-            );
-            loop {
-                tokio::select! {
-                    _ = ticks.tick() => {
-                        Self::reload_if_changed(&path, &mut seen, &config).await;
-                    }
-                    _ = stop_rx.recv() => break,
-                }
-            }
-        });
-        Ok(stop_tx)
-    }
-
-    /// Reload `path` into `config` if its fingerprint moved on from
-    /// `seen`. A missing file is skipped until it reappears.
-    #[cfg(feature = "tokio")]
-    async fn reload_if_changed(
-        path: &str,
-        seen: &mut Fingerprint,
-        config: &Arc<RwLock<Self>>,
-    ) {
-        let Ok(now) = file_fingerprint(Path::new(path)) else {
-            return;
-        };
-        if now == *seen {
-            return;
-        }
-        *seen = now;
-        if let Ok(new_config) = Self::load_async(Some(path)).await {
-            let fresh = new_config.read().clone();
-            *config.write() = fresh;
-        }
-    }
-
     /// Compares two configurations and returns the differences.
     #[must_use]
     pub fn diff(
@@ -600,17 +445,6 @@ impl TryFrom<env::Vars> for Config {
     }
 }
 
-impl fmt::Display for LogRotation {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Size(size) => write!(f, "Size: {size} bytes"),
-            Self::Time(seconds) => write!(f, "Time: {seconds} seconds"),
-            Self::Date => write!(f, "Date-based rotation"),
-            Self::Count(count) => write!(f, "Count: {count} logs"),
-        }
-    }
-}
-
 /// A trimmed value must not be empty, for [`Config::validate`].
 fn not_empty(
     value: &str,
@@ -622,68 +456,6 @@ fn not_empty(
 /// A config file that could not be read.
 fn read_error(e: &std::io::Error) -> ConfigError {
     ConfigError::FileReadError(e.to_string())
-}
-
-/// Assigns one field from a JSON value, for [`Config::set`].
-type Setter =
-    fn(&mut Config, serde_json::Value) -> Result<(), ConfigError>;
-
-/// The keys [`Config::set`] accepts, each with its setter.
-const SETTERS: [(&str, Setter); 8] = [
-    ("version", |c, v| {
-        c.version = string_field(&v, "Invalid version format")?;
-        Ok(())
-    }),
-    ("profile", |c, v| {
-        c.profile = string_field(&v, "Invalid profile format")?;
-        Ok(())
-    }),
-    ("log_format", |c, v| {
-        c.log_format = string_field(&v, "Invalid log format")?;
-        Ok(())
-    }),
-    ("log_file_path", |c, v| {
-        c.log_file_path = typed_field(v)?;
-        Ok(())
-    }),
-    ("log_level", |c, v| {
-        c.log_level = typed_field(v)?;
-        Ok(())
-    }),
-    ("log_rotation", |c, v| {
-        c.log_rotation = typed_field(v)?;
-        Ok(())
-    }),
-    ("logging_destinations", |c, v| {
-        c.logging_destinations = typed_field(v)?;
-        Ok(())
-    }),
-    ("env_vars", |c, v| {
-        c.env_vars = typed_field(v)?;
-        Ok(())
-    }),
-];
-
-/// A string-valued field for [`Config::set`]; `err` if `val` is not a
-/// string.
-fn string_field(
-    val: &serde_json::Value,
-    err: &str,
-) -> Result<String, ConfigError> {
-    val.as_str()
-        .map(str::to_string)
-        .ok_or_else(|| ConfigError::ValidationError(err.to_string()))
-}
-
-/// A structured field for [`Config::set`], deserialised from `val`.
-fn typed_field<T: serde::de::DeserializeOwned>(
-    val: serde_json::Value,
-) -> Result<T, ConfigError> {
-    serde_json::from_value(val).map_err(|e| {
-        ConfigError::ConfigParseError(SourceConfigError::Message(
-            e.to_string(),
-        ))
-    })
 }
 
 #[cfg(all(test, not(miri)))]

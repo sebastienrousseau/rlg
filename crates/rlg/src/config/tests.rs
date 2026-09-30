@@ -5,6 +5,7 @@
 //! Unit tests for `config.rs`.
 
 use super::*;
+use std::str::FromStr;
 
 #[test]
 fn test_config_set_exhaustive() {
