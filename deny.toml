@@ -47,6 +47,12 @@ skip = [
     # (indexmap, config, criterion). Ubiquitous transitively;
     # unavoidable until every upstream converges on hashbrown 0.16.
     { name = "hashbrown", version = "0.14.*" },
+
+    # `getrandom` 0.2 arrives through `config` → `rust-ini` →
+    # `const-random`, four levels down and not ours to move; the MCP
+    # SDK's `rand` and `uuid` are on 0.4. Skipping the old one keeps
+    # the duplicate documented rather than silencing the whole crate.
+    { name = "getrandom", version = "0.2.*" },
 ]
 
 skip-tree = []
@@ -66,7 +72,14 @@ deny = [
     # C locale path. rlg uses `jiff` or in-house datetime helpers
     # (`crates/rlg/src/datetime.rs`). Any transitive chrono
     # introduction is worth pausing over.
-    { name = "chrono" },
+    #
+    # The wrappers allowed are `rmcp`, the official MCP SDK behind
+    # `rlg-mcp`, which depends on chrono unconditionally for protocol
+    # timestamps — with `default-features = false`, so the C locale
+    # path is not compiled — and `schemars`, whose `chrono04` feature
+    # rmcp turns on for the schemas it derives. Nothing else may pull
+    # it in.
+    { name = "chrono", wrappers = ["rmcp", "schemars"] },
 ]
 
 [sources]

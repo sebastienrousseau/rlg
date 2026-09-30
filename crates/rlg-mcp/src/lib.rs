@@ -2,17 +2,20 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! MCP (Model Context Protocol) tool implementations and the
-//! minimal JSON-RPC 2.0 dispatcher that wires them to a Server.
+//! `rlg-mcp` — a Model Context Protocol server for rlg log files.
 //!
-//! The wire format follows the
-//! [MCP specification](https://modelcontextprotocol.io/specification/2025-06-18)'s
-//! stdio transport: one JSON-RPC request per line on stdin, one
-//! response per line on stdout.
+//! Four tools over log files on the server's filesystem — `tail_log`,
+//! `filter_log`, `summarize_errors`, `tail_logs_glob` — plus one
+//! prompt and two resources. The protocol is handled by [`rmcp`], the
+//! official MCP SDK; this crate supplies the tools and the text a
+//! model reads.
 //!
-//! The three tools (`tail_log`, `filter_log`, `summarize_errors`)
-//! are pure functions over a file path so they can be unit-tested
-//! without spinning up the transport loop.
+//! The four operations are plain functions — [`tail_log`],
+//! [`filter_log`], [`summarize_errors`], [`tail_logs_glob`] — so they
+//! can be called and tested without a transport. [`LogServer`] is the
+//! handler that exposes them as MCP tools; each answer is returned
+//! twice, as text for the model and as a structured value for a client
+//! that wants to read it without parsing prose.
 //!
 //! # Example
 //!
@@ -28,8 +31,27 @@
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg_cli::{Filter, parse_record, render};
+use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::handler::server::tool::{ToolCallContext, schema_for_output};
+use rmcp::handler::server::wrapper::Parameters;
+use rmcp::model::{
+    CallToolRequestParams, CallToolResponse, CallToolResult,
+    ContentBlock, ErrorData, GetPromptRequestParams, GetPromptResponse,
+    GetPromptResult, Implementation, ListPromptsResult,
+    ListResourceTemplatesResult, ListResourcesResult,
+    PaginatedRequestParams, Prompt, PromptArgument, PromptMessage,
+    ReadResourceRequestParams, ReadResourceResponse,
+    ReadResourceResult, Resource, ResourceContents, ResourceTemplate,
+    Role, ServerCapabilities, ServerConfig,
+};
+use rmcp::service::RequestContext;
+use rmcp::{
+    RoleServer, ServerHandler, tool, tool_handler, tool_router,
+};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -140,387 +162,366 @@ pub fn tail_logs_glob(
 }
 
 // ---------------------------------------------------------------------------
-// JSON-RPC 2.0 transport (minimal subset of MCP).
+// Structured outputs.
 // ---------------------------------------------------------------------------
 
-/// JSON-RPC 2.0 request envelope.
-///
-/// One `Request` corresponds to a single line on the stdio transport
-/// under MCP's `2025-06-18` protocol revision.
-#[derive(Debug, Deserialize)]
-pub struct Request {
-    /// JSON-RPC version marker. Must be the string `"2.0"`.
-    pub jsonrpc: String,
-    /// Correlation identifier. Absent for notifications; present for
-    /// method calls that expect a paired [`Response`].
-    #[serde(default)]
-    pub id: Option<serde_json::Value>,
-    /// Fully-qualified method name (e.g. `"tools/list"`).
-    pub method: String,
-    /// Method parameters. Shape is method-specific; unused methods
-    /// receive `Value::Null` after deserialisation.
-    #[serde(default)]
-    pub params: serde_json::Value,
+/// A slice of rendered log records: what `tail_log`, `filter_log` and
+/// `tail_logs_glob` return.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct Records {
+    /// How many records are returned.
+    pub count: usize,
+    /// The records, oldest first, one rendered record each.
+    pub records: Vec<String>,
 }
 
-/// JSON-RPC 2.0 response envelope.
-///
-/// Constructed via [`Response::ok`] or [`Response::err`]; direct
-/// field access is public so downstream code can inspect and log
-/// responses without going through the constructors.
-#[derive(Debug, Serialize)]
-pub struct Response {
-    /// JSON-RPC version marker. Always the literal `"2.0"`.
-    pub jsonrpc: &'static str,
-    /// Correlation identifier echoed back from the paired
-    /// [`Request`]. `None` for responses to notifications.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<serde_json::Value>,
-    /// Success payload. Mutually exclusive with [`Self::error`].
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
-    /// Error payload. Mutually exclusive with [`Self::result`].
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<ResponseError>,
-}
-
-/// JSON-RPC 2.0 error object.
-///
-/// Populates [`Response::error`] when a method call fails. Codes
-/// follow the JSON-RPC 2.0 reserved range (e.g. `-32603` for
-/// internal errors).
-#[derive(Debug, Serialize)]
-pub struct ResponseError {
-    /// Numeric error code. See the JSON-RPC 2.0 spec for reserved
-    /// ranges; rlg-mcp returns `-32_603` for handler failures.
-    pub code: i32,
-    /// Human-readable error message.
-    pub message: String,
-}
-
-impl Response {
-    /// Construct a successful response.
-    #[must_use]
-    pub const fn ok(
-        id: Option<serde_json::Value>,
-        result: serde_json::Value,
-    ) -> Self {
+impl From<Vec<String>> for Records {
+    fn from(records: Vec<String>) -> Self {
         Self {
-            jsonrpc: "2.0",
-            id,
-            result: Some(result),
-            error: None,
-        }
-    }
-
-    /// Construct an error response.
-    #[must_use]
-    pub fn err(
-        id: Option<serde_json::Value>,
-        code: i32,
-        message: impl Into<String>,
-    ) -> Self {
-        Self {
-            jsonrpc: "2.0",
-            id,
-            result: None,
-            error: Some(ResponseError {
-                code,
-                message: message.into(),
-            }),
+            count: records.len(),
+            records,
         }
     }
 }
 
-/// Dispatch one JSON-RPC request to the appropriate handler.
-///
-/// Returns `None` for *notifications* (requests without an `id`) —
-/// MCP requires no response for notifications.
-#[must_use]
-pub fn dispatch(req: &Request) -> Option<Response> {
-    let id = req.id.clone();
-    let result = match req.method.as_str() {
-        "initialize" => Ok(serde_json::json!({
-            "protocolVersion": "2025-06-18",
-            "capabilities": { "tools": {}, "prompts": {}, "resources": {} },
-            "serverInfo": { "name": "rlg-mcp", "version": env!("CARGO_PKG_VERSION") }
-        })),
-        "tools/list" => Ok(serde_json::json!({
-            "tools": [
-                {
-                    "name": "tail_log",
-                    "title": "Tail rlg log file",
-                    // Every tool here only reads a caller-supplied log file
-                    // from disk: read-only, idempotent, never destructive,
-                    // and open-world (it touches the local filesystem). These
-                    // MCP annotations let clients and the Glama quality grader
-                    // reason about safety without executing the tool.
-                    "annotations": {
-                        "title": "Tail rlg log file",
-                        "readOnlyHint": true,
-                        "destructiveHint": false,
-                        "idempotentHint": true,
-                        "openWorldHint": true
-                    },
-                    "description": "Return the last N parseable rlg (RustLogs) records from a log file, newest last. Use this to glance at the most recent activity in a log; use `filter_log` when you need to select records by level or component, and `summarize_errors` for an aggregated error count.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "path": { "type": "string", "description": "Filesystem path to an rlg log file (Logfmt/JSON records, one per line)." },
-                            "n": { "type": "integer", "minimum": 1, "default": 100, "description": "How many of the most recent parseable records to return (default 100)." }
-                        },
-                        "required": ["path"]
-                    }
-                },
-                {
-                    "name": "filter_log",
-                    "title": "Filter rlg log records",
-                    "annotations": {
-                        "title": "Filter rlg log records",
-                        "readOnlyHint": true,
-                        "destructiveHint": false,
-                        "idempotentHint": true,
-                        "openWorldHint": true
-                    },
-                    "description": "Select rlg records by minimum severity and/or component and render them in any rlg LogFormat. Use this to narrow a log to what matters (e.g. WARN-and-above for one service); use `tail_log` for a raw recent slice and `summarize_errors` when you only need per-component error totals.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "path": { "type": "string", "description": "Filesystem path to an rlg log file to read." },
-                            "min_level": { "type": "string", "enum": ["TRACE","DEBUG","VERBOSE","INFO","WARN","ERROR","FATAL","CRITICAL"], "description": "Keep only records at or above this severity. Omit to keep all levels." },
-                            "component": { "type": "string", "description": "Keep only records whose component matches this exact value. Omit to keep all components." },
-                            "format": { "type": "string", "default": "Logfmt", "description": "rlg LogFormat name to render matched records in (e.g. Logfmt, JSON). Defaults to Logfmt." }
-                        },
-                        "required": ["path"]
-                    }
-                },
-                {
-                    "name": "summarize_errors",
-                    "title": "Summarize rlg errors by component",
-                    "annotations": {
-                        "title": "Summarize rlg errors by component",
-                        "readOnlyHint": true,
-                        "destructiveHint": false,
-                        "idempotentHint": true,
-                        "openWorldHint": true
-                    },
-                    "description": "Group ERROR-and-above rlg records by component and count them, giving a quick error taxonomy for triage. Use this for an at-a-glance failure breakdown; use `filter_log` when you need the underlying records rather than counts.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "path": { "type": "string", "description": "Filesystem path to an rlg log file to scan for ERROR-and-above records." }
-                        },
-                        "required": ["path"]
-                    }
-                },
-                {
-                    "name": "tail_logs_glob",
-                    "title": "Tail rlg logs across a glob",
-                    "annotations": {
-                        "title": "Tail rlg logs across a glob",
-                        "readOnlyHint": true,
-                        "destructiveHint": false,
-                        "idempotentHint": true,
-                        "openWorldHint": true
-                    },
-                    "description": "Return the last N parseable rlg records across every file matching a glob pattern (e.g. `/var/log/**/*.log`), newest last, optionally filtered to a minimum level. Use this to tail many rotated or per-service log files at once; use `tail_log` for a single file and `summarize_errors` for per-component error totals.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "glob_pattern": { "type": "string", "description": "Glob pattern matching one or more rlg log files, e.g. `/var/log/**/*.log`." },
-                            "lines": { "type": "integer", "minimum": 1, "default": 100, "description": "How many of the most recent parseable records to return across all matched files (default 100)." },
-                            "level": { "type": "string", "enum": ["TRACE","DEBUG","VERBOSE","INFO","WARN","ERROR","FATAL","CRITICAL"], "description": "Keep only records at or above this severity. Omit to keep all levels." }
-                        },
-                        "required": ["glob_pattern"]
-                    }
-                }
-            ]
-        })),
-        "tools/call" => dispatch_tool_call(&req.params),
-        "prompts/list" => Ok(prompts_list()),
-        "prompts/get" => prompts_get(&req.params),
-        "resources/list" => Ok(resources_list()),
-        "resources/templates/list" => Ok(resource_templates_list()),
-        "resources/read" => resources_read(&req.params),
-        "notifications/initialized" | "notifications/cancelled" => {
-            // MCP notifications — no response required.
-            return None;
+impl fmt::Display for Records {
+    /// One record per line. When nothing matched, say so: an empty
+    /// string would read to a model as a file with nothing in it.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.records.is_empty() {
+            return f.write_str("No parseable rlg records matched.");
         }
-        other => Err(format!("unknown method: {other}")),
-    };
+        f.write_str(&self.records.join("\n"))
+    }
+}
 
-    Some(match result {
-        Ok(v) => Response::ok(id, v),
-        Err(e) => Response::err(id, -32_603, e),
+/// ERROR-and-above records counted per component: what
+/// `summarize_errors` returns.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+pub struct ErrorSummary {
+    /// How many ERROR-and-above records the file holds.
+    pub total: u64,
+    /// The count per component, sorted by component name.
+    pub by_component: BTreeMap<String, u64>,
+}
+
+impl From<BTreeMap<String, u64>> for ErrorSummary {
+    fn from(by_component: BTreeMap<String, u64>) -> Self {
+        Self {
+            total: by_component.values().sum(),
+            by_component,
+        }
+    }
+}
+
+impl fmt::Display for ErrorSummary {
+    /// The `component → count` map as pretty-printed JSON, which is
+    /// the text this tool has always returned.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let text = serde_json::to_string_pretty(&self.by_component)
+            .unwrap_or_default();
+        f.write_str(&text)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tool arguments.
+// ---------------------------------------------------------------------------
+//
+// The doc comments on the fields are the descriptions a client shows
+// the model, kept word for word from the previous release. The
+// examples are what an auditor or a client with no log of its own
+// sends: a path a log file can be written to on any Unix host.
+
+fn default_count() -> usize {
+    100
+}
+
+fn default_format() -> String {
+    "Logfmt".to_owned()
+}
+
+/// Arguments of `tail_log`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct TailLogArgs {
+    /// Filesystem path to an rlg log file (Logfmt/JSON records, one per line).
+    #[schemars(example = &"/tmp/rlg/app.ndjson")]
+    pub path: String,
+    /// How many of the most recent parseable records to return (default 100).
+    #[serde(default = "default_count")]
+    #[schemars(range(min = 1), example = &10)]
+    pub n: usize,
+}
+
+/// Arguments of `filter_log`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct FilterLogArgs {
+    /// Filesystem path to an rlg log file to read.
+    #[schemars(example = &"/tmp/rlg/app.ndjson")]
+    pub path: String,
+    /// Keep only records at or above this severity. Omit to keep all levels.
+    #[serde(default)]
+    #[schemars(
+        with = "String",
+        extend("enum" = ["TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR", "FATAL", "CRITICAL"]),
+        example = &"WARN"
+    )]
+    pub min_level: Option<String>,
+    /// Keep only records whose component matches this exact value. Omit to keep all components.
+    #[serde(default)]
+    #[schemars(with = "String", example = &"db")]
+    pub component: Option<String>,
+    /// rlg LogFormat name to render matched records in (e.g. Logfmt, JSON). Defaults to Logfmt.
+    #[serde(default = "default_format")]
+    #[schemars(example = &"JSON")]
+    pub format: String,
+}
+
+/// Arguments of `summarize_errors`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct SummarizeErrorsArgs {
+    /// Filesystem path to an rlg log file to scan for ERROR-and-above records.
+    #[schemars(example = &"/tmp/rlg/app.ndjson")]
+    pub path: String,
+}
+
+/// Arguments of `tail_logs_glob`.
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct TailLogsGlobArgs {
+    /// Glob pattern matching one or more rlg log files, e.g. `/var/log/**/*.log`.
+    #[schemars(example = &"/tmp/rlg/*.ndjson")]
+    pub glob_pattern: String,
+    /// How many of the most recent parseable records to return across all matched files (default 100).
+    #[serde(default = "default_count")]
+    #[schemars(range(min = 1), example = &10)]
+    pub lines: usize,
+    /// Keep only records at or above this severity. Omit to keep all levels.
+    #[serde(default)]
+    #[schemars(
+        with = "String",
+        extend("enum" = ["TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR", "FATAL", "CRITICAL"]),
+        example = &"ERROR"
+    )]
+    pub level: Option<String>,
+}
+
+/// A failure to read `path`, worded for a model: the path is what
+/// makes the message actionable.
+fn read_error(path: &str, e: &std::io::Error) -> String {
+    format!("Cannot read `{path}`: {e}")
+}
+
+fn parse_level(name: &str) -> Result<LogLevel, String> {
+    name.parse::<LogLevel>().map_err(|e| {
+        format!(
+            "{e}. The levels are TRACE, DEBUG, VERBOSE, INFO, WARN, \
+             ERROR, FATAL and CRITICAL."
+        )
     })
 }
 
-fn dispatch_tool_call(
-    params: &serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    let name = params
-        .get("name")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "missing `name`".to_string())?;
-    let args = params.get("arguments").cloned().unwrap_or_default();
-
-    match name {
-        "tail_log" => {
-            let path = arg_path(&args)?;
-            let n = args
-                .get("n")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(100) as usize;
-            let lines =
-                tail_log(&path, n).map_err(|e| e.to_string())?;
-            Ok(wrap_text(lines.join("\n")))
-        }
-        "tail_logs_glob" => {
-            let pattern = args
-                .get("glob_pattern")
-                .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| "missing `glob_pattern`".to_string())?;
-            let n = args
-                .get("lines")
-                .and_then(serde_json::Value::as_u64)
-                .unwrap_or(100) as usize;
-            let level = match args
-                .get("level")
-                .and_then(serde_json::Value::as_str)
-            {
-                Some(s) => Some(
-                    s.parse::<LogLevel>()
-                        .map_err(|e| format!("{e:?}"))?,
-                ),
-                None => None,
-            };
-            let lines = tail_logs_glob(pattern, n, level)?;
-            Ok(wrap_text(lines.join("\n")))
-        }
-        "filter_log" => {
-            let path = arg_path(&args)?;
-            let mut filter = Filter::new();
-            if let Some(lvl) = args
-                .get("min_level")
-                .and_then(serde_json::Value::as_str)
-            {
-                let level: LogLevel =
-                    lvl.parse().map_err(|e| format!("{e:?}"))?;
-                filter = filter.min_level(level);
-            }
-            if let Some(c) = args
-                .get("component")
-                .and_then(serde_json::Value::as_str)
-            {
-                filter = filter.component(c);
-            }
-            let format = args
-                .get("format")
-                .and_then(serde_json::Value::as_str)
-                .map_or(Ok(LogFormat::Logfmt), |s| {
-                    s.parse::<LogFormat>().map_err(|e| e.to_string())
+/// A tool result carrying the same answer twice: as text for the
+/// model and as a structured value for the client.
+///
+/// A failure keeps the text only. The structured schema describes a
+/// result, and an error is not one.
+fn reply<T: Serialize + fmt::Display>(
+    outcome: Result<T, String>,
+) -> Result<CallToolResult, ErrorData> {
+    match outcome {
+        Ok(value) => {
+            let structured =
+                serde_json::to_value(&value).map_err(|e| {
+                    ErrorData::internal_error(e.to_string(), None)
                 })?;
-            let lines = filter_log(&path, &filter, format)
-                .map_err(|e| e.to_string())?;
-            Ok(wrap_text(lines.join("\n")))
+            let mut result =
+                CallToolResult::success(vec![ContentBlock::text(
+                    value.to_string(),
+                )]);
+            result.structured_content = Some(structured);
+            Ok(result)
         }
-        "summarize_errors" => {
-            let path = arg_path(&args)?;
-            let buckets =
-                summarize_errors(&path).map_err(|e| e.to_string())?;
-            Ok(serde_json::json!({
-                "content": [ {
-                    "type": "text",
-                    "text": serde_json::to_string_pretty(&buckets).unwrap_or_default()
-                } ]
-            }))
+        // A tool that ran and could not do the job: a *successful*
+        // JSON-RPC response carrying `isError`, so the model sees the
+        // text and can react to it. A JSON-RPC error would be handled
+        // by the client and never shown.
+        Err(message) => {
+            Ok(CallToolResult::error(vec![ContentBlock::text(message)]))
         }
-        other => Err(format!("unknown tool: {other}")),
     }
 }
 
-fn arg_path(
-    args: &serde_json::Value,
-) -> Result<std::path::PathBuf, String> {
-    args.get("path")
-        .and_then(serde_json::Value::as_str)
-        .map(std::path::PathBuf::from)
-        .ok_or_else(|| "missing `path`".to_string())
-}
-
-fn wrap_text(s: String) -> serde_json::Value {
-    serde_json::json!({
-        "content": [ { "type": "text", "text": s } ]
-    })
-}
-
 // ---------------------------------------------------------------------------
-// Prompts.
+// The server.
 // ---------------------------------------------------------------------------
 
-/// Descriptors returned to MCP clients via `prompts/list`.
-fn prompts_list() -> serde_json::Value {
-    serde_json::json!({
-        "prompts": [
-            {
-                "name": "triage_error_spike",
-                "title": "Triage an rlg error spike",
-                "description": "Guided SRE workflow for investigating a spike \
-                    of errors in an rlg log using tail_log, filter_log and \
-                    summarize_errors.",
-                "arguments": [
-                    {
-                        "name": "path",
-                        "description": "Filesystem path to the rlg log file to triage.",
-                        "required": false
-                    },
-                    {
-                        "name": "window_minutes",
-                        "description": "Recent time window to focus on, in minutes.",
-                        "required": false
-                    }
-                ]
-            }
-        ]
-    })
+/// The MCP server: the four tools, one prompt and two resources over
+/// [`rmcp`].
+///
+/// Cheap to create and to clone; the HTTP transports create one per
+/// session. It holds nothing between calls.
+#[derive(Debug, Clone)]
+pub struct LogServer {
+    tool_router: ToolRouter<Self>,
 }
 
-/// `prompts/get` handler. Returns the prompt-message payload, or an
-/// error string (mapped to a JSON-RPC error envelope).
-fn prompts_get(
-    params: &serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    let name = params
-        .get("name")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "missing `name`".to_string())?;
-    match name {
-        "triage_error_spike" => Ok(triage_error_spike(params)),
-        other => Err(format!("unknown prompt: {other}")),
+impl Default for LogServer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-/// Build the `triage_error_spike` prompt messages, embedding the
+// Every tool here only reads a caller-supplied log file from disk:
+// read-only, idempotent, never destructive, and open-world (it touches
+// the local filesystem). These MCP annotations let clients reason
+// about safety without executing the tool.
+#[tool_router]
+#[allow(
+    clippy::unused_self,
+    reason = "the SDK's tool router calls tools as methods"
+)]
+impl LogServer {
+    /// A server with all four tools registered.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            tool_router: Self::tool_router(),
+        }
+    }
+
+    #[tool(
+        name = "tail_log",
+        description = "Return the last N parseable rlg (RustLogs) records from a log file, newest last. Use this to glance at the most recent activity in a log; use `filter_log` when you need to select records by level or component, and `summarize_errors` for an aggregated error count.",
+        annotations(
+            title = "Tail rlg log file",
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        ),
+        output_schema = schema_for_output::<Records>()
+    )]
+    fn tail_log_tool(
+        &self,
+        Parameters(args): Parameters<TailLogArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        reply(
+            tail_log(Path::new(&args.path), args.n)
+                .map(Records::from)
+                .map_err(|e| read_error(&args.path, &e)),
+        )
+    }
+
+    #[tool(
+        name = "filter_log",
+        description = "Select rlg records by minimum severity and/or component and render them in any rlg LogFormat. Use this to narrow a log to what matters (e.g. WARN-and-above for one service); use `tail_log` for a raw recent slice and `summarize_errors` when you only need per-component error totals.",
+        annotations(
+            title = "Filter rlg log records",
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        ),
+        output_schema = schema_for_output::<Records>()
+    )]
+    fn filter_log_tool(
+        &self,
+        Parameters(args): Parameters<FilterLogArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        reply(filter_log_outcome(&args))
+    }
+
+    #[tool(
+        name = "summarize_errors",
+        description = "Group ERROR-and-above rlg records by component and count them, giving a quick error taxonomy for triage. Use this for an at-a-glance failure breakdown; use `filter_log` when you need the underlying records rather than counts.",
+        annotations(
+            title = "Summarize rlg errors by component",
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        ),
+        output_schema = schema_for_output::<ErrorSummary>()
+    )]
+    fn summarize_errors_tool(
+        &self,
+        Parameters(args): Parameters<SummarizeErrorsArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        reply(
+            summarize_errors(Path::new(&args.path))
+                .map(ErrorSummary::from)
+                .map_err(|e| read_error(&args.path, &e)),
+        )
+    }
+
+    #[tool(
+        name = "tail_logs_glob",
+        description = "Return the last N parseable rlg records across every file matching a glob pattern (e.g. `/var/log/**/*.log`), newest last, optionally filtered to a minimum level. Use this to tail many rotated or per-service log files at once; use `tail_log` for a single file and `summarize_errors` for per-component error totals.",
+        annotations(
+            title = "Tail rlg logs across a glob",
+            read_only_hint = true,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        ),
+        output_schema = schema_for_output::<Records>()
+    )]
+    fn tail_logs_glob_tool(
+        &self,
+        Parameters(args): Parameters<TailLogsGlobArgs>,
+    ) -> Result<CallToolResult, ErrorData> {
+        reply(tail_logs_glob_outcome(&args))
+    }
+}
+
+fn filter_log_outcome(args: &FilterLogArgs) -> Result<Records, String> {
+    let mut filter = Filter::new();
+    if let Some(level) = args.min_level.as_deref() {
+        filter = filter.min_level(parse_level(level)?);
+    }
+    if let Some(component) = args.component.as_deref() {
+        filter = filter.component(component);
+    }
+    let format = args.format.parse::<LogFormat>().map_err(|e| {
+        format!(
+            "{e}. Use an rlg LogFormat name such as Logfmt or JSON."
+        )
+    })?;
+    filter_log(Path::new(&args.path), &filter, format)
+        .map(Records::from)
+        .map_err(|e| read_error(&args.path, &e))
+}
+
+fn tail_logs_glob_outcome(
+    args: &TailLogsGlobArgs,
+) -> Result<Records, String> {
+    let level = args.level.as_deref().map(parse_level).transpose()?;
+    tail_logs_glob(&args.glob_pattern, args.lines, level)
+        .map(Records::from)
+}
+
+/// The name of the one prompt.
+const TRIAGE_PROMPT: &str = "triage_error_spike";
+/// The static resource: the severity ladder.
+const LEVELS_URI: &str = "rlg://log-levels";
+/// The templated resource: a log's recent tail.
+const TAIL_URI_PREFIX: &str = "rlg://tail/";
+
+/// Build the `triage_error_spike` prompt text, embedding the
 /// caller-supplied `path` and `window_minutes` arguments when present.
-fn triage_error_spike(params: &serde_json::Value) -> serde_json::Value {
-    let args = params.get("arguments").cloned().unwrap_or_default();
-    let path = args
-        .get("path")
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("");
-    let window = args
-        .get("window_minutes")
-        .and_then(serde_json::Value::as_u64);
-    let target = if path.is_empty() {
-        "the rlg log".to_string()
-    } else {
-        format!("`{path}`")
+fn triage_error_spike(
+    path: Option<&str>,
+    window_minutes: Option<u64>,
+) -> String {
+    let target = match path {
+        Some(p) if !p.is_empty() => format!("`{p}`"),
+        _ => "the rlg log".to_owned(),
     };
-    let window_clause = match window {
+    let window_clause = match window_minutes {
         Some(m) => format!(" Focus on roughly the last {m} minutes."),
         None => String::new(),
     };
-    let text = format!(
+    format!(
         "Help me triage an error spike in {target}.{window_clause} Start with \
          summarize_errors to get the ERROR-and-above count per component and \
          spot which component spiked. Then call filter_log with \
@@ -529,90 +530,191 @@ fn triage_error_spike(params: &serde_json::Value) -> serde_json::Value {
          context. From the messages, group the errors by likely root cause and \
          propose the most probable trigger (a recent deploy, a dependency \
          outage, a config change) with the evidence for each."
-    );
-    serde_json::json!({
-        "description": "Guided rlg error-spike SRE triage workflow.",
-        "messages": [
-            { "role": "user", "content": { "type": "text", "text": text } }
-        ]
-    })
+    )
 }
 
-// ---------------------------------------------------------------------------
-// Resources.
-// ---------------------------------------------------------------------------
-
-/// Static resource descriptors returned via `resources/list`.
-fn resources_list() -> serde_json::Value {
-    serde_json::json!({
-        "resources": [
-            {
-                "uri": "rlg://log-levels",
-                "name": "log-levels",
-                "title": "rlg severity ladder",
-                "description": "The ordered rlg log levels, lowest to highest \
-                    severity, as accepted by filter_log's min_level.",
-                "mimeType": "application/json"
-            }
-        ]
-    })
-}
-
-/// Templated resource descriptors returned via
-/// `resources/templates/list`.
-fn resource_templates_list() -> serde_json::Value {
-    serde_json::json!({
-        "resourceTemplates": [
-            {
-                "uriTemplate": "rlg://tail/{path}",
-                "name": "tail",
-                "title": "Recent rlg log tail",
-                "description": "The last 100 parseable rlg records from the log \
-                    file at {path}, newest last, as a read-only resource.",
-                "mimeType": "text/plain"
-            }
-        ]
-    })
-}
-
-/// `resources/read` handler. Serves the static severity ladder and the
-/// templated `rlg://tail/{path}` log tail; errors on an unknown URI.
-fn resources_read(
-    params: &serde_json::Value,
-) -> Result<serde_json::Value, String> {
-    let uri = params
-        .get("uri")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "missing `uri`".to_string())?;
-    if uri == "rlg://log-levels" {
-        let text = serde_json::json!([
-            "TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR",
-            "FATAL", "CRITICAL"
-        ])
-        .to_string();
-        return Ok(resource_contents(uri, "application/json", text));
+#[tool_handler(router = self.tool_router)]
+impl ServerHandler for LogServer {
+    fn get_info(&self) -> ServerConfig {
+        ServerConfig::new(
+            ServerCapabilities::builder()
+                .enable_tools()
+                .enable_prompts()
+                .enable_resources()
+                .build(),
+        )
+        .with_server_info(
+            Implementation::new("rlg-mcp", env!("CARGO_PKG_VERSION"))
+                .with_title("RustLogs MCP")
+                .with_website_url(env!("CARGO_PKG_HOMEPAGE")),
+        )
+        .with_instructions(
+            "Tools over rlg (RustLogs) log files on the server's \
+             filesystem, given by path. tail_log returns the most recent \
+             records of one file and tail_logs_glob the same across every \
+             file matching a glob; filter_log selects records by minimum \
+             level and component; summarize_errors counts ERROR-and-above \
+             records per component. The triage_error_spike prompt walks \
+             through an error-spike investigation with those tools.",
+        )
     }
-    if let Some(path) = uri.strip_prefix("rlg://tail/") {
-        let lines = tail_log(std::path::Path::new(path), 100)
-            .map_err(|e| e.to_string())?;
-        return Ok(resource_contents(
-            uri,
-            "text/plain",
-            lines.join("\n"),
-        ));
-    }
-    Err(format!("resource not found: {uri}"))
-}
 
-/// Wrap resource text into the MCP `resources/read` reply shape.
-fn resource_contents(
-    uri: &str,
-    mime: &str,
-    text: String,
-) -> serde_json::Value {
-    serde_json::json!({
-        "contents": [ { "uri": uri, "mimeType": mime, "text": text } ]
-    })
+    /// A tool the server does not have is reported as a tool result,
+    /// not a protocol error.
+    ///
+    /// The SDK's default is `-32602`, which the stateless HTTP revision
+    /// carries as an HTTP 400 — a transport fault to the client, and
+    /// nothing a model gets to read. A model that misspelt a tool name
+    /// is better served by text saying so.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, ErrorData> {
+        if !self.tool_router.has_route(&request.name) {
+            return Ok(CallToolResult::error(vec![ContentBlock::text(
+                format!(
+                    "Unknown tool: {}. The tools are tail_log, filter_log, \
+                     summarize_errors and tail_logs_glob.",
+                    request.name
+                ),
+            )])
+            .into());
+        }
+        let call = ToolCallContext::new(self, request, context);
+        self.tool_router.call(call).await
+    }
+
+    async fn list_prompts(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListPromptsResult, ErrorData> {
+        let prompt = Prompt::new(
+            TRIAGE_PROMPT,
+            Some(
+                "Guided SRE workflow for investigating a spike of errors in \
+                 an rlg log using tail_log, filter_log and summarize_errors.",
+            ),
+            Some(vec![
+                PromptArgument::new("path")
+                    .with_description(
+                        "Filesystem path to the rlg log file to triage.",
+                    )
+                    .with_required(false),
+                PromptArgument::new("window_minutes")
+                    .with_description(
+                        "Recent time window to focus on, in minutes.",
+                    )
+                    .with_required(false),
+            ]),
+        )
+        .with_title("Triage an rlg error spike");
+        Ok(ListPromptsResult::with_all_items(vec![prompt]))
+    }
+
+    async fn get_prompt(
+        &self,
+        request: GetPromptRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<GetPromptResponse, ErrorData> {
+        if request.name != TRIAGE_PROMPT {
+            return Err(ErrorData::invalid_params(
+                format!(
+                    "unknown prompt: {}. The one prompt is {TRIAGE_PROMPT}.",
+                    request.name
+                ),
+                None,
+            ));
+        }
+        let args = request.arguments.unwrap_or_default();
+        let path = args.get("path").and_then(serde_json::Value::as_str);
+        // A client sends prompt arguments as strings; a number is
+        // accepted too.
+        let window = args.get("window_minutes").and_then(|v| {
+            v.as_u64().or_else(|| {
+                v.as_str().and_then(|s| s.trim().parse().ok())
+            })
+        });
+        let text = triage_error_spike(path, window);
+        Ok(GetPromptResult::new(vec![PromptMessage::new_text(
+            Role::User,
+            text,
+        )])
+        .with_description("Guided rlg error-spike SRE triage workflow.")
+        .into())
+    }
+
+    async fn list_resources(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourcesResult, ErrorData> {
+        let levels = Resource::new(LEVELS_URI, "log-levels")
+            .with_title("rlg severity ladder")
+            .with_description(
+                "The ordered rlg log levels, lowest to highest severity, as \
+                 accepted by filter_log's min_level.",
+            )
+            .with_mime_type("application/json");
+        Ok(ListResourcesResult::with_all_items(vec![levels]))
+    }
+
+    async fn list_resource_templates(
+        &self,
+        _request: Option<PaginatedRequestParams>,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ListResourceTemplatesResult, ErrorData> {
+        let tail = ResourceTemplate::new(
+            format!("{TAIL_URI_PREFIX}{{path}}"),
+            "tail",
+        )
+        .with_title("Recent rlg log tail")
+        .with_description(
+            "The last 100 parseable rlg records from the log file at \
+             {path}, newest last, as a read-only resource.",
+        )
+        .with_mime_type("text/plain");
+        Ok(ListResourceTemplatesResult::with_all_items(vec![tail]))
+    }
+
+    async fn read_resource(
+        &self,
+        request: ReadResourceRequestParams,
+        _context: RequestContext<RoleServer>,
+    ) -> Result<ReadResourceResponse, ErrorData> {
+        let uri = request.uri;
+        if uri == LEVELS_URI {
+            let text = serde_json::json!([
+                "TRACE", "DEBUG", "VERBOSE", "INFO", "WARN", "ERROR",
+                "FATAL", "CRITICAL"
+            ])
+            .to_string();
+            let contents = ResourceContents::text(text, uri)
+                .with_mime_type("application/json");
+            return Ok(ReadResourceResult::new(vec![contents]).into());
+        }
+        if let Some(path) = uri.strip_prefix(TAIL_URI_PREFIX) {
+            let lines =
+                tail_log(Path::new(path), 100).map_err(|e| {
+                    ErrorData::resource_not_found(
+                        read_error(path, &e),
+                        None,
+                    )
+                })?;
+            let contents =
+                ResourceContents::text(lines.join("\n"), uri)
+                    .with_mime_type("text/plain");
+            return Ok(ReadResourceResult::new(vec![contents]).into());
+        }
+        Err(ErrorData::resource_not_found(
+            format!(
+                "resource not found: {uri}. The resources are {LEVELS_URI} \
+                 and {TAIL_URI_PREFIX}{{path}}."
+            ),
+            None,
+        ))
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -622,6 +724,7 @@ fn resource_contents(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{Value, json};
     use std::io::Write;
 
     fn write_log(content: &str) -> tempfile::NamedTempFile {
@@ -633,6 +736,43 @@ mod tests {
     const INFO: &str = r#"{"session_id":1,"time":"t","level":"INFO","component":"svc","description":"hi","format":"JSON","attributes":{}}"#;
     const ERROR: &str = r#"{"session_id":2,"time":"t","level":"ERROR","component":"db","description":"boom","format":"JSON","attributes":{}}"#;
     const FATAL: &str = r#"{"session_id":3,"time":"t","level":"FATAL","component":"db","description":"down","format":"JSON","attributes":{}}"#;
+
+    /// Call a tool the way a request reaches it: JSON arguments,
+    /// deserialised into the tool's parameter type.
+    fn parse<T: serde::de::DeserializeOwned>(v: Value) -> T {
+        serde_json::from_value(v).expect("arguments")
+    }
+
+    fn call(tool: &str, args: Value) -> CallToolResult {
+        let server = LogServer::new();
+        let result = match tool {
+            "tail_log" => server.tail_log_tool(Parameters(parse(args))),
+            "filter_log" => {
+                server.filter_log_tool(Parameters(parse(args)))
+            }
+            "summarize_errors" => {
+                server.summarize_errors_tool(Parameters(parse(args)))
+            }
+            "tail_logs_glob" => {
+                server.tail_logs_glob_tool(Parameters(parse(args)))
+            }
+            other => panic!("no such tool {other}"),
+        };
+        result
+            .expect("a tool failure is a result, not a protocol error")
+    }
+
+    fn text_of(r: &CallToolResult) -> &str {
+        r.content
+            .first()
+            .and_then(ContentBlock::as_text)
+            .map(|t| t.text.as_str())
+            .expect("text content")
+    }
+
+    fn is_error(r: &CallToolResult) -> bool {
+        r.is_error == Some(true)
+    }
 
     #[test]
     fn tail_log_returns_last_n() {
@@ -731,361 +871,284 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_tail_logs_glob_via_tools_call() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("a.log"), format!("{ERROR}\n"))
-            .unwrap();
-        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
-        let r = dispatch(&req(
-            "tools/call",
-            serde_json::json!({
-                "name": "tail_logs_glob",
-                "arguments": { "glob_pattern": pattern, "level": "ERROR" }
-            }),
-        ))
-        .expect("response");
-        let text = r.result.unwrap()["content"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("boom"));
-    }
-
-    #[test]
-    fn dispatch_tail_logs_glob_missing_pattern_errors() {
-        let r = dispatch(&req(
-            "tools/call",
-            serde_json::json!({ "name": "tail_logs_glob", "arguments": {} }),
-        ))
-        .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tail_logs_glob_bad_level_errors() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("a.log"), format!("{INFO}\n"))
-            .unwrap();
-        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
-        let r = dispatch(&req(
-            "tools/call",
-            serde_json::json!({
-                "name": "tail_logs_glob",
-                "arguments": { "glob_pattern": pattern, "level": "NOPE" }
-            }),
-        ))
-        .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    fn req(method: &str, params: serde_json::Value) -> Request {
-        Request {
-            jsonrpc: "2.0".to_string(),
-            id: Some(serde_json::json!(1)),
-            method: method.to_string(),
-            params,
+    fn every_tool_is_registered_with_schema_and_annotations() {
+        let tools = LogServer::tool_router().list_all();
+        let mut names: Vec<&str> =
+            tools.iter().map(|t| t.name.as_ref()).collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            [
+                "filter_log",
+                "summarize_errors",
+                "tail_log",
+                "tail_logs_glob"
+            ]
+        );
+        for t in &tools {
+            assert!(
+                t.description.is_some(),
+                "{} has no description",
+                t.name
+            );
+            assert_eq!(
+                t.input_schema.get("type").and_then(Value::as_str),
+                Some("object")
+            );
+            let props =
+                t.input_schema.get("properties").expect("properties");
+            for (name, schema) in props.as_object().expect("object") {
+                assert!(
+                    schema.get("examples").is_some(),
+                    "{}.{name} has no example: {schema}",
+                    t.name
+                );
+                assert!(
+                    schema.get("description").is_some(),
+                    "{}.{name} has no description",
+                    t.name
+                );
+            }
+            assert!(
+                t.output_schema.is_some(),
+                "{} has no outputSchema",
+                t.name
+            );
+            let a = t.annotations.as_ref().expect("annotations");
+            assert_eq!(a.read_only_hint, Some(true), "{}", t.name);
+            assert_eq!(a.destructive_hint, Some(false), "{}", t.name);
         }
     }
 
     #[test]
-    fn dispatch_initialize_returns_capabilities() {
-        let r = dispatch(&req("initialize", serde_json::json!({})))
-            .expect("response");
-        let result = r.result.unwrap();
-        assert_eq!(result["protocolVersion"], "2025-06-18");
-        assert_eq!(result["serverInfo"]["name"], "rlg-mcp");
-        assert!(result["capabilities"]["prompts"].is_object());
-        assert!(result["capabilities"]["resources"].is_object());
+    fn input_schemas_keep_the_field_names_defaults_and_enums() {
+        let tools = LogServer::tool_router().list_all();
+        let find = |name: &str| {
+            tools.iter().find(|t| t.name == name).expect("tool").clone()
+        };
+
+        let tail = find("tail_log");
+        let props = &tail.input_schema["properties"];
+        assert_eq!(props["n"]["default"], 100, "{props}");
+        assert_eq!(props["n"]["minimum"], 1, "{props}");
+        assert_eq!(tail.input_schema["required"], json!(["path"]));
+
+        let filter = find("filter_log");
+        let props = &filter.input_schema["properties"];
+        assert_eq!(props["format"]["default"], "Logfmt", "{props}");
+        assert_eq!(props["min_level"]["type"], "string", "{props}");
+        let levels =
+            props["min_level"]["enum"].as_array().expect("enum");
+        assert_eq!(levels.len(), 8, "{props}");
+        assert!(levels.contains(&json!("ERROR")));
+        assert_eq!(filter.input_schema["required"], json!(["path"]));
+
+        let glob = find("tail_logs_glob");
+        assert_eq!(
+            glob.input_schema["required"],
+            json!(["glob_pattern"])
+        );
+        assert_eq!(
+            glob.input_schema["properties"]["lines"]["default"],
+            100
+        );
     }
 
     #[test]
-    fn dispatch_prompts_list_returns_the_prompt() {
-        let r = dispatch(&req("prompts/list", serde_json::json!({})))
-            .expect("response");
-        let prompts = r.result.unwrap();
-        let names: Vec<&str> = prompts["prompts"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|p| p["name"].as_str().unwrap())
-            .collect();
-        assert!(names.contains(&"triage_error_spike"));
+    fn tail_log_tool_returns_text_and_structured_content() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n"));
+        let r = call(
+            "tail_log",
+            json!({ "path": f.path().to_str().unwrap(), "n": 5 }),
+        );
+        assert!(!is_error(&r));
+        assert!(text_of(&r).contains("hi"));
+        assert!(text_of(&r).contains("boom"));
+        let s = r.structured_content.expect("structured");
+        assert_eq!(s["count"], 2);
+        assert_eq!(s["records"].as_array().map(Vec::len), Some(2));
     }
 
     #[test]
-    fn dispatch_prompts_get_embeds_arguments() {
-        let r = dispatch(&req(
-            "prompts/get",
-            serde_json::json!({
-                "name": "triage_error_spike",
-                "arguments": { "path": "/var/log/app.log", "window_minutes": 15 }
+    fn n_defaults_to_one_hundred() {
+        let f = write_log(&format!("{INFO}\n"));
+        let r = call(
+            "tail_log",
+            json!({ "path": f.path().to_str().unwrap() }),
+        );
+        assert!(!is_error(&r));
+        assert_eq!(
+            r.structured_content.expect("structured")["count"],
+            1
+        );
+    }
+
+    #[test]
+    fn an_empty_result_says_so() {
+        let f = write_log("not a record\n");
+        let r = call(
+            "tail_log",
+            json!({ "path": f.path().to_str().unwrap() }),
+        );
+        assert!(!is_error(&r));
+        assert!(
+            text_of(&r).contains("No parseable"),
+            "{}",
+            text_of(&r)
+        );
+        assert_eq!(
+            r.structured_content.expect("structured")["count"],
+            0
+        );
+    }
+
+    #[test]
+    fn a_missing_file_is_a_result_the_model_can_read() {
+        let r = call(
+            "tail_log",
+            json!({ "path": "/definitely/does/not/exist.ndjson" }),
+        );
+        assert!(is_error(&r));
+        assert!(
+            text_of(&r).contains("exist.ndjson"),
+            "{}",
+            text_of(&r)
+        );
+        assert!(r.structured_content.is_none());
+    }
+
+    #[test]
+    fn filter_log_tool_applies_every_filter() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
+        let r = call(
+            "filter_log",
+            json!({
+                "path": f.path().to_str().unwrap(),
+                "min_level": "ERROR",
+                "component": "db",
+                "format": "JSON"
             }),
-        ))
-        .expect("response");
-        let text = r.result.unwrap()["messages"][0]["content"]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
+        );
+        assert!(!is_error(&r));
+        let text = text_of(&r);
+        assert!(
+            text.contains("boom") && text.contains("down"),
+            "{text}"
+        );
+        assert!(!text.contains("\"hi\""), "{text}");
+        assert_eq!(
+            r.structured_content.expect("structured")["count"],
+            2
+        );
+    }
+
+    #[test]
+    fn filter_log_tool_accepts_any_case_for_the_level() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n"));
+        let r = call(
+            "filter_log",
+            json!({ "path": f.path().to_str().unwrap(), "min_level": "error" }),
+        );
+        assert!(!is_error(&r), "{r:?}");
+        assert_eq!(
+            r.structured_content.expect("structured")["count"],
+            1
+        );
+    }
+
+    #[test]
+    fn filter_log_tool_rejects_a_bad_level_and_a_bad_format() {
+        let f = write_log(INFO);
+        let path = f.path().to_str().unwrap();
+        let r = call(
+            "filter_log",
+            json!({ "path": path, "min_level": "NOT_A_LEVEL" }),
+        );
+        assert!(is_error(&r));
+        assert!(text_of(&r).contains("NOT_A_LEVEL"), "{}", text_of(&r));
+        assert!(text_of(&r).contains("CRITICAL"), "{}", text_of(&r));
+
+        let r = call(
+            "filter_log",
+            json!({ "path": path, "format": "NotAFormat" }),
+        );
+        assert!(is_error(&r));
+        assert!(text_of(&r).contains("NotAFormat"), "{}", text_of(&r));
+    }
+
+    #[test]
+    fn summarize_errors_tool_counts_per_component() {
+        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
+        let r = call(
+            "summarize_errors",
+            json!({ "path": f.path().to_str().unwrap() }),
+        );
+        assert!(!is_error(&r));
+        assert!(text_of(&r).contains("\"db\": 2"), "{}", text_of(&r));
+        assert_eq!(
+            r.structured_content,
+            Some(json!({ "total": 2, "by_component": { "db": 2 } }))
+        );
+    }
+
+    #[test]
+    fn tail_logs_glob_tool_filters_and_reports_bad_input() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("a.log"),
+            format!("{INFO}\n{ERROR}\n"),
+        )
+        .unwrap();
+        let pattern = format!("{}/*.log", dir.path().to_str().unwrap());
+        let r = call(
+            "tail_logs_glob",
+            json!({ "glob_pattern": pattern, "level": "ERROR" }),
+        );
+        assert!(!is_error(&r), "{r:?}");
+        assert!(text_of(&r).contains("boom"));
+        assert_eq!(
+            r.structured_content.expect("structured")["count"],
+            1
+        );
+
+        let r = call(
+            "tail_logs_glob",
+            json!({ "glob_pattern": pattern, "level": "NOPE" }),
+        );
+        assert!(is_error(&r));
+
+        let r =
+            call("tail_logs_glob", json!({ "glob_pattern": "a/**b[" }));
+        assert!(is_error(&r));
+        assert!(text_of(&r).contains("invalid glob pattern"));
+    }
+
+    #[test]
+    fn the_prompt_embeds_its_arguments_or_stays_generic() {
+        let text =
+            triage_error_spike(Some("/var/log/app.log"), Some(15));
         assert!(text.contains("/var/log/app.log"));
         assert!(text.contains("15 minutes"));
         assert!(text.contains("summarize_errors"));
-    }
 
-    #[test]
-    fn dispatch_prompts_get_without_arguments_is_generic() {
-        let r = dispatch(&req(
-            "prompts/get",
-            serde_json::json!({ "name": "triage_error_spike" }),
-        ))
-        .expect("response");
-        let text = r.result.unwrap()["messages"][0]["content"]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("the rlg log"));
-    }
+        let generic = triage_error_spike(None, None);
+        assert!(generic.contains("the rlg log"));
+        assert!(!generic.contains("minutes"));
 
-    #[test]
-    fn dispatch_prompts_get_unknown_errors() {
-        let r = dispatch(&req(
-            "prompts/get",
-            serde_json::json!({ "name": "nope" }),
-        ))
-        .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_prompts_get_missing_name_errors() {
-        let r = dispatch(&req("prompts/get", serde_json::json!({})))
-            .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_resources_list_and_templates() {
-        let r = dispatch(&req("resources/list", serde_json::json!({})))
-            .expect("response");
-        assert_eq!(
-            r.result.unwrap()["resources"][0]["uri"],
-            "rlg://log-levels"
-        );
-        let t = dispatch(&req(
-            "resources/templates/list",
-            serde_json::json!({}),
-        ))
-        .expect("response");
-        assert_eq!(
-            t.result.unwrap()["resourceTemplates"][0]["uriTemplate"],
-            "rlg://tail/{path}"
+        // An empty path is the same as none.
+        assert!(
+            triage_error_spike(Some(""), None).contains("the rlg log")
         );
     }
 
     #[test]
-    fn dispatch_resources_read_log_levels() {
-        let r = dispatch(&req(
-            "resources/read",
-            serde_json::json!({ "uri": "rlg://log-levels" }),
-        ))
-        .expect("response");
-        let text = r.result.unwrap()["contents"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("ERROR"));
-    }
-
-    #[test]
-    fn dispatch_resources_read_tail_template() {
-        let f = write_log(&format!("{INFO}\n{ERROR}\n"));
-        let uri = format!("rlg://tail/{}", f.path().to_str().unwrap());
-        let r = dispatch(&req(
-            "resources/read",
-            serde_json::json!({ "uri": uri }),
-        ))
-        .expect("response");
-        let text = r.result.unwrap()["contents"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("boom"));
-    }
-
-    #[test]
-    fn dispatch_resources_read_unknown_uri_errors() {
-        let r = dispatch(&req(
-            "resources/read",
-            serde_json::json!({ "uri": "rlg://mystery" }),
-        ))
-        .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_resources_read_missing_uri_errors() {
-        let r = dispatch(&req("resources/read", serde_json::json!({})))
-            .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tools_list_returns_all_tools() {
-        let r = dispatch(&req("tools/list", serde_json::json!({})))
-            .expect("response");
-        let result = r.result.unwrap();
-        let tools = result["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 4);
-        let names: Vec<&str> =
-            tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
-        assert!(names.contains(&"tail_logs_glob"));
-    }
-
-    #[test]
-    fn dispatch_unknown_method_returns_error() {
-        let r = dispatch(&req("nope", serde_json::json!({})))
-            .expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_notification_returns_none() {
-        let mut r =
-            req("notifications/initialized", serde_json::json!({}));
-        r.id = None;
-        assert!(dispatch(&r).is_none());
-    }
-
-    #[test]
-    fn dispatch_tools_call_tail_log() {
-        let f = write_log(&format!("{INFO}\n{ERROR}\n"));
-        let call = req(
-            "tools/call",
-            serde_json::json!({
-                "name": "tail_log",
-                "arguments": { "path": f.path().to_str().unwrap(), "n": 5 }
-            }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_none());
-        let text = r.result.unwrap()["content"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("hi"));
-        assert!(text.contains("boom"));
-    }
-
-    #[test]
-    fn dispatch_tools_call_unknown_name_errors() {
-        let call = req(
-            "tools/call",
-            serde_json::json!({ "name": "nope", "arguments": {} }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tools_call_missing_path_errors() {
-        let call = req(
-            "tools/call",
-            serde_json::json!({ "name": "tail_log", "arguments": {} }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tools_call_filter_log_full_args() {
-        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
-        let call = req(
-            "tools/call",
-            serde_json::json!({
-                "name": "filter_log",
-                "arguments": {
-                    "path": f.path().to_str().unwrap(),
-                    "min_level": "ERROR",
-                    "component": "db",
-                    "format": "JSON"
-                }
-            }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_none());
-        let text = r.result.unwrap()["content"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("boom") || text.contains("down"));
-        assert!(!text.contains("hello"));
-    }
-
-    #[test]
-    fn dispatch_tools_call_filter_log_rejects_bad_level() {
-        let f = write_log(INFO);
-        let call = req(
-            "tools/call",
-            serde_json::json!({
-                "name": "filter_log",
-                "arguments": {
-                    "path": f.path().to_str().unwrap(),
-                    "min_level": "NOT_A_LEVEL"
-                }
-            }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tools_call_filter_log_rejects_bad_format() {
-        let f = write_log(INFO);
-        let call = req(
-            "tools/call",
-            serde_json::json!({
-                "name": "filter_log",
-                "arguments": {
-                    "path": f.path().to_str().unwrap(),
-                    "format": "NotAFormat"
-                }
-            }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_some());
-    }
-
-    #[test]
-    fn dispatch_tools_call_summarize_errors() {
-        let f = write_log(&format!("{INFO}\n{ERROR}\n{FATAL}\n"));
-        let call = req(
-            "tools/call",
-            serde_json::json!({
-                "name": "summarize_errors",
-                "arguments": { "path": f.path().to_str().unwrap() }
-            }),
-        );
-        let r = dispatch(&call).expect("response");
-        assert!(r.error.is_none());
-        let text = r.result.unwrap()["content"][0]["text"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert!(text.contains("db"));
-    }
-
-    #[test]
-    fn response_ok_and_err_round_trip_json() {
-        let ok = Response::ok(
-            Some(serde_json::json!(1)),
-            serde_json::json!({"a": 1}),
-        );
-        let s = serde_json::to_string(&ok).unwrap();
-        assert!(s.contains("\"jsonrpc\":\"2.0\""));
-        assert!(s.contains("\"result\""));
-
-        let err = Response::err(None, -32_700, "parse failed");
-        let s = serde_json::to_string(&err).unwrap();
-        assert!(s.contains("\"error\""));
-        assert!(s.contains("parse failed"));
+    fn the_server_describes_itself() {
+        let info = LogServer::default().get_info();
+        assert_eq!(info.server_info.name, "rlg-mcp");
+        assert_eq!(info.server_info.version, env!("CARGO_PKG_VERSION"));
+        assert!(info.capabilities.tools.is_some());
+        assert!(info.capabilities.prompts.is_some());
+        assert!(info.capabilities.resources.is_some());
+        assert!(info.instructions.is_some());
     }
 }
