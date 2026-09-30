@@ -34,12 +34,6 @@
       "halstead": 30.4,
       "sloc": 49.0
     },
-    "crates/rlg/src/engine.rs::LockFreeEngine::new": {
-      "cognitive": 11.0,
-      "cyclomatic": 13.0,
-      "halstead": 25.3,
-      "sloc": 81.0
-    },
     "crates/rlg/src/error.rs::RlgError::diagnostic": {
       "cognitive": 1.0,
       "cyclomatic": 12.0,
