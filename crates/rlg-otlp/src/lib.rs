@@ -175,8 +175,12 @@ impl OtlpExporter {
             return Err(OtlpError::CircuitOpen);
         }
 
+        // ureq turns every non-2xx status into an `Err` by default,
+        // which would retry a 4xx and report a 5xx as a transport
+        // error. The status is classified below instead.
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(self.timeout))
+            .http_status_as_error(false)
             .build()
             .new_agent();
 
