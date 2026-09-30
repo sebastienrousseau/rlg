@@ -7,6 +7,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.13] — unreleased
+
+The **smaller-tree** cut. rlg-mcp moves onto the official MCP SDK and
+serves stdio, streamable HTTP and the older HTTP+SSE transport; the
+optional dependencies that failed `cargo deny --all-features` (miette,
+notify, reqwest, tonic) are replaced by in-house code or removed, taking
+107 crates out of the lockfile; and the repository gains the gates that
+keep it that way: an enforcing cargo-deny job over all features, a
+complexity baseline, and a check that install snippets name the shipped
+version.
+
+Workspace-lockstep versioning: all 10 publishable crates are at
+`0.0.13`. `xtask` stays at `0.0.0`.
+
+This is the first `0.0.13` on crates.io. The number was used briefly
+for an internal dependency batch before 0.0.12 (see the note there),
+but nothing was ever tagged or published under it.
+
 ### Added
 
 - `rlg-mcp` runs on the official MCP SDK (`rmcp`) and serves stdio (the

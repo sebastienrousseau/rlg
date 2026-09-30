@@ -31,8 +31,8 @@ The wire format is OTLP/HTTP with JSON encoding.
 
 ```toml
 [dependencies]
-rlg       = "0.0.12"
-rlg-otlp  = "0.0.12"
+rlg       = "0.0.13"
+rlg-otlp  = "0.0.13"
 ```
 
 Requires Rust **1.88.0** or newer (edition 2024).

@@ -113,7 +113,7 @@ For automated timing, rlg ships the `rlg_time_it!` macro.
 Add `rlg` with the `tracing-layer` feature:
 
 ```toml
-rlg = { version = "0.0.12", features = ["tracing-layer"] }
+rlg = { version = "0.0.13", features = ["tracing-layer"] }
 ```
 
 Install both subscribers:

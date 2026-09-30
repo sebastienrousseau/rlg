@@ -27,7 +27,7 @@
 
 This is the Cargo workspace root. The library lives at
 [`crates/rlg`](crates/rlg). Ten companion crates ship from this
-workspace, all at lockstep version `0.0.12`.
+workspace, all at lockstep version `0.0.13`.
 
 ## The rlg ecosystem
 
@@ -49,13 +49,13 @@ workspace, all at lockstep version `0.0.12`.
 
 ```toml
 [dependencies]
-rlg         = "0.0.12"
-rlg-otlp    = "0.0.12"  # ship to an OTLP collector
-rlg-tower   = "0.0.12"  # HTTP middleware
-rlg-redact  = "0.0.12"  # PII redaction
+rlg         = "0.0.13"
+rlg-otlp    = "0.0.13"  # ship to an OTLP collector
+rlg-tower   = "0.0.13"  # HTTP middleware
+rlg-redact  = "0.0.13"  # PII redaction
 
 [dev-dependencies]
-rlg-test    = "0.0.12"  # assertions in your tests
+rlg-test    = "0.0.13"  # assertions in your tests
 ```
 
 CLI binaries:
