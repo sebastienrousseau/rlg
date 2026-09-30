@@ -55,10 +55,21 @@ async fn test_hot_reload_applies_edit_and_atomic_replace() {
     fs::rename(&tmp, &path).unwrap();
     assert!(wait_for_profile(&shared, "replaced").await);
 
+    // A deleted file is skipped until it reappears.
+    fs::remove_file(&path).unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+    assert_eq!(shared.read().profile, "replaced");
+    let restored = Config {
+        profile: "restored".into(),
+        ..Config::default()
+    };
+    restored.save_to_file(&path).unwrap();
+    assert!(wait_for_profile(&shared, "restored").await);
+
     // Invalid TOML keeps the last good config.
     fs::write(&path, "invalid = [toml").unwrap();
     tokio::time::sleep(std::time::Duration::from_millis(600)).await;
-    assert_eq!(shared.read().profile, "replaced");
+    assert_eq!(shared.read().profile, "restored");
 
     stop.send(()).await.unwrap();
 }

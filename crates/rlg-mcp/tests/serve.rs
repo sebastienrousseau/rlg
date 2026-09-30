@@ -288,3 +288,31 @@ async fn the_prompt_and_resources_are_served() {
     assert!(missing.is_err(), "{missing:?}");
     let _ = client.cancel().await.expect("clean close");
 }
+
+#[tokio::test]
+async fn unknown_prompts_and_unreadable_logs_are_protocol_errors() {
+    let client = session().await;
+
+    let prompt = client
+        .get_prompt(GetPromptRequestParams::new("no_such_prompt"))
+        .await;
+    let message = format!("{prompt:?}");
+    assert!(
+        message.contains("unknown prompt: no_such_prompt"),
+        "{message}"
+    );
+    assert!(message.contains("triage_error_spike"), "{message}");
+
+    let tail = client
+        .read_resource(ReadResourceRequestParams::new(
+            "rlg://tail//nonexistent/rlg-mcp/app.log",
+        ))
+        .await;
+    let message = format!("{tail:?}");
+    assert!(tail.is_err(), "{message}");
+    assert!(
+        message.contains("/nonexistent/rlg-mcp/app.log"),
+        "{message}"
+    );
+    let _ = client.cancel().await.expect("clean close");
+}
