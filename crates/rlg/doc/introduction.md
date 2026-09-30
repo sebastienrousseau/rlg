@@ -17,7 +17,7 @@ RLG pushes log events into a lock-free ring buffer and formats them on a backgro
 
 ```toml
 [dependencies]
-rlg = "0.0.7"
+rlg = "0.0.12"
 ```
 
 ```rust

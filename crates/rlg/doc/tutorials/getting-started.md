@@ -6,7 +6,7 @@ Install RLG, emit your first log, and verify output — all in under five minute
 
 ```toml
 [dependencies]
-rlg = "0.0.7"
+rlg = "0.0.12"
 ```
 
 To ship records to an OpenTelemetry Collector (which forwards them to

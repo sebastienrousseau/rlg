@@ -25,7 +25,7 @@
 
 ```toml
 [dependencies]
-rlg-ebpf = "0.0.11"
+rlg-ebpf = "0.0.12"
 ```
 
 Requires Rust **1.88.0** or newer (edition 2024).

@@ -52,6 +52,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Install snippets in thirteen places (every crate README, the getting
+  started tutorial, the introduction and the tracing migration guide)
+  named 0.0.11 or 0.0.7. They name 0.0.12, and
+  `scripts/check-doc-versions.sh` fails CI when a snippet drifts from
+  `crates/rlg/Cargo.toml` again.
+- The blocking OTLP exporter retried 4xx responses and reported every
+  failing status as a transport error: ureq returned non-2xx as errors,
+  so the status handling never ran. A 4xx is now final and statuses are
+  reported as `OtlpError::BadStatus`.
 - `glama.json` and `server.json` named 0.0.11 while the workspace shipped
   0.0.12, so the Glama listing and the registry's install command pointed
   at the previous image. Both are stamped, the README's lockstep line with
