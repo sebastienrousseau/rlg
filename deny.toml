@@ -30,6 +30,10 @@ highlight = "all"
 # Wildcard-version dependencies are disallowed workspace-wide.
 # `Cargo.toml` must pin each dep to a concrete version range.
 wildcards = "deny"
+# Except path-only dependencies between workspace crates. The one in
+# use is `rlg`'s dev-dependency on `rlg-cli`, which `cargo publish`
+# strips, so no published manifest carries a wildcard.
+allow-wildcard-paths = true
 
 # Documented duplicate exemptions. Each entry must justify itself —
 # not a dumping ground.
@@ -43,16 +47,12 @@ skip = [
     { name = "serde_spanned", version = "0.6.*" },
     { name = "winnow", version = "0.7.*" },
 
-    # `hashbrown` duplicates cascade through the whole ecosystem
-    # (indexmap, config, criterion). Ubiquitous transitively;
-    # unavoidable until every upstream converges on hashbrown 0.16.
-    { name = "hashbrown", version = "0.14.*" },
-
-    # `getrandom` 0.2 arrives through `config` → `rust-ini` →
-    # `const-random`, four levels down and not ours to move; the MCP
-    # SDK's `rand` and `uuid` are on 0.4. Skipping the old one keeps
-    # the duplicate documented rather than silencing the whole crate.
-    { name = "getrandom", version = "0.2.*" },
+    # `syn` is mid-migration from 2 to 3 across the ecosystem:
+    # `clap_derive` and `darling` (behind the MCP SDK's macros) are on
+    # 3, while `tokio-macros`, `tracing-attributes`, `prost-derive`,
+    # `zerocopy-derive` and other proc macros are still on 2. Both are
+    # build-time only. Drop this once the 2.x dependents move.
+    { name = "syn", version = "2.*" },
 ]
 
 skip-tree = []

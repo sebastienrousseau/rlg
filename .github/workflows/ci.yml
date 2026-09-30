@@ -29,6 +29,23 @@ jobs:
       type: rust
       redirect-crate: rlg
 
+  # The shared security workflow runs `cargo deny check` with
+  # `continue-on-error: true`, so a policy violation there never
+  # fails the build. This job is the enforcing gate for deny.toml.
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+        with:
+          # Default features, as the shared workflow checks. The
+          # --all-features tree still carries unresolved duplicates and
+          # a license decision (webpki-roots, CDLA-Permissive-2.0).
+          arguments: ''
+
   mcp-manifests:
     name: MCP manifests name the shipped version
     runs-on: ubuntu-latest
