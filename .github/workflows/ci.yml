@@ -69,13 +69,15 @@ jobs:
       - run: scripts/check-mcp-manifests.sh
 
   doc-versions:
-    name: Install snippets name the shipped version
+    name: README template and install snippets
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: scripts/check-doc-versions.sh
+      - name: README follows the template
+        run: scripts/check-readme.py
 
   # Markdown lint, the user manual build, and a link check over it.
   docs-lint:
@@ -97,4 +99,17 @@ jobs:
         with:
           args: --offline --no-progress --exclude-path target/book/404.html target/book
           fail: true
+
+  # The declared minimum supported Rust version (rust-version) builds
+  # every library and binary. Tests may need newer toolchains through
+  # dev-dependencies; see docs/POLICIES.md.
+  msrv:
+    name: MSRV (1.88.0) builds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo +1.88.0 check --locked --workspace --all-features --lib --bins
 

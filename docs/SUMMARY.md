@@ -41,6 +41,7 @@
 
 # Project
 
+- [Policies](POLICIES.md)
 - [Release 0.0.13 highlights](releases/v0.0.13.md)
 - [Fuzzing and OSS-Fuzz](OSS-FUZZ.md)
 - [Implementation plan to 0.1.0](IMPLEMENTATION-PLAN-v0.1.0.md)
