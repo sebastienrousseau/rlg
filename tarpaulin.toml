@@ -36,6 +36,10 @@ exclude-files = [
     # Binary entry points — see (1) above.
     "crates/rlg-cli/src/main.rs",
     "crates/rlg-mcp/src/main.rs",
+    # Part of the rlg-mcp binary (`main.rs` declares it), not the
+    # library: tests/http.rs drives every transport by spawning the
+    # binary, which tarpaulin cannot follow.
+    "crates/rlg-mcp/src/transport.rs",
     "crates/rlg-report/src/main.rs",
     # Internal automation crate — see (2) above.
     "crates/xtask/**/*",

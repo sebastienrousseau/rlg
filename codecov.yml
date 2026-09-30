@@ -40,6 +40,9 @@ ignore:
   - "crates/xtask/**"
   - "crates/rlg-cli/src/main.rs"
   - "crates/rlg-mcp/src/main.rs"
+  # Compiled into the rlg-mcp binary only; tests/http.rs drives it
+  # by spawning the binary. See tarpaulin.toml.
+  - "crates/rlg-mcp/src/transport.rs"
   - "crates/rlg-report/src/main.rs"
   # Generated and example code — not part of the production surface.
   - "**/build.rs"
