@@ -135,15 +135,15 @@ version = "0.4.45"
 criteria = "safe-to-deploy"
 
 [[exemptions.clap]]
-version = "4.6.6"
+version = "4.6.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.clap_builder]]
-version = "4.6.6"
+version = "4.6.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.clap_derive]]
-version = "4.6.4"
+version = "4.6.7"
 criteria = "safe-to-deploy"
 
 [[exemptions.clap_lex]]
@@ -155,7 +155,7 @@ version = "1.0.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.config]]
-version = "0.15.25"
+version = "0.15.26"
 criteria = "safe-to-deploy"
 
 [[exemptions.cookie]]
@@ -183,7 +183,7 @@ version = "0.8.7"
 criteria = "safe-to-run"
 
 [[exemptions.crossbeam-queue]]
-version = "0.3.13"
+version = "0.3.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.crossbeam-utils]]
@@ -391,7 +391,7 @@ version = "1.2.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.io-uring]]
-version = "0.7.14"
+version = "0.7.15"
 criteria = "safe-to-deploy"
 
 [[exemptions.is_terminal_polyfill]]
@@ -439,7 +439,7 @@ version = "0.4.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.log]]
-version = "0.4.33"
+version = "0.4.34"
 criteria = "safe-to-deploy"
 
 [[exemptions.loom]]
@@ -703,11 +703,11 @@ version = "0.4.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.thiserror]]
-version = "2.0.20"
+version = "2.0.21"
 criteria = "safe-to-deploy"
 
 [[exemptions.thiserror-impl]]
-version = "2.0.20"
+version = "2.0.21"
 criteria = "safe-to-deploy"
 
 [[exemptions.time]]
@@ -751,7 +751,7 @@ version = "0.8.23"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml]]
-version = "1.1.4+spec-1.1.0"
+version = "1.1.6+spec-1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml_datetime]]
@@ -807,11 +807,11 @@ version = "1.0.24"
 criteria = "safe-to-deploy"
 
 [[exemptions.ureq]]
-version = "3.4.0"
+version = "3.4.2"
 criteria = "safe-to-deploy"
 
 [[exemptions.ureq-proto]]
-version = "0.6.1"
+version = "0.6.4"
 criteria = "safe-to-deploy"
 
 [[exemptions.url]]
