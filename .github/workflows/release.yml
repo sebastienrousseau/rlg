@@ -375,3 +375,27 @@ jobs:
           gh release upload "${RELEASE_TAG}" rlg-* SHA256SUMS \
             --repo "${GITHUB_REPOSITORY}" --clobber
 
+      # The release page in the portfolio format (AGENTS.md §3): title
+      # `rlg <VERSION>`, the hand-written Highlights from
+      # docs/releases/, GitHub's generated What's Changed, SHA-256 of
+      # every asset (binaries, SBOMs, signatures), and the compare link.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          path: src
+          persist-credentials: false
+      - name: Compose the release page
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p all
+          gh release download "${RELEASE_TAG}" --dir all --clobber
+          cd src
+          previous=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^")
+          scripts/compose-release-notes.sh "${RELEASE_TAG}" "$previous" ../all > ../notes.md
+          gh release edit "${RELEASE_TAG}" --title "rlg ${RELEASE_TAG#v}" \
+            --notes-file ../notes.md
+
