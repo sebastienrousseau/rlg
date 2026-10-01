@@ -10,7 +10,7 @@ body:
     id: crate
     attributes:
       label: Crate and version
-      description: For example `rlg 0.0.13` or `rlg-mcp 0.0.13`.
+      description: For example `rlg 0.0.14` or `rlg-mcp 0.0.14`.
     validations:
       required: true
   - type: input

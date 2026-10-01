@@ -10,7 +10,7 @@ url: "https://rustlogs.com/"
 license:
   - Apache-2.0
   - MIT
-version: 0.0.13
+version: 0.0.14
 keywords:
   - logging
   - rust

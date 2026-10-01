@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to release, e.g. v0.0.13 (required unless dry_run)"
+        description: "Existing tag to release, e.g. v0.0.14 (required unless dry_run)"
         required: false
         type: string
       dry_run:

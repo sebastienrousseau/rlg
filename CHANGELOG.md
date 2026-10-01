@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.14] — unreleased
+
+The **follow-through** cut: what releasing 0.0.13 exposed. The
+documentation site deploys again, release pages stop carrying unsigned
+duplicate SBOMs, and a flaky MCP test is fixed.
+
+Workspace-lockstep versioning: all 10 publishable crates are at
+`0.0.14`. `xtask` stays at `0.0.0`.
+
 ### Fixed
 
 - The documentation site stopped deploying at 0.0.13: today's nightly
