@@ -25,6 +25,15 @@ Workspace-lockstep versioning: all 10 publishable crates are at
   the development machine; 3.0 to 0.95 µs with `fast-queue`), and a
   record fired at an idle engine is still written in about 57 µs. A new
   `Contended Emission (8 threads)` benchmark group tracks it.
+- The event, level, error and format counters in `TuiMetrics` are now
+  updated by the flusher as it drains each event (and on the eviction
+  path for dropped ones), not by every producer in `ingest` and
+  `fire()`: the counters have a single writer in the common case, and
+  producers no longer contend on their cache line. Counts now trail
+  `ingest` by at most one flush, and events below the level filter no
+  longer reach the format counters. With eight threads, `fire()` is
+  about 10% cheaper per thread (median 1.93 to 1.74 µs on a loaded
+  machine). The public types and methods are unchanged.
 - **Breaking** (`rlg-otlp`): the blocking `OtlpExporter` now uses the
   crate's own HTTP/1.1 client over `std::net`, like the async exporter,
   and `ureq` is gone: 38 fewer crates in the lockfile and 34 fewer

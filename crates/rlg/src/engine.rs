@@ -113,7 +113,8 @@ pub static ENGINE: LazyLock<LockFreeEngine> =
 /// historical pop-then-push loop.
 ///
 /// Every event that does not stay in the queue is counted once in
-/// `dropped_events`: each one an eviction actually removes, and the new
+/// `dropped_events`, and once by [`count_event`] since the flusher will
+/// never see it: each one an eviction actually removes, and the new
 /// event itself if every retry loses the race for the freed slot.
 fn push_evicting(
     queue: &ShardedQueue,
@@ -124,15 +125,36 @@ fn push_evicting(
         return;
     };
     for _ in 0..3 {
-        if queue.pop_local().is_some() {
-            metrics.inc_dropped();
+        if let Some(evicted) = queue.pop_local() {
+            count_dropped(metrics, &evicted);
         }
         match queue.push(rejected) {
             Ok(()) => return,
             Err(e) => rejected = e,
         }
     }
+    count_dropped(metrics, &rejected);
+}
+
+/// Count an event that left the engine without reaching the sink.
+fn count_dropped(metrics: &TuiMetrics, event: &LogEvent) {
+    count_event(metrics, event);
     metrics.inc_dropped();
+}
+
+/// Add one event to the totals, level, error and format counters.
+///
+/// Runs where an event leaves the queue (on the flusher, or on the
+/// rare eviction path), never on every `ingest`: the counters then
+/// have one writer in the common case, and producers do not contend
+/// on their cache line.
+fn count_event(metrics: &TuiMetrics, event: &LogEvent) {
+    metrics.inc_events();
+    metrics.inc_level(event.level);
+    if event.level_num >= LogLevel::ERROR.to_numeric() {
+        metrics.inc_errors();
+    }
+    metrics.inc_format(event.log.format);
 }
 
 /// Start the `rlg-flusher` thread over `queue`.
@@ -141,11 +163,12 @@ fn spawn_flusher(
     queue: Arc<ShardedQueue>,
     shutdown: Arc<AtomicBool>,
     idle: Arc<AtomicBool>,
+    metrics: Arc<TuiMetrics>,
 ) -> thread::JoinHandle<()> {
     // Lightweight OS thread: runtime agnostic.
     thread::Builder::new()
         .name("rlg-flusher".into())
-        .spawn(move || run_flusher(&queue, &shutdown, &idle))
+        .spawn(move || run_flusher(&queue, &shutdown, &idle, &metrics))
         .expect("Failed to spawn rlg-flusher background thread")
 }
 
@@ -156,6 +179,7 @@ fn run_flusher(
     queue: &ShardedQueue,
     shutdown: &AtomicBool,
     idle: &AtomicBool,
+    metrics: &TuiMetrics,
 ) {
     let mut sink = PlatformSink::native();
     let mut fmt_buf = Vec::with_capacity(512);
@@ -164,6 +188,7 @@ fn run_flusher(
             std::array::from_fn(|_| None);
         drain_into(queue, &mut batch);
         for event in batch.iter().flatten() {
+            count_event(metrics, event);
             emit(&mut sink, &mut fmt_buf, event);
         }
         if shutdown.load(Ordering::Relaxed) && queue.is_empty() {
@@ -231,6 +256,7 @@ impl LockFreeEngine {
                 Arc::clone(&queue),
                 Arc::clone(&shutdown_flag),
                 Arc::clone(&flusher_idle),
+                Arc::clone(&metrics),
             );
             // Spawn the TUI dashboard thread if RLG_TUI=1
             if std::env::var("RLG_TUI").is_ok_and(|v| v == "1") {
@@ -263,18 +289,14 @@ impl LockFreeEngine {
     ///
     /// If the buffer is full, the oldest event is evicted to make room.
     /// Dropped events are tracked via `TuiMetrics::dropped_events`.
+    ///
+    /// The event, level, error and format counters are updated as the
+    /// flusher drains each event (or when one is dropped), so they
+    /// trail `ingest` by at most one flush.
     pub fn ingest(&self, event: LogEvent) {
         if event.level_num < self.filter_level.load(Ordering::Acquire) {
             return;
         }
-
-        self.metrics.inc_events();
-        self.metrics.inc_level(event.level);
-
-        if event.level_num >= LogLevel::ERROR.to_numeric() {
-            self.metrics.inc_errors();
-        }
-
         push_evicting(&self.queue, &self.metrics, event);
         self.wake_flusher();
     }
@@ -303,6 +325,9 @@ impl LockFreeEngine {
     }
 
     /// Increments the format counter in the TUI metrics.
+    ///
+    /// The engine counts each event's format itself as it drains it;
+    /// call this only for records that bypass [`Self::ingest`].
     pub fn inc_format(&self, format: crate::log_format::LogFormat) {
         self.metrics.inc_format(format);
     }

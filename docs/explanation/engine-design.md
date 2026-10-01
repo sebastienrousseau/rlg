@@ -12,17 +12,18 @@ Call flow:
 
 1. `Log::info("msg").fire()` builds a `LogEvent` and calls `ENGINE.ingest()`.
 2. `ingest()` checks the event's level against an atomic filter. Events below the threshold are dropped immediately.
-3. `ingest()` pushes the event into the caller's shard. If the shard is full, it evicts the oldest entry on that shard and retries, up to three times. Every event that does not stay in the buffer is counted once in `TuiMetrics::dropped_events`: each eviction that removes one, and the new event if every retry loses the race.
-4. `ingest()` unparks the flusher thread via a cached `std::thread::Thread` handle — no `Mutex` on the hot path.
+3. `ingest()` pushes the event into the caller's shard. If the shard is full, it evicts the oldest entry on that shard and retries, up to three times. Every event that does not stay in the buffer is counted once in `TuiMetrics::dropped_events`, and once in the event, level, error and format counters: each eviction that removes one, and the new event if every retry loses the race.
+4. `ingest()` reads the flusher's idle flag. Only if the flusher is parked does the first producer to see the flag clear it and unpark the thread through a cached `std::thread::Thread` handle; otherwise the producer writes nothing shared. No `Mutex` on the hot path, and no metrics counter either.
 
 ## 2. The Flusher Thread
 
-A single OS thread named `rlg-flusher` parks itself between batches and is unparked by each `ingest()`; a 5 ms park timeout is the fallback when no wake-up arrives. On wake:
+A single OS thread named `rlg-flusher` raises an idle flag and parks when the queue is empty; the first `ingest()` to see the flag wakes it, and a 5 ms park timeout covers a wake-up lost in the race between the flag and the final emptiness check. On wake:
 
 1. Drain up to 64 events from the queue into a local batch.
-2. Format each event into a reused byte buffer using `Display::fmt`.
-3. Write each formatted event to the configured sink (file, journald, os_log, or stdout).
-4. Stop if shutdown was requested and the queue is empty; otherwise park again.
+2. Count each event in the `TuiMetrics` event, level, error and format counters. The flusher is their only writer in the common case, so producers never contend on them.
+3. Format each event into a reused byte buffer using `Display::fmt`.
+4. Write each formatted event to the configured sink (file, journald, os_log, or stdout).
+5. Stop if shutdown was requested and the queue is empty; otherwise park again.
 
 The flusher reuses its format buffer across batches to avoid repeated heap allocation.
 
@@ -30,7 +31,7 @@ The flusher reuses its format buffer across batches to avoid repeated heap alloc
 
 Formatting happens on the flusher thread, never on the caller's thread. `Log::build()` captures metadata (level, description, component, attributes) without serialising to a string. The `Display` implementation on `Log` handles serialisation when the flusher calls `write!`.
 
-This design keeps the ingestion path fast: one atomic level check, one `ArrayQueue::push`, one `thread::unpark`.
+This design keeps the ingestion path fast: one atomic level check, one `ArrayQueue::push`, and a read of the idle flag, with an `unpark` only when the flusher is parked.
 
 ## 4. Platform Sinks
 

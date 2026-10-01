@@ -16,6 +16,40 @@ fn make_event(level: LogLevel) -> LogEvent {
     }
 }
 
+/// The flusher counts what it drains: after `shutdown` every ingested
+/// event appears once in the total, level, error and format counters,
+/// and events below the filter appear nowhere.
+#[test]
+#[cfg_attr(miri, ignore)] // spawns the flusher
+fn the_flusher_counts_every_ingested_event() {
+    use crate::LogFormat;
+    let engine = LockFreeEngine::new(1_024);
+    engine.set_filter(LogLevel::DEBUG.to_numeric());
+    let event = |level: LogLevel, format: LogFormat| {
+        let mut e = make_event(level);
+        e.log.format = format;
+        engine.ingest(e);
+    };
+    event(LogLevel::TRACE, LogFormat::JSON); // filtered out
+    event(LogLevel::INFO, LogFormat::JSON);
+    event(LogLevel::INFO, LogFormat::MCP);
+    event(LogLevel::ERROR, LogFormat::JSON);
+    event(LogLevel::FATAL, LogFormat::ECS);
+    engine.shutdown();
+    let m = &engine.metrics;
+    let n =
+        |c: &std::sync::atomic::AtomicUsize| c.load(Ordering::Relaxed);
+    assert_eq!(n(&m.total_events), 4);
+    assert_eq!(n(&m.error_count), 2);
+    assert_eq!((n(&m.level_trace), n(&m.level_info)), (0, 2));
+    assert_eq!((n(&m.level_error), n(&m.level_fatal)), (1, 1));
+    assert_eq!(
+        (n(&m.fmt_json), n(&m.fmt_mcp), n(&m.fmt_ecs)),
+        (2, 1, 1)
+    );
+    assert_eq!(n(&m.dropped_events), 0);
+}
+
 /// Under contention on a full queue, every event pushed ends up
 /// either in the queue or counted as dropped: nothing is lost
 /// uncounted and nothing is counted twice.
@@ -46,7 +80,8 @@ fn every_event_is_queued_or_counted_as_dropped() {
             producer.join().unwrap();
         }
         let mut queued = 0;
-        while queue.pop().is_some() {
+        while let Some(event) = queue.pop() {
+            count_event(&metrics, &event);
             queued += 1;
         }
         let dropped = metrics.dropped_events.load(Ordering::Relaxed);
@@ -54,6 +89,11 @@ fn every_event_is_queued_or_counted_as_dropped() {
             queued + dropped,
             THREADS * EACH,
             "round {round}: {queued} queued, {dropped} dropped"
+        );
+        assert_eq!(
+            metrics.total_events.load(Ordering::Relaxed),
+            THREADS * EACH,
+            "round {round}: drained plus dropped events counted once"
         );
     }
 }

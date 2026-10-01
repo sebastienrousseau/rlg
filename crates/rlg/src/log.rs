@@ -93,7 +93,6 @@ impl Log {
     /// the clone. Use `log()` only when you need to retain the entry.
     #[track_caller]
     pub fn log(&self) {
-        crate::engine::ENGINE.inc_format(self.format);
         let event = crate::engine::LogEvent {
             level: self.level,
             level_num: self.level.to_numeric(),
@@ -215,7 +214,6 @@ impl Log {
             "caller".to_string(),
             serde_json::Value::String(caller_string(caller)),
         );
-        crate::engine::ENGINE.inc_format(self.format);
         let event = crate::engine::LogEvent {
             level: self.level,
             level_num: self.level.to_numeric(),
