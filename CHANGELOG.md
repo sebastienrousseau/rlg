@@ -35,6 +35,15 @@ Workspace-lockstep versioning: all 10 publishable crates are at
 
 ### Fixed
 
+- **Memory safety** (macOS): the `os_log` sink declared `syslog(3)` with
+  a fixed third parameter, but the C function is variadic. On Apple
+  Silicon, variadic arguments are passed on the stack, so `syslog` read
+  a stale stack word as the message pointer: the flusher could crash in
+  `strlen`, or log bytes from an arbitrary address. The declaration is
+  now variadic. A release build firing 20,000 records crashed 3 runs in
+  3 on the previous commit and runs clean with the fix. Present since
+  0.0.9; CI never reached this path because `GITHUB_ACTIONS` routes the
+  sink to stdout.
 - `TuiMetrics::dropped_events` under-counted under contention. When the
   ring buffer was full, `ingest` counted one drop and then evicted up to
   three events uncounted; with eight threads on a full queue, 47% of the
