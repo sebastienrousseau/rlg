@@ -9,9 +9,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.0.14] — unreleased
 
-The **follow-through** cut: what releasing 0.0.13 exposed. The
-documentation site deploys again, release pages stop carrying unsigned
-duplicate SBOMs, and a flaky MCP test is fixed.
+The **follow-through** cut: what releasing 0.0.13 exposed. A
+memory-safety bug in the macOS sink is fixed, `fire()` costs less than
+half as much under contention, the blocking OTLP exporter drops `ureq`,
+the documentation site deploys again, and release pages stop carrying
+unsigned duplicate SBOMs.
 
 Workspace-lockstep versioning: all 10 publishable crates are at
 `0.0.14`. `xtask` stays at `0.0.0`.
