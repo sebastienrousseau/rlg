@@ -119,7 +119,7 @@ Output (MCP / JSON-RPC 2.0 notification):
 ```
 
 `Log::fire()` pushes a fully-built event into the ring buffer and
-returns; on a GitHub-hosted runner that costs about 0.85 µs per
+returns; on a GitHub-hosted runner that costs about 0.6 µs per
 record ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)). A dedicated flusher thread picks the event up, runs the
 chosen `LogFormat`'s `Display` impl, and dispatches to the
 configured `PlatformSink`.
@@ -148,9 +148,9 @@ Two architectural choices motivate the design:
    Mutex anywhere on the hot path. What that buys is the I/O:
    the caller never waits on a sink's syscalls. It is not a
    cheaper call in isolation: in the published benchmarks
-   `fire()` costs about 0.85 µs on the calling thread against
-   0.35 µs for `tracing::info!` formatting into a discarding
-   writer ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)).
+   `fire()` costs about what `tracing::info!` does on the
+   calling thread (598 ns against 591 ns) while `tracing`
+   formats the event there ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)).
 
 2. **POSIX `syslog(3)` for the macOS sink, not `_os_log_impl`.**
    Apple's `os_log` macro expands into a binary-trailer

@@ -52,21 +52,36 @@ not exist, and the failure was swallowed.
 
 ### 0.0.13 (release branch)
 
-[Run 36773354952](https://github.com/sebastienrousseau/rlg/actions/runs/36773354952),
-GitHub-hosted `ubuntu-latest`, stable Rust, release profile. Typical
-time per iteration with Criterion's 95% confidence interval.
+Two runs on GitHub-hosted `ubuntu-latest`, stable Rust, release profile,
+before and after the hot-path fix below. Typical time per iteration with
+Criterion's 95% confidence interval.
 
-| Scenario | rlg `fire()` | `tracing::info!` | `log::info!` (no-op) |
-| :--- | ---: | ---: | ---: |
-| Simple Emission | 848 ns (833–864) | 353 ns (351–355) | 1.7 ns |
-| Structured Emission, 3 attributes | 1,145 ns (1,128–1,162) | 676 ns (672–679) | 1.9 ns |
-| Burst of 10,000 records | 9.44 ms (9.18–9.83) | 4.00 ms (3.98–4.02) | 0.02 ms |
-| Latency Distribution | 793 ns (787–800) | 333 ns (332–333) | 1.5 ns |
+Runners differ in speed between runs: `tracing`, whose code did not
+change, measured 353 ns in one and 591 ns in the other. So compare
+within a run (the ratio to `tracing`), not across runs.
 
-**Reading these honestly.** On the calling thread, rlg's `fire()` costs
-about 2.4 times what `tracing::info!` costs, even though `tracing`
-formats the event there and rlg does not. rlg's advantage is not a
-cheaper call; it is that the caller never waits on a sink's I/O, which
+**After** ([run 36802323103](https://github.com/sebastienrousseau/rlg/actions/runs/36802323103)):
+
+| Scenario | rlg `fire()` | `tracing::info!` | `log::info!` (no-op) | rlg ÷ tracing |
+| :--- | ---: | ---: | ---: | ---: |
+| Simple Emission | 598 ns (582–615) | 591 ns (589–593) | 2.7 ns | 1.01 |
+| Structured Emission, 3 attributes | 947 ns (923–969) | 1,117 ns (1,115–1,120) | 3.0 ns | 0.85 |
+| Burst of 10,000 records | 6.86 ms (6.57–7.20) | 6.97 ms (6.95–7.00) | 0.03 ms | 0.98 |
+| Latency Distribution | 649 ns (639–659) | 587 ns (585–590) | 2.7 ns | 1.11 |
+
+**Before** ([run 36773354952](https://github.com/sebastienrousseau/rlg/actions/runs/36773354952)):
+
+| Scenario | rlg `fire()` | `tracing::info!` | `log::info!` (no-op) | rlg ÷ tracing |
+| :--- | ---: | ---: | ---: | ---: |
+| Simple Emission | 848 ns (833–864) | 353 ns (351–355) | 1.7 ns | 2.40 |
+| Structured Emission, 3 attributes | 1,145 ns (1,128–1,162) | 676 ns (672–679) | 1.9 ns | 1.69 |
+| Burst of 10,000 records | 9.44 ms (9.18–9.83) | 4.00 ms (3.98–4.02) | 0.02 ms | 2.36 |
+| Latency Distribution | 793 ns (787–800) | 333 ns (332–333) | 1.5 ns | 2.38 |
+
+**Reading these honestly.** After the fix, `fire()` costs about what
+`tracing::info!` costs on the calling thread, and less with attributes,
+while `tracing` formats the event there and rlg does not. rlg's
+advantage remains that the caller never waits on a sink's I/O, which
 this suite's discarding writer does not exercise.
 
 ### Where the per-record cost went
@@ -84,5 +99,4 @@ calling thread, not the queue or the wake-up:
 The timestamp is now written digit by digit into a fixed buffer instead
 of through `format!` (output identical, checked against the old code on
 two million instants), and the `caller` attribute is built without
-`format!`. Fresh CI numbers for these changes come from the next
-benchmark run.
+`format!`.
