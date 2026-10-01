@@ -1,0 +1,15 @@
+// The rlg development container: Rust and the tools `make verify`
+// needs. CI builds it and runs `make` inside (ci.yml, devcontainer).
+{
+  "name": "rlg",
+  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
+  },
+  "postCreateCommand": "rustup toolchain install 1.96.0 --profile minimal --component clippy,rustfmt && rustup default 1.96.0 && cargo fetch --locked",
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer", "tamasfe.even-better-toml"]
+    }
+  }
+}
