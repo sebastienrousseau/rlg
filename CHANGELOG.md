@@ -34,6 +34,18 @@ Workspace-lockstep versioning: all 10 publishable crates are at
   longer reach the format counters. With eight threads, `fire()` is
   about 10% cheaper per thread (median 1.93 to 1.74 µs on a loaded
   machine). The public types and methods are unchanged.
+- **Breaking**: `fire()` no longer builds the `caller` attribute on
+  the calling thread. It carries the `&'static Location` in a new
+  `LogEvent::caller` field, and the flusher renders `file:line` into
+  the attribute before formatting, so records look exactly as before.
+  That string and its map insert were about 100 ns of every `fire()`.
+  With eight threads, `fire()` costs about 38% less per thread (median
+  2.55 to 1.59 µs, faster in 10 of 10 interleaved runs). Code that
+  builds a `LogEvent` literal needs `caller: None`, or the new
+  `LogEvent::new(log)`. `Log::with` keeps converting values eagerly:
+  measured, the `serde_json` conversion is 1–7 ns of the ~45 ns an
+  attribute costs, and deferring it would need `T: 'static` plus a
+  boxed copy.
 - **Breaking** (`rlg-otlp`): the blocking `OtlpExporter` now uses the
   crate's own HTTP/1.1 client over `std::net`, like the async exporter,
   and `ureq` is gone: 38 fewer crates in the lockfile and 34 fewer

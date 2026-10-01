@@ -70,3 +70,16 @@ fn caller_string_is_file_colon_line() {
         caller_string(location).ends_with(&format!("tests.rs:{line}"))
     );
 }
+
+/// `fire()` leaves the attributes alone on the caller's thread and
+/// carries the call site to the flusher as a `&'static Location`.
+#[test]
+fn fired_event_carries_the_call_site_unrendered() {
+    let line = line!() + 1;
+    let event = Log::info("msg").with("k", 1).into_fired_event();
+    let caller = event.caller.expect("fire() records its call site");
+    assert!(caller.file().ends_with("tests.rs"), "{}", caller.file());
+    assert_eq!(caller.line(), line);
+    assert!(!event.log.attributes.contains_key("caller"));
+    assert_eq!(event.level_num, LogLevel::INFO.to_numeric());
+}

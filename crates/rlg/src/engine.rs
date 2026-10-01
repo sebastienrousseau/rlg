@@ -49,6 +49,23 @@ pub struct LogEvent {
     pub level_num: u8,
     /// Structured log data. Formatted on the flusher thread, not here.
     pub log: crate::log::Log,
+    /// Call site captured by [`Log::fire`](crate::log::Log::fire). The
+    /// flusher adds it to `log` as the `caller` attribute before
+    /// formatting, so the caller's thread never builds that string.
+    pub caller: Option<&'static std::panic::Location<'static>>,
+}
+
+impl LogEvent {
+    /// Wrap `log` as an event at its own level, with no call site.
+    #[must_use]
+    pub const fn new(log: crate::log::Log) -> Self {
+        Self {
+            level: log.level,
+            level_num: log.level.to_numeric(),
+            log,
+            caller: None,
+        }
+    }
 }
 
 /// The near-lock-free ingestion engine.
@@ -104,36 +121,20 @@ impl fmt::Debug for LockFreeEngine {
 pub static ENGINE: LazyLock<LockFreeEngine> =
     LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
-/// Push `event`; if its shard is full, evict and retry with bounded
-/// retries.
-///
-/// `pop_local` targets the same shard as `push` so the eviction makes
-/// room for the retry on the shard the producer is actually contending
-/// on. Under the default (1-shard) build this is identical to the
-/// historical pop-then-push loop.
+/// Push `event`, evicting from its shard when full (see
+/// [`ShardedQueue::push_evicting`]).
 ///
 /// Every event that does not stay in the queue is counted once in
 /// `dropped_events`, and once by [`count_event`] since the flusher will
-/// never see it: each one an eviction actually removes, and the new
-/// event itself if every retry loses the race for the freed slot.
+/// never see it.
 fn push_evicting(
     queue: &ShardedQueue,
     metrics: &TuiMetrics,
     event: LogEvent,
 ) {
-    let Err(mut rejected) = queue.push(event) else {
-        return;
-    };
-    for _ in 0..3 {
-        if let Some(evicted) = queue.pop_local() {
-            count_dropped(metrics, &evicted);
-        }
-        match queue.push(rejected) {
-            Ok(()) => return,
-            Err(e) => rejected = e,
-        }
-    }
-    count_dropped(metrics, &rejected);
+    queue.push_evicting(event, |dropped| {
+        count_dropped(metrics, dropped);
+    });
 }
 
 /// Count an event that left the engine without reaching the sink.
@@ -187,7 +188,8 @@ fn run_flusher(
         let mut batch: [Option<LogEvent>; MAX_DRAIN_BATCH_SIZE] =
             std::array::from_fn(|_| None);
         drain_into(queue, &mut batch);
-        for event in batch.iter().flatten() {
+        for event in batch.iter_mut().flatten() {
+            attach_caller(event);
             count_event(metrics, event);
             emit(&mut sink, &mut fmt_buf, event);
         }
@@ -218,6 +220,19 @@ fn drain_into(queue: &ShardedQueue, batch: &mut [Option<LogEvent>]) {
     for slot in batch {
         let Some(event) = queue.pop() else { break };
         *slot = Some(event);
+    }
+}
+
+/// Add the call site `fire()` captured as the `caller` attribute.
+#[cfg(not(miri))]
+fn attach_caller(event: &mut LogEvent) {
+    if let Some(caller) = event.caller.take() {
+        event.log.attributes.insert(
+            "caller".to_string(),
+            serde_json::Value::String(crate::log::caller_string(
+                caller,
+            )),
+        );
     }
 }
 

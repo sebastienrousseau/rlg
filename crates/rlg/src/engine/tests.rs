@@ -13,7 +13,28 @@ fn make_event(level: LogLevel) -> LogEvent {
         level,
         level_num: level.to_numeric(),
         log: Log::build(level, "test"),
+        caller: None,
     }
+}
+
+/// The flusher renders the call site `fire()` captured as the
+/// `caller` attribute, once, overriding a user-set `caller`.
+#[test]
+#[cfg(not(miri))]
+fn the_flusher_attaches_the_caller_attribute() {
+    let location = std::panic::Location::caller();
+    let mut event = LogEvent {
+        caller: Some(location),
+        ..LogEvent::new(Log::info("msg").with("caller", "user"))
+    };
+    attach_caller(&mut event);
+    let expected = format!("{}:{}", location.file(), location.line());
+    assert_eq!(event.log.attributes["caller"], expected.as_str());
+    assert!(event.caller.is_none(), "rendered once");
+
+    let mut plain = LogEvent::new(Log::info("msg"));
+    attach_caller(&mut plain);
+    assert!(!plain.log.attributes.contains_key("caller"));
 }
 
 /// The flusher counts what it drains: after `shutdown` every ingested

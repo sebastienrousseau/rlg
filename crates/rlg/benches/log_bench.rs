@@ -150,6 +150,7 @@ fn bench_engine_ingest(c: &mut Criterion) {
                 level: LogLevel::INFO,
                 level_num: 6,
                 log: black_box(log),
+                caller: None,
             };
             rlg::engine::ENGINE.ingest(black_box(event));
         });
