@@ -216,6 +216,9 @@ jobs:
           path: .
           format: spdx-json
           output-file: sbom.spdx.json
+          # Signed copies are attached below; the action's own
+          # unsigned upload would duplicate them on the release.
+          upload-release-assets: false
 
       - name: Generate workspace SBOM (CycloneDX)
         uses: anchore/sbom-action@v0
@@ -223,6 +226,9 @@ jobs:
           path: .
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
+          # Signed copies are attached below; the action's own
+          # unsigned upload would duplicate them on the release.
+          upload-release-assets: false
 
       # ─── Sigstore / cosign signatures ───────────────────────────
       # Keyless signing via GitHub Actions OIDC. No maintainer key

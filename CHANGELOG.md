@@ -7,6 +7,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- The documentation site stopped deploying at 0.0.13: today's nightly
+  rustdoc rejects module links that repeat a path its label already
+  resolves, while stable cannot resolve the short form, so six links in
+  `config`, `engine` and `rotation` now carry descriptive labels that
+  both accept. CI builds the docs the way docs.rs and Pages do on every
+  pull request.
+- Releases attached unsigned duplicate SBOMs next to the signed ones;
+  only the signed files are uploaded now.
+- An MCP HTTP test could connect to another test's subprocess when both
+  were handed the same port; test servers now use ports outside the
+  ephemeral range.
+
 ## [0.0.13] — unreleased
 
 The **smaller-tree** cut. rlg-mcp moves onto the official MCP SDK and
