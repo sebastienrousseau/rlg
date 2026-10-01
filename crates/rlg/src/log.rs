@@ -16,6 +16,19 @@ mod write;
 use write::Part::{Map, Num, Raw, Str, Value};
 use write::{write_logfmt_value, write_parts};
 
+/// `file:line` for a call site, built without the `format!` machinery:
+/// `fire()` runs on the caller's thread for every record.
+fn caller_string(caller: &std::panic::Location<'_>) -> String {
+    let mut line = itoa::Buffer::new();
+    let line = line.format(caller.line());
+    let file = caller.file();
+    let mut out = String::with_capacity(file.len() + 1 + line.len());
+    out.push_str(file);
+    out.push(':');
+    out.push_str(line);
+    out
+}
+
 /// Monotonic session ID counter. Incremented atomically per `build()` call.
 static SESSION_COUNTER: Counter = Counter::new(1);
 
@@ -200,11 +213,7 @@ impl Log {
         let caller = std::panic::Location::caller();
         self.attributes.insert(
             "caller".to_string(),
-            serde_json::Value::String(format!(
-                "{}:{}",
-                caller.file(),
-                caller.line()
-            )),
+            serde_json::Value::String(caller_string(caller)),
         );
         crate::engine::ENGINE.inc_format(self.format);
         let event = crate::engine::LogEvent {

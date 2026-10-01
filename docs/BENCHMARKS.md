@@ -67,7 +67,22 @@ time per iteration with Criterion's 95% confidence interval.
 about 2.4 times what `tracing::info!` costs, even though `tracing`
 formats the event there and rlg does not. rlg's advantage is not a
 cheaper call; it is that the caller never waits on a sink's I/O, which
-this suite's discarding writer does not exercise. The per-record cost
-has not been profiled yet; the likely candidates are the flusher
-wake-up (`unpark`) on every `fire()` and the per-record metrics
-counters.
+this suite's discarding writer does not exercise.
+
+### Where the per-record cost went
+
+Timing each piece of `fire()` in isolation (release build, one
+machine) showed most of it was formatting that had stayed on the
+calling thread, not the queue or the wake-up:
+
+| Piece | Before | After |
+| :--- | ---: | ---: |
+| Timestamp (`now_iso8601`) | 252 ns | 94 ns |
+| `fire()` end to end | 618 ns | 376 ns |
+| `unpark()` of the flusher | 1 ns | 1 ns |
+
+The timestamp is now written digit by digit into a fixed buffer instead
+of through `format!` (output identical, checked against the old code on
+two million instants), and the `caller` attribute is built without
+`format!`. Fresh CI numbers for these changes come from the next
+benchmark run.

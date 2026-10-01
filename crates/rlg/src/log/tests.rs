@@ -51,3 +51,22 @@ fn test_log_write_logfmt_with_attributes() {
     let output_no = format!("{log_no_attr}");
     assert!(!output_no.contains(" key="));
 }
+
+#[track_caller]
+fn here() -> &'static std::panic::Location<'static> {
+    std::panic::Location::caller()
+}
+
+#[test]
+fn caller_string_is_file_colon_line() {
+    for location in [here(), here(), here()] {
+        assert_eq!(
+            caller_string(location),
+            format!("{}:{}", location.file(), location.line())
+        );
+    }
+    let (location, line) = (here(), line!());
+    assert!(
+        caller_string(location).ends_with(&format!("tests.rs:{line}"))
+    );
+}

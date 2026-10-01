@@ -143,6 +143,38 @@ fn in_range(b: &[u8], lo: u32, hi: u32) -> bool {
 /// allocation beyond the final `String`.
 fn format_epoch(seconds: u64, nanos: u32) -> String {
     let days = i64::try_from(seconds / 86_400).unwrap_or(0);
+    let (year, month, day) = civil_from_days(days);
+    let sod = seconds % 86_400;
+    // Four-digit years and in-range nanoseconds fill a fixed layout;
+    // anything else keeps the general formatter's output.
+    let Ok(year) = u32::try_from(year) else {
+        return format_epoch_general(seconds, nanos);
+    };
+    if year > 9999 || nanos > 999_999_999 {
+        return format_epoch_general(seconds, nanos);
+    }
+    let mut buf = *b"0000-00-00T00:00:00.000000000Z";
+    put_digits(&mut buf[0..4], year);
+    put_digits(&mut buf[5..7], month);
+    put_digits(&mut buf[8..10], day);
+    put_digits(&mut buf[11..13], (sod / 3600) as u32);
+    put_digits(&mut buf[14..16], ((sod % 3600) / 60) as u32);
+    put_digits(&mut buf[17..19], (sod % 60) as u32);
+    put_digits(&mut buf[20..29], nanos);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Write `n` into `dst` as zero-padded decimal, filling it right to left.
+fn put_digits(dst: &mut [u8], mut n: u32) {
+    for byte in dst.iter_mut().rev() {
+        *byte = b'0' + (n % 10) as u8;
+        n /= 10;
+    }
+}
+
+/// The general form, for years past 9999.
+fn format_epoch_general(seconds: u64, nanos: u32) -> String {
+    let days = i64::try_from(seconds / 86_400).unwrap_or(0);
     let sod = seconds % 86_400;
     let hour = (sod / 3600) as u32;
     let minute = ((sod % 3600) / 60) as u32;
@@ -178,6 +210,29 @@ const fn civil_from_days(days: i64) -> (i32, u32, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_epoch_known_instants() {
+        let cases = [
+            (0, 0, "1970-01-01T00:00:00.000000000Z"),
+            (951_782_400, 5, "2000-02-29T00:00:00.000000005Z"),
+            (
+                1_727_740_800,
+                123_456_789,
+                "2024-10-01T00:00:00.123456789Z",
+            ),
+            (
+                253_402_300_799,
+                999_999_999,
+                "9999-12-31T23:59:59.999999999Z",
+            ),
+            // The first five-digit year takes the general path.
+            (253_402_300_800, 0, "10000-01-01T00:00:00.000000000Z"),
+        ];
+        for (secs, nanos, want) in cases {
+            assert_eq!(format_epoch(secs, nanos), want, "{secs}");
+        }
+    }
 
     #[test]
     fn now_iso8601_shape() {
