@@ -210,11 +210,75 @@ fn latency_distribution(c: &mut Criterion) {
     group.finish();
 }
 
+// ---------------------------------------------------------------------------
+// Group 5: Contended emission (8 producer threads at once)
+// ---------------------------------------------------------------------------
+
+/// Time `iters` records spread over eight threads emitting at once;
+/// reports wall time, so per-record cost includes the contention.
+fn contended<F: Fn() + Sync>(
+    iters: u64,
+    emit: F,
+) -> std::time::Duration {
+    const THREADS: u64 = 8;
+    let per_thread = iters.div_ceil(THREADS);
+    let start = std::time::Instant::now();
+    std::thread::scope(|scope| {
+        for _ in 0..THREADS {
+            scope.spawn(|| {
+                for _ in 0..per_thread {
+                    emit();
+                }
+            });
+        }
+    });
+    start.elapsed()
+}
+
+fn contended_emission(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Contended Emission (8 threads)");
+
+    group.bench_function("RLG fire()", |b| {
+        b.iter_custom(|iters| {
+            contended(iters, || {
+                rlg::log::Log::info(black_box("benchmark message"))
+                    .component("bench")
+                    .fire();
+            })
+        });
+    });
+
+    let dispatch = tracing::Dispatch::new(
+        tracing_subscriber::fmt()
+            .with_writer(std::io::sink)
+            .finish(),
+    );
+    group.bench_function("tracing::info!", |b| {
+        b.iter_custom(|iters| {
+            contended(iters, || {
+                tracing::dispatcher::with_default(&dispatch, || {
+                    tracing::info!("benchmark message");
+                });
+            })
+        });
+    });
+
+    ensure_null_logger();
+    group.bench_function("log::info!", |b| {
+        b.iter_custom(|iters| {
+            contended(iters, || log::info!("benchmark message"))
+        });
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     simple_emission,
     structured_emission,
     burst_10k,
     latency_distribution,
+    contended_emission,
 );
 criterion_main!(benches);

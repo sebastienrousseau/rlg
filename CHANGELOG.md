@@ -16,6 +16,16 @@ duplicate SBOMs, and a flaky MCP test is fixed.
 Workspace-lockstep versioning: all 10 publishable crates are at
 `0.0.14`. `xtask` stays at `0.0.0`.
 
+### Changed
+
+- Producers no longer write to the flusher's park state on every
+  record: the flusher raises an idle flag before parking and only the
+  first producer to see it wakes the thread. With eight threads logging
+  at once, `fire()` costs about 54% less per thread (3.9 to 1.8 µs on
+  the development machine; 3.0 to 0.95 µs with `fast-queue`), and a
+  record fired at an idle engine is still written in about 57 µs. A new
+  `Contended Emission (8 threads)` benchmark group tracks it.
+
 ### Fixed
 
 - `TuiMetrics::dropped_events` under-counted under contention. When the
