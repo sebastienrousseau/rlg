@@ -86,6 +86,9 @@ but nothing was ever tagged or published under it.
 
 ### Fixed
 
+- `rlg` did not compile on Windows: the stand-in for the Unix socket type
+  lacked the documentation the crate requires. It builds again, and CI now
+  checks every library and binary on Windows.
 - The configuration example in the `rlg` README did not load
   (`LogRotation` and `LoggingDestination` use `{ Size = N }` and
   `{ type = "File", value = ... }`); it does now, and a test loads it.
