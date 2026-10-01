@@ -17,6 +17,10 @@ use std::path::PathBuf;
 #[derive(Parser, Debug)]
 #[command(name = "rlg-report", version, about, long_about = None)]
 struct Cli {
+    /// Print the manual page (roff) and exit.
+    #[arg(long, exclusive = true)]
+    manpage: bool,
+
     /// Print the completion script for SHELL and exit.
     #[arg(long, value_name = "SHELL", exclusive = true)]
     completions: Option<clap_complete::Shell>,
@@ -42,8 +46,14 @@ enum OutputShape {
     Json,
 }
 
-fn main() -> anyhow::Result<()> {
-    let cli = Cli::parse();
+/// Handle `--manpage` and `--completions`: print what clap derives from
+/// the `Cli` definition. Returns whether one of them was asked for.
+fn print_generated(cli: &Cli) -> io::Result<bool> {
+    if cli.manpage {
+        clap_mangen::Man::new(Cli::command())
+            .render(&mut io::stdout())?;
+        return Ok(true);
+    }
     if let Some(shell) = cli.completions {
         clap_complete::generate(
             shell,
@@ -51,6 +61,14 @@ fn main() -> anyhow::Result<()> {
             "rlg-report",
             &mut io::stdout(),
         );
+        return Ok(true);
+    }
+    Ok(false)
+}
+
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+    if print_generated(&cli)? {
         return Ok(());
     }
     let stdin = io::stdin();

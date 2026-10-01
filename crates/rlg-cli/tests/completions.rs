@@ -32,3 +32,12 @@ fn completions_are_exclusive() {
     let out = run(&["--completions", "zsh", "--format", "json"]);
     assert!(!out.status.success());
 }
+
+#[test]
+fn the_manpage_is_generated_from_the_cli() {
+    let out = run(&["--manpage"]);
+    assert!(out.status.success());
+    let page = String::from_utf8(out.stdout).unwrap();
+    assert!(page.contains(".TH rlg 1"), "{page}");
+    assert!(page.contains("format"), "lists the options");
+}

@@ -52,13 +52,18 @@ cargo test --frozen --workspace --config .cargo-vendor.toml
 The tests need no network: the ones that exercise HTTP bind loopback
 sockets (`127.0.0.1`) and talk to themselves.
 
-## Shell completions
+## Installing, manpages and completions
 
-Generate them from the binaries; never ship copies from elsewhere:
+`make DESTDIR="$pkgdir" PREFIX=/usr install` builds the release
+binaries and installs them, their manpages (section 1) and bash, zsh
+and fish completions into an FHS tree; CI checks the staged tree on a
+clean runner. To do it by hand, generate everything from the binaries;
+never ship copies from elsewhere:
 
 ```bash
 rlg --completions bash        > rlg.bash
 rlg-report --completions zsh  > _rlg-report
+rlg --manpage                 > rlg.1
 ```
 
 Supported shells: bash, zsh, fish, elvish, PowerShell. `make completions`

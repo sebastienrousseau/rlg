@@ -86,8 +86,11 @@ cargo install rlg-report   # `rlg-report`: summaries by level, component and mes
 cargo install rlg-mcp      # `rlg-mcp`: log files as tools for AI agents
 ```
 
-Shell completions come from the binaries themselves, for bash, zsh,
-fish, elvish and PowerShell: `rlg --completions zsh > _rlg`.
+From a checkout, `make install` builds the three binaries and installs
+them with their manpages and bash, zsh and fish completions under
+`/usr/local` (`PREFIX` and `DESTDIR` are honoured; `make uninstall`
+reverses it). The binaries generate both themselves:
+`rlg --manpage > rlg.1`, `rlg --completions zsh > _rlg`.
 
 `rlg-mcp` is also published as a container image,
 `ghcr.io/sebastienrousseau/rlg-mcp`, and listed in the MCP registry.

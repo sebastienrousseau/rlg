@@ -30,6 +30,10 @@ but nothing was ever tagged or published under it.
 - `rlg --completions <SHELL>` and `rlg-report --completions <SHELL>`
   print shell completions (bash, zsh, fish, elvish, PowerShell)
   generated from the CLI definition; `make completions` writes them all.
+- `--manpage` on both binaries prints a section-1 manual page generated
+  from the CLI definition, and a `GNUmakefile` adds `make install` /
+  `make uninstall` (honouring `PREFIX` and `DESTDIR`) for the binaries,
+  manpages and completions.
 - A user manual built with mdBook from `docs/` and published at
   <https://doc.rustlogs.com/manual/>, with `ARCHITECTURE.md`,
   `POLICIES.md`, `packaging.md`, `COMPARISON.md` and `BENCHMARKS.md`.

@@ -34,6 +34,8 @@ package() {
     target/release/rlg --completions bash > rlg.bash
     target/release/rlg --completions zsh > _rlg
     target/release/rlg --completions fish > rlg.fish
+    target/release/rlg --manpage > rlg.1
+    install -Dm644 rlg.1 "${pkgdir}/usr/share/man/man1/rlg.1"
     install -Dm644 rlg.bash "${pkgdir}/usr/share/bash-completion/completions/rlg"
     install -Dm644 _rlg "${pkgdir}/usr/share/zsh/site-functions/_rlg"
     install -Dm644 rlg.fish "${pkgdir}/usr/share/fish/vendor_completions.d/rlg.fish"

@@ -48,6 +48,7 @@ version checks. Run it before opening a pull request.
 | Model checking | `cd crates/rlg && cargo kani --all-features` | `kani.yml` |
 | Fuzzing (smoke) | `cd fuzz && cargo +nightly fuzz run <target> -- -max_total_time=60` | `fuzz-smoke.yml` |
 | Examples | `cargo run -p <crate> --example <name>` | `examples-smoke.yml` |
+| Install contract | `make DESTDIR=/tmp/stage install` | `ci.yml` |
 | MCP conformance | `cargo build --release -p rlg-mcp`, then the MCP Inspector | `mcp-inspect.yml` |
 
 ## Where the tests live

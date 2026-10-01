@@ -113,3 +113,45 @@ jobs:
       - run: rustup toolchain install 1.88.0 --profile minimal
       - run: cargo +1.88.0 check --locked --workspace --all-features --lib --bins
 
+  # The GNUmakefile install contract on a clean runner: binaries,
+  # generated manpages and completions land in an FHS tree under
+  # DESTDIR, and uninstall removes every one.
+  install-smoke:
+    name: make install (DESTDIR stage)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make DESTDIR=/tmp/stage install
+      - name: The staged tree is complete
+        run: |
+          set -euo pipefail
+          for f in bin/rlg bin/rlg-report bin/rlg-mcp \
+            share/man/man1/rlg.1 share/man/man1/rlg-report.1 \
+            share/bash-completion/completions/rlg \
+            share/zsh/site-functions/_rlg \
+            share/fish/vendor_completions.d/rlg.fish; do
+            test -s "/tmp/stage/usr/local/$f" || { echo "missing $f"; exit 1; }
+          done
+          /tmp/stage/usr/local/bin/rlg --version
+          man -l /tmp/stage/usr/local/share/man/man1/rlg.1 | head -5
+      - name: Uninstall leaves nothing behind
+        run: |
+          make DESTDIR=/tmp/stage uninstall
+          test -z "$(find /tmp/stage -type f)"
+
+  # The dev container builds and boots to a working `make` (the
+  # release build), so Codespaces and local containers stay usable.
+  devcontainer:
+    name: Dev container boots to make
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          push: never
+          runCmd: make
+

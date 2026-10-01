@@ -154,6 +154,10 @@ criteria = "safe-to-deploy"
 version = "1.1.0"
 criteria = "safe-to-deploy"
 
+[[exemptions.clap_mangen]]
+version = "0.3.3"
+criteria = "safe-to-deploy"
+
 [[exemptions.colorchoice]]
 version = "1.0.5"
 criteria = "safe-to-deploy"
@@ -600,6 +604,10 @@ criteria = "safe-to-deploy"
 
 [[exemptions.rmcp-macros]]
 version = "3.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.roff]]
+version = "1.1.1"
 criteria = "safe-to-deploy"
 
 [[exemptions.rustix]]
