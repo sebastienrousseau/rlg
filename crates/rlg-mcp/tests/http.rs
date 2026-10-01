@@ -35,6 +35,25 @@ fn log_file() -> tempfile::NamedTempFile {
     f
 }
 
+/// A free port below every common ephemeral range (Linux starts at
+/// 32768, macOS at 49152). A port the system hands out for `:0` could
+/// be handed out again to the binary another test starts with
+/// `--port 0`, between this test releasing it and its server binding
+/// it; the readiness probe would then reach that process instead.
+fn free_port_outside_ephemeral_range() -> u16 {
+    use std::sync::atomic::{AtomicU16, Ordering};
+    static NEXT: AtomicU16 = AtomicU16::new(0);
+    let seed = u16::try_from(std::process::id() % 10_000).unwrap_or(0);
+    for _ in 0..10_000 {
+        let offset = NEXT.fetch_add(1, Ordering::Relaxed);
+        let port = 20_000 + (seed + offset) % 10_000;
+        if std::net::TcpListener::bind(("127.0.0.1", port)).is_ok() {
+            return port;
+        }
+    }
+    panic!("no free port in 20000..30000");
+}
+
 /// A server running in-process on its own runtime, stopped when
 /// dropped.
 struct Server {
@@ -65,10 +84,7 @@ impl Server {
     /// Serve on a port the system just handed out and released: the
     /// in-process twin of `--port 0`. `None` if the bind failed.
     fn try_start(transport: &str) -> Option<Self> {
-        let port = std::net::TcpListener::bind("127.0.0.1:0")
-            .and_then(|l| l.local_addr())
-            .expect("free port")
-            .port();
+        let port = free_port_outside_ephemeral_range();
         let args =
             ["--transport", transport, "--port", &port.to_string()]
                 .map(String::from);
