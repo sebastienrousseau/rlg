@@ -128,6 +128,7 @@ Precise multipliers land on the CI-published Criterion report at
 v0.1.0 per Phase 27 (live `rustlogs.com/bench/`).
 
 Expected direction (validated locally):
+
 - **Single-producer case**: ≤0 % regression (sticky shard index +
   same underlying `ArrayQueue` per shard).
 - **4-producer concurrent case**: ≥1.4× throughput (contention on

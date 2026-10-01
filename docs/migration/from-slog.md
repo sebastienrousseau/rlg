@@ -44,7 +44,7 @@ drains it. No migration needed.
 ## Level mapping
 
 | slog | rlg |
-|---|---|
+| --- | --- |
 | `trace!` | `Log::trace` |
 | `debug!` | `Log::debug` |
 | `info!` | `Log::info` |

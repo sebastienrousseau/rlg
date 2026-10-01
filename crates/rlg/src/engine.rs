@@ -98,6 +98,62 @@ impl fmt::Debug for LockFreeEngine {
 pub static ENGINE: LazyLock<LockFreeEngine> =
     LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
+/// Start the `rlg-flusher` thread over `queue`.
+#[cfg(not(miri))]
+fn spawn_flusher(
+    queue: Arc<ShardedQueue>,
+    shutdown: Arc<AtomicBool>,
+) -> thread::JoinHandle<()> {
+    // Lightweight OS thread: runtime agnostic.
+    thread::Builder::new()
+        .name("rlg-flusher".into())
+        .spawn(move || run_flusher(&queue, &shutdown))
+        .expect("Failed to spawn rlg-flusher background thread")
+}
+
+/// The flusher loop: drain a batch, format and emit it, and stop once
+/// shutdown is flagged and the queue is empty.
+#[cfg(not(miri))]
+fn run_flusher(queue: &ShardedQueue, shutdown: &AtomicBool) {
+    let mut sink = PlatformSink::native();
+    let mut fmt_buf = Vec::with_capacity(512);
+    loop {
+        let mut batch: [Option<LogEvent>; MAX_DRAIN_BATCH_SIZE] =
+            std::array::from_fn(|_| None);
+        drain_into(queue, &mut batch);
+        for event in batch.iter().flatten() {
+            emit(&mut sink, &mut fmt_buf, event);
+        }
+        if shutdown.load(Ordering::Relaxed) && queue.is_empty() {
+            break;
+        }
+        // Park briefly as fallback; real wakeup comes from unpark() in ingest().
+        thread::park_timeout(Duration::from_millis(5));
+    }
+}
+
+/// Fill `batch` from the front with queued events until either runs out.
+#[cfg(not(miri))]
+fn drain_into(queue: &ShardedQueue, batch: &mut [Option<LogEvent>]) {
+    for slot in batch {
+        let Some(event) = queue.pop() else { break };
+        *slot = Some(event);
+    }
+}
+
+/// Format one event into `fmt_buf` and hand it to the sink.
+#[cfg(not(miri))]
+fn emit(
+    sink: &mut PlatformSink,
+    fmt_buf: &mut Vec<u8>,
+    event: &LogEvent,
+) {
+    use std::io::Write;
+    fmt_buf.clear();
+    let _ = writeln!(fmt_buf, "{}", event.log);
+    sink.emit(event.level.as_str(), fmt_buf);
+}
+
 impl LockFreeEngine {
     /// Create a new engine with the given buffer capacity and spawn the flusher.
     ///
@@ -115,51 +171,10 @@ impl LockFreeEngine {
         // "main thread terminated without waiting" errors.
         #[cfg(not(miri))]
         let flusher_handle = {
-            let flusher_queue = queue.clone();
-            let flusher_shutdown = shutdown_flag.clone();
-
-            // Spawn lightweight OS thread (Runtime Agnostic)
-            let handle = thread::Builder::new()
-                .name("rlg-flusher".into())
-                .spawn(move || {
-                    use std::io::Write;
-                    let mut sink = PlatformSink::native();
-                    let mut fmt_buf = Vec::with_capacity(512);
-
-                    loop {
-                        let mut batch: [Option<LogEvent>;
-                            MAX_DRAIN_BATCH_SIZE] =
-                            std::array::from_fn(|_| None);
-                        let mut count = 0;
-                        while count < MAX_DRAIN_BATCH_SIZE {
-                            match flusher_queue.pop() {
-                                Some(event) => {
-                                    batch[count] = Some(event);
-                                    count += 1;
-                                }
-                                None => break,
-                            }
-                        }
-                        for event in batch.iter().flatten() {
-                            fmt_buf.clear();
-                            let _ = writeln!(fmt_buf, "{}", event.log);
-                            sink.emit(event.level.as_str(), &fmt_buf);
-                        }
-
-                        if flusher_shutdown.load(Ordering::Relaxed)
-                            && flusher_queue.is_empty()
-                        {
-                            break;
-                        }
-
-                        // Park briefly as fallback; real wakeup comes from unpark() in ingest().
-                        thread::park_timeout(Duration::from_millis(5));
-                    }
-                })
-                .expect(
-                    "Failed to spawn rlg-flusher background thread",
-                );
-
+            let handle = spawn_flusher(
+                Arc::clone(&queue),
+                Arc::clone(&shutdown_flag),
+            );
             // Spawn the TUI dashboard thread if RLG_TUI=1
             if std::env::var("RLG_TUI").is_ok_and(|v| v == "1") {
                 spawn_tui_thread(
@@ -167,7 +182,6 @@ impl LockFreeEngine {
                     shutdown_flag.clone(),
                 );
             }
-
             Some(handle)
         };
 

@@ -25,7 +25,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - uses: taiki-e/install-action@v2.86.5
+      - uses: taiki-e/install-action@v2.87.15
         with:
           tool: cargo-criterion
 
@@ -44,6 +44,9 @@ jobs:
           RLG_FALLBACK_STDOUT: "1"
         run: |
           set -euo pipefail
+          # Nothing is built before this step, so target/ does not exist
+          # yet; without it every redirect below fails before cargo runs.
+          mkdir -p target
           for manifest in crates/*/Cargo.toml; do
             crate="$(basename "$(dirname "$manifest")")"
             # xtask has no benches; skip.
@@ -60,10 +63,16 @@ jobs:
             echo "::endgroup::"
           done
 
+      # Artifact names may not contain "/", which a branch name can
+      # (feat/v0.0.13); a tag like v0.0.13 is unchanged.
+      - name: Name the artifacts after the ref
+        id: ref
+        run: echo "name=${GITHUB_REF_NAME//\//-}" >> "$GITHUB_OUTPUT"
+
       - name: Upload Criterion HTML report bundle
         uses: actions/upload-artifact@v7
         with:
-          name: criterion-${{ github.ref_name }}
+          name: criterion-${{ steps.ref.outputs.name }}
           path: target/criterion/
           if-no-files-found: warn
           retention-days: 90
@@ -71,7 +80,7 @@ jobs:
       - name: Upload machine-readable summary
         uses: actions/upload-artifact@v7
         with:
-          name: criterion-summary-${{ github.ref_name }}
+          name: criterion-summary-${{ steps.ref.outputs.name }}
           path: target/criterion-*.jsonl
           if-no-files-found: warn
           retention-days: 90

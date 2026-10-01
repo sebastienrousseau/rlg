@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.11"
+rlg = "0.0.13"
 ```
 
 ### Build from source
@@ -79,16 +79,15 @@ the application needs.
 
 | Feature | Pulls in | Adds | Documented in |
 | :--- | :--- | :--- | :--- |
-| `tokio` | `tokio` + `notify` | `Config::load_async`, file-watcher hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
+| `tokio` | `tokio` | `Config::load_async`, polling hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
 | `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
-| `miette` | `miette` 7 | Pretty diagnostic error reports | [Library reference](#capabilities-in-0011) |
 | `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups | [Bridging existing facades](#bridging-existing-facades) |
 | `debug_enabled` | — | Verbose internal engine diagnostics | — |
 
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.11", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.13", features = ["tokio", "tracing-layer"] }
 ```
 
 ---
@@ -119,9 +118,9 @@ Output (MCP / JSON-RPC 2.0 notification):
 {"jsonrpc":"2.0","method":"notifications/log","params":{"data":{"attributes":{"caller":"src/main.rs:9","session_uuid":"a1b2c3d4","user_id":42},"component":"auth-service","description":"User authenticated","session_id":1,"time":"2026-05-29T22:18:04.123456789Z"},"level":"info"}}
 ```
 
-The default ingestion path runs in **~1.4 µs** — `Log::fire()`
-pushes a fully-built event into the `crossbeam::ArrayQueue` and
-returns. A dedicated flusher thread picks the event up, runs the
+`Log::fire()` pushes a fully-built event into the ring buffer and
+returns; on a GitHub-hosted runner that costs about 0.6 µs per
+record ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)). A dedicated flusher thread picks the event up, runs the
 chosen `LogFormat`'s `Display` impl, and dispatches to the
 configured `PlatformSink`.
 
@@ -134,8 +133,8 @@ rlg targets the niche `log` / `tracing` / `env_logger` /
 threads, route them somewhere durable — and is written
 **lock-free on the hot path** against the LMAX Disruptor
 pattern. The engine runs MIRI-clean under
-`-Zmiri-tree-borrows`; 99.07 % of source lines and 99.30 % of
-functions are covered by tests.
+`-Zmiri-tree-borrows`, and CI fails any change that takes
+workspace line coverage below 95%.
 
 Two architectural choices motivate the design:
 
@@ -145,11 +144,13 @@ Two architectural choices motivate the design:
    metrics counter, and push into the ring buffer. The
    serialisation (`fmt_json`, `fmt_mcp`, `fmt_otlp`, …) and the
    `os_log` / `journald` / `write_all` syscalls all run on the
-   flusher thread, off the caller's critical path. The pattern
-   that mainstream Rust loggers use — *take a Mutex, format
-   into a String, write to a Writer* — is ~20 µs at p50 and
-   pathologically variable under contention. rlg measures
-   ~1.4 µs at p50 with no Mutex anywhere on the hot path.
+   flusher thread, off the caller's critical path, with no
+   Mutex anywhere on the hot path. What that buys is the I/O:
+   the caller never waits on a sink's syscalls. It is not a
+   cheaper call in isolation: in the published benchmarks
+   `fire()` costs about what `tracing::info!` does on the
+   calling thread (598 ns against 591 ns) while `tracing`
+   formats the event there ([benchmarks](https://doc.rustlogs.com/manual/BENCHMARKS.html)).
 
 2. **POSIX `syslog(3)` for the macOS sink, not `_os_log_impl`.**
    Apple's `os_log` macro expands into a binary-trailer
@@ -182,9 +183,10 @@ A few features built on top of those choices:
 The runtime default profile carries **seven runtime crates**
 plus the well-vetted `serde` family. Disabling all optional
 features keeps the engine compiling to the same seven; the
-`tokio` runtime, `terminal_size` for the TUI, `miette` for
-diagnostics, and `tracing-subscriber` for the layer bridge
-are strictly opt-in.
+`tokio` runtime, `terminal_size` for the TUI and
+`tracing-subscriber` for the layer bridge are strictly opt-in.
+Diagnostic codes and help text (`RlgError::code`, `help`,
+`report`) are built in, with no extra dependency.
 
 ---
 
@@ -213,14 +215,15 @@ are strictly opt-in.
   `spanId` / `traceId` so an `otelcol` pipeline picks up rlg
   records without an adapter.
 - **TOML configuration with hot-reload.** `Config::load_async`
-  + the `notify` file watcher (behind the `tokio` feature)
-  picks up `/etc/rlg.toml` mutations without a restart.
+  and `Config::hot_reload_async` (behind the `tokio` feature)
+  polls `/etc/rlg.toml` and picks up edits, including
+  editor-style atomic replaces, without a restart.
 - **Bridges for `log` and `tracing`.** `rlg::init()`
   installs a `log::Log` implementation; the `tracing-layer`
   feature exposes a `tracing_subscriber::Layer` you can stack
   with the rest of your subscriber.
-- **99.07 % line coverage.** Measured by `cargo llvm-cov`.
-  Run on every PR via the centralised
+- **A 95% line-coverage floor.** Measured by `cargo tarpaulin`
+  on every PR via the centralised
   [`sebastienrousseau/pipelines`](https://github.com/sebastienrousseau/pipelines)
   reusable workflows.
 
@@ -312,16 +315,14 @@ unset environment is valid.
 # rlg.toml
 version              = "1.0"
 profile              = "production"
+log_file_path        = "/var/log/rlg.log"
 log_level            = "INFO"
 log_format           = "%level - %message"
 logging_destinations = [
-    { type = "file",   path = "/var/log/rlg.log" },
-    { type = "stdout" },
+    { type = "File", value = "/var/log/rlg.log" },
+    { type = "Stdout" },
 ]
-
-[log_rotation]
-type      = "size"
-threshold = 10485760            # 10 MiB
+log_rotation         = { Size = 10485760 }  # 10 MiB
 ```
 
 ```rust,ignore
@@ -501,7 +502,7 @@ signed-commit policy and PR flow.
   call with a static `c"%s"` format string and exactly one
   argument — no varargs UB, no
   `_os_log_impl`-style private-symbol calls.
-- 99.07 % line coverage on the engine path, including the
+- Tests cover the engine path, including the
   concurrent queue retry, the shutdown idempotency, and the
   `OsLog` priority mapping.
 
@@ -527,11 +528,11 @@ for security problems.
 
 | Document | Covers |
 | :--- | :--- |
-| [`doc/introduction.md`](doc/introduction.md) | Motivation and design overview. |
-| [`doc/tutorials/getting-started.md`](doc/tutorials/getting-started.md) | Step-by-step first integration. |
-| [`doc/how-to/fluent-api.md`](doc/how-to/fluent-api.md) | Building entries with the fluent builder. |
-| [`doc/explanation/engine-design.md`](doc/explanation/engine-design.md) | LMAX Disruptor pattern as applied in rlg. |
-| [`doc/explanation/safety.md`](doc/explanation/safety.md) | UB-free FFI design, MIRI posture. |
+| [Introduction](https://doc.rustlogs.com/manual/introduction.html) | Motivation and design overview. |
+| [Getting started](https://doc.rustlogs.com/manual/tutorials/getting-started.html) | Step-by-step first integration. |
+| [The fluent API](https://doc.rustlogs.com/manual/how-to/fluent-api.html) | Building entries with the fluent builder. |
+| [Engine design](https://doc.rustlogs.com/manual/explanation/engine-design.html) | LMAX Disruptor pattern as applied in rlg. |
+| [Safety: Miri and FFI](https://doc.rustlogs.com/manual/explanation/safety.html) | UB-free FFI design, MIRI posture. |
 | [`SECURITY.md`](../../SECURITY.md) | Disclosure policy, supported versions, contact. |
 | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) | Signed-commit policy, PR guidelines, local-test recipe. |
 

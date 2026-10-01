@@ -52,7 +52,7 @@ See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-r
 Four `cargo-fuzz` targets cover the deserialisation and scan entry points that accept untrusted input:
 
 | Target | Exercises |
-|---|---|
+| --- | --- |
 | `parse_record` | `rlg_cli::parse_record` |
 | `log_format_from_str` | `<LogFormat as FromStr>::from_str` |
 | `config_load` | `toml::from_str::<Config>` |
@@ -109,6 +109,15 @@ cargo vet certify <crate> <version> safe-to-deploy
 ```
 
 Strategy and bootstrap exemptions policy in [`docs/adr/0006-cargo-vet-adoption.md`](docs/adr/0006-cargo-vet-adoption.md).
+
+### Complexity ceilings
+
+Production code (`crates/*/src`, outside `#[cfg(test)]` modules) is held to: cyclomatic ≤ 10, cognitive ≤ 15, Halstead difficulty ≤ 30 and ≤ 60 lines per function, and ≤ 500 lines per file. Code over a ceiling today is listed in [`scripts/complexity-baseline.json`](scripts/complexity-baseline.json); CI fails on a new offender or a baselined one getting worse.
+
+```bash
+scripts/complexity-gate.py            # needs rust-code-analysis-cli 0.0.25
+scripts/complexity-gate.py --update   # after shrinking an offender, record it
+```
 
 ## Cryptographic Signing — Mandatory
 

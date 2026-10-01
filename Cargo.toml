@@ -39,7 +39,7 @@ incremental = false
 lto = true
 # Optimize for speed (3) over size ("s"). The ingestion path is a
 # hot library surface — `Log::fire()` dispatches through an
-# `ArrayQueue::push` in ~1.4 µs, and the per-format `Display`
+# `ArrayQueue::push`, and the per-format `Display`
 # implementations get fully inlined and vectorized at opt-level 3.
 opt-level = 3
 # Keep overflow checks: the engine handles caller-supplied

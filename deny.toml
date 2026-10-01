@@ -7,15 +7,15 @@
 # Every license the transitive tree may carry. Anything else fails
 # the build. Enterprise adopters diff this list against their own
 # licence policy.
+#
+# Pruned to the licences the tree actually carries: an entry no crate
+# uses is a pre-approval nobody reviewed. A dependency under another
+# licence fails CI until it is added here on purpose.
 allow = [
     "MIT",
     "Apache-2.0",
-    "Unicode-DFS-2016",
     "Unicode-3.0",
-    "ISC",
-    "CC0-1.0",
     "BSL-1.0",
-    "Zlib",
     "Unlicense",
     "BSD-3-Clause",
 ]
@@ -30,6 +30,10 @@ highlight = "all"
 # Wildcard-version dependencies are disallowed workspace-wide.
 # `Cargo.toml` must pin each dep to a concrete version range.
 wildcards = "deny"
+# Except path-only dependencies between workspace crates. The one in
+# use is `rlg`'s dev-dependency on `rlg-cli`, which `cargo publish`
+# strips, so no published manifest carries a wildcard.
+allow-wildcard-paths = true
 
 # Documented duplicate exemptions. Each entry must justify itself —
 # not a dumping ground.
@@ -43,10 +47,12 @@ skip = [
     { name = "serde_spanned", version = "0.6.*" },
     { name = "winnow", version = "0.7.*" },
 
-    # `hashbrown` duplicates cascade through the whole ecosystem
-    # (indexmap, config, criterion). Ubiquitous transitively;
-    # unavoidable until every upstream converges on hashbrown 0.16.
-    { name = "hashbrown", version = "0.14.*" },
+    # `syn` is mid-migration from 2 to 3 across the ecosystem:
+    # `clap_derive` and `darling` (behind the MCP SDK's macros) are on
+    # 3, while `tokio-macros`, `tracing-attributes`, `async-trait`,
+    # `zerocopy-derive` and other proc macros are still on 2. Both are
+    # build-time only. Drop this once the 2.x dependents move.
+    { name = "syn", version = "2.*" },
 ]
 
 skip-tree = []
@@ -66,7 +72,14 @@ deny = [
     # C locale path. rlg uses `jiff` or in-house datetime helpers
     # (`crates/rlg/src/datetime.rs`). Any transitive chrono
     # introduction is worth pausing over.
-    { name = "chrono" },
+    #
+    # The wrappers allowed are `rmcp`, the official MCP SDK behind
+    # `rlg-mcp`, which depends on chrono unconditionally for protocol
+    # timestamps — with `default-features = false`, so the C locale
+    # path is not compiled — and `schemars`, whose `chrono04` feature
+    # rmcp turns on for the schemas it derives. Nothing else may pull
+    # it in.
+    { name = "chrono", wrappers = ["rmcp", "schemars"] },
 ]
 
 [sources]

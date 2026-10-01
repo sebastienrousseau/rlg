@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use rlg in your work, please cite it as below."
+title: "rlg: a near-lock-free structured logging library for Rust"
+type: software
+authors:
+  - family-names: Rousseau
+    given-names: Sebastien
+repository-code: "https://github.com/sebastienrousseau/rlg"
+url: "https://rustlogs.com/"
+license:
+  - Apache-2.0
+  - MIT
+version: 0.0.13
+keywords:
+  - logging
+  - rust
+  - structured-logging
+  - observability
+  - mcp

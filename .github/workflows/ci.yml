@@ -29,6 +29,36 @@ jobs:
       type: rust
       redirect-crate: rlg
 
+  # The shared security workflow runs `cargo deny check` with
+  # `continue-on-error: true`, so a policy violation there never
+  # fails the build. This job is the enforcing gate for deny.toml.
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The action's default arguments are --all-features, so every
+      # optional dependency is held to deny.toml too.
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
+
+  # Per-function and per-file complexity ceilings, held against the
+  # committed baseline in scripts/complexity-baseline.json: no new
+  # offenders, and no baselined offender may get worse.
+  complexity:
+    name: Complexity ceilings
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The version the baseline was measured with; bump both together.
+      - uses: taiki-e/install-action@v2.87.15
+        with:
+          tool: rust-code-analysis-cli@0.0.25
+      - run: scripts/complexity-gate.py
+
   mcp-manifests:
     name: MCP manifests name the shipped version
     runs-on: ubuntu-latest
@@ -37,3 +67,126 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: scripts/check-mcp-manifests.sh
+
+  doc-versions:
+    name: README template and install snippets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/check-doc-versions.sh
+      - name: README follows the template
+        run: scripts/check-readme.py
+
+  # Markdown lint, the user manual build, and a link check over it.
+  docs-lint:
+    name: Docs lint, manual and links
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: "**/*.md"
+      - uses: taiki-e/install-action@v2.87.15
+        with:
+          tool: mdbook@0.5.4
+      - name: Build the user manual
+        run: mdbook build
+      - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --no-progress --exclude-path target/book/404.html target/book README.md
+          fail: true
+
+  # The declared minimum supported Rust version (rust-version) builds
+  # every library and binary. Tests may need newer toolchains through
+  # dev-dependencies; see docs/POLICIES.md.
+  msrv:
+    name: MSRV (1.88.0) builds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install 1.88.0 --profile minimal
+      - run: cargo +1.88.0 check --locked --workspace --all-features --lib --bins
+
+  # The GNUmakefile install contract on a clean runner: binaries,
+  # generated manpages and completions land in an FHS tree under
+  # DESTDIR, and uninstall removes every one.
+  install-smoke:
+    name: make install (DESTDIR stage)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make DESTDIR=/tmp/stage install
+      - name: The staged tree is complete
+        run: |
+          set -euo pipefail
+          for f in bin/rlg bin/rlg-report bin/rlg-mcp \
+            share/man/man1/rlg.1 share/man/man1/rlg-report.1 \
+            share/bash-completion/completions/rlg \
+            share/zsh/site-functions/_rlg \
+            share/fish/vendor_completions.d/rlg.fish; do
+            test -s "/tmp/stage/usr/local/$f" || { echo "missing $f"; exit 1; }
+          done
+          /tmp/stage/usr/local/bin/rlg --version
+          man -l /tmp/stage/usr/local/share/man/man1/rlg.1 | head -5
+      - name: Uninstall leaves nothing behind
+        run: |
+          make DESTDIR=/tmp/stage uninstall
+          test -z "$(find /tmp/stage -type f)"
+
+  # The dev container builds and boots to a working `make` (the
+  # release build), so Codespaces and local containers stay usable.
+  devcontainer:
+    name: Dev container boots to make
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          push: never
+          runCmd: make
+
+  # The crate archives crates.io receives are reproducible: packaging
+  # the workspace in two separate checkouts gives identical bytes.
+  reproducible-packages:
+    name: Reproducible crate packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: a
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: b
+      - name: Package twice and compare
+        run: |
+          set -euo pipefail
+          for d in a b; do
+            (cd "$d" && cargo package --locked --workspace --exclude xtask --no-verify -q)
+            (cd "$d/target/package" && sha256sum *.crate) > "$d.sums"
+          done
+          cat a.sums
+          diff a.sums b.sums
+
+  # rlg falls back to stdout or a file where there is no os_log or
+  # journald; this keeps every library and binary building on Windows.
+  windows:
+    name: Windows builds
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: cargo clippy --locked --workspace --all-features --lib --bins -- -D warnings
+

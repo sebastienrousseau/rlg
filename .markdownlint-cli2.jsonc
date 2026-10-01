@@ -1,0 +1,21 @@
+// markdownlint configuration (npx markdownlint-cli2, run in CI).
+{
+  "config": {
+    // Tables, URLs and long code references cannot wrap.
+    "MD013": false,
+    // The README template (README-TEMPLATE.md) mandates a centred header
+    // built from these elements; anything else is still flagged.
+    "MD033": {
+      "allowed_elements": ["p", "img", "h1", "a", "br", "code", "details", "summary", "sub", "sup", "kbd"]
+    },
+    // Files open with an SPDX comment on line 1, before the heading.
+    "MD041": false,
+    // Keep-a-Changelog repeats "### Added" under each release.
+    "MD024": { "siblings_only": true },
+    // The README template's Contents block groups links under bold
+    // labels ("**Getting started**"), which this rule reads as headings.
+    "MD036": false
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["target/**", "fuzz/target/**", "**/node_modules/**"]
+}

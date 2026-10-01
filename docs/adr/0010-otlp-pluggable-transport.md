@@ -2,7 +2,9 @@
 
 # ADR 0010 — OTLP Pluggable Transport (Phase 19a: reliability primitives)
 
-- **Status:** Accepted
+- **Status:** Accepted. The 19b (`reqwest`) and 19c (`tonic`)
+  transport choices are superseded by ADR 0015; the 19a
+  reliability primitives stand.
 - **Date:** 2026-07-05
 - **Phase:** 19a (per `docs/IMPLEMENTATION-PLAN-v0.1.0.md`)
 - **Deciders:** repository maintainers

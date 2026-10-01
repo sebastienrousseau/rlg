@@ -15,7 +15,7 @@ the OSS-Fuzz onboarding runbook.
 ## Targets
 
 | Target | Exercises |
-|---|---|
+| --- | --- |
 | `parse_record` | `rlg_cli::parse_record` — one JSON-shape record per line |
 | `log_format_from_str` | `<LogFormat as FromStr>::from_str` — the 14 variants |
 | `config_load` | `toml::from_str::<Config>` — the config file parser |

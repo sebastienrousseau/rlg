@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/sebastienrousseau/rlg/security/advisories/new
+    about: Report privately, never in a public issue. See SECURITY.md.
+  - name: Read the documentation
+    url: https://docs.rs/rlg
+    about: API reference; the user manual and SUPPORT.md say where else to look.

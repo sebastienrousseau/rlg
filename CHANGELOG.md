@@ -7,8 +7,111 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.13] — unreleased
+
+The **smaller-tree** cut. rlg-mcp moves onto the official MCP SDK and
+serves stdio, streamable HTTP and the older HTTP+SSE transport; the
+optional dependencies that failed `cargo deny --all-features` (miette,
+notify, reqwest, tonic) are replaced by in-house code or removed, taking
+107 crates out of the lockfile; and the repository gains the gates that
+keep it that way: an enforcing cargo-deny job over all features, a
+complexity baseline, and a check that install snippets name the shipped
+version.
+
+Workspace-lockstep versioning: all 10 publishable crates are at
+`0.0.13`. `xtask` stays at `0.0.0`.
+
+This is the first `0.0.13` on crates.io. The number was used briefly
+for an internal dependency batch before 0.0.12 (see the note there),
+but nothing was ever tagged or published under it.
+
+### Added
+
+- `rlg --completions <SHELL>` and `rlg-report --completions <SHELL>`
+  print shell completions (bash, zsh, fish, elvish, PowerShell)
+  generated from the CLI definition; `make completions` writes them all.
+- `--manpage` on both binaries prints a section-1 manual page generated
+  from the CLI definition, and a `GNUmakefile` adds `make install` /
+  `make uninstall` (honouring `PREFIX` and `DESTDIR`) for the binaries,
+  manpages and completions.
+- A user manual built with mdBook from `docs/` and published at
+  <https://doc.rustlogs.com/manual/>, with `ARCHITECTURE.md`,
+  `POLICIES.md`, `packaging.md`, `COMPARISON.md` and `BENCHMARKS.md`.
+- CI gates: the 1.88.0 MSRV build, markdownlint, an offline link check
+  of the manual and README, the README template, and OpenSSF Scorecard.
+- `rlg-mcp` runs on the official MCP SDK (`rmcp`) and serves stdio (the
+  default), streamable HTTP (`--transport streamable-http`) or the older
+  HTTP+SSE transport (`--transport sse`), covering protocol revisions
+  2024-11-05 through 2026-07-28.
+- `RlgError::code`, `RlgError::help` and `RlgError::report`: stable error
+  codes (`rlg::io_error`, …), a resolution hint, and a multi-line report,
+  with no extra dependency.
+- `rlg_otlp::DEFAULT_ENDPOINT` (`http://localhost:4318/v1/logs`), and
+  `OtlpError::InvalidEndpoint` / `OtlpError::InvalidHeader`.
+- CI runs `cargo deny --all-features check` as a failing gate. The shared
+  security workflow's run is `continue-on-error`, so policy violations
+  had gone unreported.
+
+### Changed
+
+- `fire()` is about 40% cheaper on the calling thread: the timestamp and
+  the `caller` attribute are no longer formatted through `format!`.
+  Output is byte-identical. In CI it went from 2.4x to about 1.0x the
+  cost of `tracing::info!` measured in the same run.
+- `rlg-otlp` sends plain OTLP/HTTP to a local OpenTelemetry Collector,
+  which owns TLS and credentials towards the backend
+  ([ADR 0015](docs/adr/0015-otlp-local-collector-transport.md)).
+  `AsyncOtlpExporter` now runs on an in-house HTTP/1.1 client over Tokio
+  instead of `reqwest`, and rejects `https://` endpoints and unsafe
+  headers at `build()`. Both builders default to `DEFAULT_ENDPOINT`
+  instead of panicking when no endpoint is set. **Breaking:**
+  `OtlpError::AsyncTransport` wraps `std::io::Error`. Deployments that
+  exported straight to a SaaS `https://` endpoint must add a Collector;
+  the crate docs carry a minimal configuration.
+- `Config::hot_reload_async` polls the file (`HOT_RELOAD_POLL_INTERVAL`,
+  250 ms) instead of using `notify`, and now also picks up editor-style
+  saves that rename a new file over the old one. **Breaking:**
+  `ConfigError::WatcherError` wraps `std::io::Error`.
+- rlg builds `config` with the TOML format only; YAML, JSON5, RON and INI
+  parsers it never used are no longer compiled.
+
+### Removed
+
+- The `rlg-otlp` `grpc` feature, `GrpcOtlpExporter` and its error
+  variants. It was a scaffold whose send path returned
+  `GrpcNotImplemented`; collectors accept OTLP/HTTP on port 4318.
+- The `rlg` `miette` feature; use `RlgError::code`, `help` and `report`.
+- `reqwest`, `tonic`, `prost`, `rustls`, `ring`, `webpki-roots`,
+  `miette` and `notify` from the dependency tree (82 crates in all).
+
 ### Fixed
 
+- `rlg` did not compile on Windows: the stand-in for the Unix socket type
+  lacked the documentation the crate requires. It builds again, and CI now
+  checks every library and binary on Windows.
+- The configuration example in the `rlg` README did not load
+  (`LogRotation` and `LoggingDestination` use `{ Size = N }` and
+  `{ type = "File", value = ... }`); it does now, and a test loads it.
+- `bench-publish.yml` never ran a benchmark: its output directory did
+  not exist and the error was swallowed. Release benchmarks now run and
+  publish.
+- The `rlg` README and crate docs claimed `fire()` takes ~1.4 µs against
+  ~20 µs for mainstream loggers. Measured in CI it is ~0.85 µs, and
+  `tracing` formatting to a discarding writer is ~0.35 µs; the claims
+  are replaced by the published numbers.
+- `.github/SECURITY.md`, the copy GitHub shows first, was a template
+  with no reporting channel; the real policy is now the one shown.
+- `PKGBUILD` said 0.0.7 and `debian/debcargo.toml` named a feature that
+  does not exist; both are fixed and the `PKGBUILD` version is CI-checked.
+- Install snippets in thirteen places (every crate README, the getting
+  started tutorial, the introduction and the tracing migration guide)
+  named 0.0.11 or 0.0.7. They name 0.0.12, and
+  `scripts/check-doc-versions.sh` fails CI when a snippet drifts from
+  `crates/rlg/Cargo.toml` again.
+- The blocking OTLP exporter retried 4xx responses and reported every
+  failing status as a transport error: ureq returned non-2xx as errors,
+  so the status handling never ran. A 4xx is now final and statuses are
+  reported as `OtlpError::BadStatus`.
 - `glama.json` and `server.json` named 0.0.11 while the workspace shipped
   0.0.12, so the Glama listing and the registry's install command pointed
   at the previous image. Both are stamped, the README's lockstep line with

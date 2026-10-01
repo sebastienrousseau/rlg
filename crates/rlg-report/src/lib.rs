@@ -94,37 +94,42 @@ impl Report {
                 report.unparseable += 1;
                 continue;
             };
-            report.total += 1;
-            *report
-                .count_by_level
-                .entry(record.level.to_string())
-                .or_insert(0) += 1;
-            *report
-                .count_by_component
-                .entry(record.component.to_string())
-                .or_insert(0) += 1;
-            *descriptions
-                .entry(record.description.clone())
-                .or_insert(0) += 1;
-            for key in ["latency_ms", "http.latency_ms"] {
-                if let Some(v) = record.attributes.get(key)
-                    && let Some(ms) = v.as_u64()
-                {
-                    latencies.push(ms);
-                }
-            }
+            report.tally(&record, &mut descriptions, &mut latencies);
         }
 
-        let mut top: Vec<(String, u64)> =
-            descriptions.into_iter().collect();
-        top.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
-        top.truncate(top_n);
-        report.top_descriptions = top;
+        report.top_descriptions = most_frequent(descriptions, top_n);
 
         if !latencies.is_empty() {
             report.latency = Some(percentiles(&mut latencies));
         }
         report
+    }
+
+    /// Count one parsed record: its level, component and description,
+    /// and any latency attribute it carries.
+    fn tally(
+        &mut self,
+        record: &rlg::log::Log,
+        descriptions: &mut BTreeMap<String, u64>,
+        latencies: &mut Vec<u64>,
+    ) {
+        self.total += 1;
+        *self
+            .count_by_level
+            .entry(record.level.to_string())
+            .or_insert(0) += 1;
+        *self
+            .count_by_component
+            .entry(record.component.to_string())
+            .or_insert(0) += 1;
+        *descriptions.entry(record.description.clone()).or_insert(0) +=
+            1;
+        latencies.extend(
+            ["latency_ms", "http.latency_ms"]
+                .iter()
+                .filter_map(|key| record.attributes.get(*key))
+                .filter_map(serde_json::Value::as_u64),
+        );
     }
 
     /// Render the report as a human-readable text table.
@@ -220,6 +225,18 @@ fn percentiles(values: &mut [u64]) -> LatencyStats {
     }
 }
 
+/// The `n` most frequent descriptions, most frequent first; ties in
+/// alphabetical order.
+fn most_frequent(
+    counts: BTreeMap<String, u64>,
+    n: usize,
+) -> Vec<(String, u64)> {
+    let mut top: Vec<(String, u64)> = counts.into_iter().collect();
+    top.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    top.truncate(n);
+    top
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -267,6 +284,22 @@ mod tests {
         // "boom" appears twice, "hi" and "crash" once each.
         assert_eq!(r.top_descriptions[0].0, "boom");
         assert_eq!(r.top_descriptions[0].1, 2);
+    }
+
+    #[test]
+    fn ties_rank_alphabetically_and_both_latency_keys_count() {
+        const BOTH: &str = r#"{"session_id":6,"time":"t","level":"INFO","component":"api","description":"alpha","format":"JSON","attributes":{"latency_ms":5,"http.latency_ms":7,"other":9}}"#;
+        let r =
+            Report::from_lines_with_top([FATAL, HTTP, BOTH, INFO], 3);
+        let names: Vec<&str> = r
+            .top_descriptions
+            .iter()
+            .map(|(d, _)| d.as_str())
+            .collect();
+        assert_eq!(names, ["GET /", "alpha", "crash"]);
+        let latency = r.latency.expect("latency samples");
+        assert_eq!(latency.samples, 3);
+        assert_eq!(latency.p50, 7);
     }
 
     #[test]

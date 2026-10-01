@@ -1,6 +1,6 @@
 # Maintainer: Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>
 pkgname=rust-rlg
-pkgver=0.0.7
+pkgver=0.0.13
 pkgrel=1
 pkgdesc="Brutalist, lock-free observability engine with AI-native telemetry support"
 arch=('x86_64' 'aarch64')
@@ -30,6 +30,15 @@ check() {
 package() {
     cd "rlg-${pkgver}"
     install -Dm755 "target/release/rlg" "${pkgdir}/usr/bin/rlg"
+    # Completions come from the binary, generated from its CLI definition.
+    target/release/rlg --completions bash > rlg.bash
+    target/release/rlg --completions zsh > _rlg
+    target/release/rlg --completions fish > rlg.fish
+    target/release/rlg --manpage > rlg.1
+    install -Dm644 rlg.1 "${pkgdir}/usr/share/man/man1/rlg.1"
+    install -Dm644 rlg.bash "${pkgdir}/usr/share/bash-completion/completions/rlg"
+    install -Dm644 _rlg "${pkgdir}/usr/share/zsh/site-functions/_rlg"
+    install -Dm644 rlg.fish "${pkgdir}/usr/share/fish/vendor_completions.d/rlg.fish"
     install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
     install -Dm644 "LICENSE-MIT" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE-MIT"
     install -Dm644 "LICENSE-APACHE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE-APACHE"

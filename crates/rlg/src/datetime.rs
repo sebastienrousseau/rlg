@@ -42,6 +42,14 @@ pub fn parse_iso8601(s: &str) -> RlgResult<String> {
 
 fn validate(s: &str) -> Result<(), &'static str> {
     let bytes = s.as_bytes();
+    validate_date_time(bytes)?;
+    // Optional fractional seconds, then mandatory zone designator.
+    let zone = skip_fraction(bytes, 19)?;
+    validate_zone(bytes, zone)
+}
+
+/// `YYYY-MM-DDTHH:MM:SS`, the fixed-width head every timestamp has.
+fn validate_date_time(bytes: &[u8]) -> Result<(), &'static str> {
     if bytes.len() < 20 {
         return Err("too short");
     }
@@ -54,18 +62,29 @@ fn validate(s: &str) -> Result<(), &'static str> {
     if !is_hms(&bytes[11..19]) {
         return Err("invalid time");
     }
-    // Optional fractional seconds, then mandatory zone designator.
-    let mut i = 19usize;
-    if bytes.get(i) == Some(&b'.') {
-        i += 1;
-        let start = i;
-        while bytes.get(i).is_some_and(u8::is_ascii_digit) {
-            i += 1;
-        }
-        if i == start {
-            return Err("empty fractional seconds");
-        }
+    Ok(())
+}
+
+/// The index after `.digits` at `i`, or `i` when there is no fraction.
+fn skip_fraction(
+    bytes: &[u8],
+    i: usize,
+) -> Result<usize, &'static str> {
+    if bytes.get(i) != Some(&b'.') {
+        return Ok(i);
     }
+    let digits = bytes[i + 1..]
+        .iter()
+        .take_while(|b| b.is_ascii_digit())
+        .count();
+    if digits == 0 {
+        return Err("empty fractional seconds");
+    }
+    Ok(i + 1 + digits)
+}
+
+/// `Z` or `±HH:MM` at `i`, ending the string.
+fn validate_zone(bytes: &[u8], i: usize) -> Result<(), &'static str> {
     match bytes.get(i) {
         Some(&b'Z') if i + 1 == bytes.len() => Ok(()),
         Some(&b'+' | &b'-') if bytes.len() - i == 6 => {
@@ -124,6 +143,38 @@ fn in_range(b: &[u8], lo: u32, hi: u32) -> bool {
 /// allocation beyond the final `String`.
 fn format_epoch(seconds: u64, nanos: u32) -> String {
     let days = i64::try_from(seconds / 86_400).unwrap_or(0);
+    let (year, month, day) = civil_from_days(days);
+    let sod = seconds % 86_400;
+    // Four-digit years and in-range nanoseconds fill a fixed layout;
+    // anything else keeps the general formatter's output.
+    let Ok(year) = u32::try_from(year) else {
+        return format_epoch_general(seconds, nanos);
+    };
+    if year > 9999 || nanos > 999_999_999 {
+        return format_epoch_general(seconds, nanos);
+    }
+    let mut buf = *b"0000-00-00T00:00:00.000000000Z";
+    put_digits(&mut buf[0..4], year);
+    put_digits(&mut buf[5..7], month);
+    put_digits(&mut buf[8..10], day);
+    put_digits(&mut buf[11..13], (sod / 3600) as u32);
+    put_digits(&mut buf[14..16], ((sod % 3600) / 60) as u32);
+    put_digits(&mut buf[17..19], (sod % 60) as u32);
+    put_digits(&mut buf[20..29], nanos);
+    String::from_utf8_lossy(&buf).into_owned()
+}
+
+/// Write `n` into `dst` as zero-padded decimal, filling it right to left.
+fn put_digits(dst: &mut [u8], mut n: u32) {
+    for byte in dst.iter_mut().rev() {
+        *byte = b'0' + (n % 10) as u8;
+        n /= 10;
+    }
+}
+
+/// The general form, for years past 9999.
+fn format_epoch_general(seconds: u64, nanos: u32) -> String {
+    let days = i64::try_from(seconds / 86_400).unwrap_or(0);
     let sod = seconds % 86_400;
     let hour = (sod / 3600) as u32;
     let minute = ((sod % 3600) / 60) as u32;
@@ -159,6 +210,29 @@ const fn civil_from_days(days: i64) -> (i32, u32, u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn format_epoch_known_instants() {
+        let cases = [
+            (0, 0, "1970-01-01T00:00:00.000000000Z"),
+            (951_782_400, 5, "2000-02-29T00:00:00.000000005Z"),
+            (
+                1_727_740_800,
+                123_456_789,
+                "2024-10-01T00:00:00.123456789Z",
+            ),
+            (
+                253_402_300_799,
+                999_999_999,
+                "9999-12-31T23:59:59.999999999Z",
+            ),
+            // The first five-digit year takes the general path.
+            (253_402_300_800, 0, "10000-01-01T00:00:00.000000000Z"),
+        ];
+        for (secs, nanos, want) in cases {
+            assert_eq!(format_epoch(secs, nanos), want, "{secs}");
+        }
+    }
 
     #[test]
     fn now_iso8601_shape() {

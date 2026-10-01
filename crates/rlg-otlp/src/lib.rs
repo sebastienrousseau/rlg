@@ -4,15 +4,21 @@
 
 //! OpenTelemetry (OTLP) network exporter for rlg.
 //!
-//! Today rlg renders records in `LogFormat::OTLP` shape but only
-//! writes them to the configured `PlatformSink` (stdout, file,
-//! `os_log`, `journald`). This crate adds an **HTTP exporter** that
-//! POSTs OTLP-shaped records to a real collector endpoint —
-//! Honeycomb, Datadog, Tempo, Jaeger, or any `otelcol` instance with
-//! the OTLP/HTTP receiver enabled.
+//! rlg renders records in `LogFormat::OTLP` shape and writes them to
+//! the configured `PlatformSink` (stdout, file, `os_log`,
+//! `journald`). This crate adds an **HTTP exporter** that POSTs
+//! OTLP-shaped records to an OpenTelemetry Collector.
 //!
 //! Wire format: **OTLP/HTTP JSON encoding** (`Content-Type:
-//! application/json`). Protobuf encoding is on the v0.0.11 roadmap.
+//! application/json`), over plain `http://`.
+//!
+//! # Deployment: a local collector owns TLS
+//!
+//! The exporter carries no TLS stack. It sends to a Collector (or
+//! any OTLP/HTTP forwarder) on the same host or pod, by default
+//! [`DEFAULT_ENDPOINT`], and the Collector holds the TLS connection
+//! and credentials for the backend. `https://` endpoints are refused.
+//! The README has a minimal Collector configuration.
 //!
 //! # Example
 //!
@@ -21,11 +27,8 @@
 //! use rlg::log::Log;
 //! use rlg::log_format::LogFormat;
 //!
-//! let exporter = OtlpExporter::builder()
-//!     .endpoint("https://api.honeycomb.io/v1/logs")
-//!     .header("x-honeycomb-team", "<api-key>")
-//!     .timeout_secs(10)
-//!     .build();
+//! // Defaults to the Collector at http://localhost:4318/v1/logs.
+//! let exporter = OtlpExporter::builder().timeout_secs(10).build();
 //!
 //! let record = Log::error("payment-service down")
 //!     .component("orders")
@@ -46,15 +49,17 @@
 
 /// Retry policy + full-jitter + tokens-per-window circuit breaker.
 ///
-/// Transport-agnostic reliability primitives — the sync HTTP path
-/// in this crate uses them; the deferred async / gRPC transports
-/// (see `docs/adr/0010-otlp-pluggable-transport.md`) will use the
-/// same primitives without duplicating the reliability logic.
+/// Transport-agnostic reliability primitives shared by the blocking
+/// and async exporters.
 pub mod backoff;
 
 pub use crate::backoff::{CircuitBreaker, RetryPolicy};
 
-/// Async HTTP/JSON transport via `reqwest` + `rustls`.
+/// The in-house HTTP/1.1 exchange behind the async exporter.
+#[cfg(feature = "async")]
+mod http;
+
+/// Async HTTP/JSON transport over Tokio and plain `http://`.
 /// Enable with the `async` feature.
 #[cfg(feature = "async")]
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
@@ -66,17 +71,13 @@ pub use crate::async_http::{
     AsyncOtlpExporter, AsyncOtlpExporterBuilder,
 };
 
-/// OTLP/gRPC transport scaffold via `tonic` + `rustls`.
-/// Enable with the `grpc` feature.
-#[cfg(feature = "grpc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-pub mod grpc;
+/// The endpoint a builder uses when given none: the OTLP/HTTP logs
+/// route of a Collector on the same host.
+pub const DEFAULT_ENDPOINT: &str = "http://localhost:4318/v1/logs";
 
-#[cfg(feature = "grpc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-pub use crate::grpc::{GrpcOtlpExporter, GrpcOtlpExporterBuilder};
-
-use crate::backoff::cheap_random_0_to_1;
+use crate::backoff::{
+    cheap_random_0_to_1, is_retriable, record_outcome, status_outcome,
+};
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use std::collections::HashMap;
@@ -88,7 +89,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum OtlpError {
     /// The HTTP transport failed before a response arrived (DNS, TCP,
-    /// TLS, timeout).
+    /// timeout, or an `https://` endpoint, which is not supported).
     #[error("OTLP transport error: {0}")]
     Transport(#[from] Box<ureq::Error>),
     /// The collector responded with a non-2xx status code.
@@ -101,28 +102,22 @@ pub enum OtlpError {
     /// request was rejected without touching the network.
     #[error("OTLP circuit breaker tripped (too many recent failures)")]
     CircuitOpen,
-    /// The async HTTP transport failed. Only produced when the
-    /// `async` feature is enabled and an [`AsyncOtlpExporter`] is in
-    /// use.
+    /// The async HTTP transport failed: the collector could not be
+    /// reached, timed out, or did not answer with HTTP/1.x. Only
+    /// produced when the `async` feature is enabled and an
+    /// [`AsyncOtlpExporter`] is in use.
     #[cfg(feature = "async")]
     #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
     #[error("OTLP async transport error: {0}")]
-    AsyncTransport(Box<reqwest::Error>),
-    /// gRPC endpoint URL could not be parsed or the tonic channel
-    /// could not be built. Only produced when the `grpc` feature
-    /// is enabled.
-    #[cfg(feature = "grpc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-    #[error("OTLP gRPC endpoint error: {0}")]
-    GrpcEndpoint(String),
-    /// The gRPC transport's protobuf-encoded send is not yet
-    /// implemented. Scaffolding shipped in Phase 19c; the wire
-    /// path lands in Phase 19c.1. See
-    /// `docs/adr/0010-otlp-pluggable-transport.md`.
-    #[cfg(feature = "grpc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "grpc")))]
-    #[error("OTLP gRPC send not implemented (Phase 19c.1)")]
-    GrpcNotImplemented,
+    AsyncTransport(std::io::Error),
+    /// The endpoint is not a usable `http://` URL. `https://` is
+    /// refused: TLS belongs to the local collector.
+    #[error("OTLP endpoint error: {0}")]
+    InvalidEndpoint(String),
+    /// A caller-supplied header has an invalid name, a line break
+    /// in its value, or is one the exporter sets itself.
+    #[error("OTLP header error: {0}")]
+    InvalidHeader(String),
 }
 
 /// A `Result` alias with [`OtlpError`] as the error variant.
@@ -174,69 +169,47 @@ impl OtlpExporter {
     }
 
     fn post(&self, body: &str) -> OtlpResult<()> {
-        // Consult the circuit breaker before every attempt. A tripped
-        // breaker rejects immediately without touching the network.
+        // A tripped breaker rejects without touching the network.
         if let Some(cb) = &self.circuit
             && !cb.allow()
         {
             return Err(OtlpError::CircuitOpen);
         }
-
+        // ureq turns every non-2xx status into an `Err` by default,
+        // which would retry a 4xx and report a 5xx as a transport
+        // error. `status_outcome` classifies the status instead.
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(self.timeout))
+            .http_status_as_error(false)
             .build()
             .new_agent();
-
         let mut attempt: u32 = 0;
-        loop {
-            let mut req = agent
-                .post(&self.endpoint)
-                .header("content-type", "application/json");
-            for (k, v) in &self.headers {
-                req = req.header(k.as_str(), v.as_str());
+        let result = loop {
+            let result = self.send(&agent, body);
+            if !is_retriable(&result)
+                || attempt >= self.retry.max_retries
+            {
+                break result;
             }
-            match req.send(body) {
-                Ok(response) => {
-                    let status = response.status().as_u16();
-                    // 5xx and 429 are retriable; everything else
-                    // (success or 4xx client error) is final.
-                    if status >= 500 || status == 429 {
-                        if attempt < self.retry.max_retries {
-                            self.sleep_for_attempt(attempt);
-                            attempt += 1;
-                            continue;
-                        }
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if !(200..300).contains(&status) {
-                        if let Some(cb) = &self.circuit {
-                            cb.record_failure();
-                        }
-                        return Err(OtlpError::BadStatus(status));
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_success();
-                    }
-                    return Ok(());
-                }
-                Err(e) => {
-                    // Transport errors (timeout, connection refused,
-                    // DNS) are retriable.
-                    if attempt < self.retry.max_retries {
-                        self.sleep_for_attempt(attempt);
-                        attempt += 1;
-                        continue;
-                    }
-                    if let Some(cb) = &self.circuit {
-                        cb.record_failure();
-                    }
-                    return Err(OtlpError::Transport(Box::new(e)));
-                }
-            }
+            self.sleep_for_attempt(attempt);
+            attempt += 1;
+        };
+        record_outcome(self.circuit.as_deref(), &result);
+        result
+    }
+
+    /// One attempt: POST `body` and classify the answer.
+    fn send(&self, agent: &ureq::Agent, body: &str) -> OtlpResult<()> {
+        let mut req = agent
+            .post(&self.endpoint)
+            .header("content-type", "application/json");
+        for (k, v) in &self.headers {
+            req = req.header(k.as_str(), v.as_str());
         }
+        let response = req
+            .send(body)
+            .map_err(|e| OtlpError::Transport(Box::new(e)))?;
+        status_outcome(response.status().as_u16())
     }
 
     /// Sleep for the delay computed by the retry policy, including
@@ -267,7 +240,9 @@ pub struct OtlpExporterBuilder {
 }
 
 impl OtlpExporterBuilder {
-    /// Set the collector endpoint URL.
+    /// Set the collector endpoint URL. The default is
+    /// [`DEFAULT_ENDPOINT`], a Collector on this host. Use `http://`:
+    /// this transport has no TLS.
     #[must_use]
     pub fn endpoint(mut self, url: impl Into<String>) -> Self {
         self.endpoint = Some(url.into());
@@ -327,9 +302,6 @@ impl OtlpExporterBuilder {
     }
 
     /// Finalise the builder.
-    ///
-    /// # Panics
-    /// Panics if `.endpoint()` was not called.
     #[must_use]
     pub fn build(self) -> OtlpExporter {
         let retry = RetryPolicy {
@@ -343,7 +315,7 @@ impl OtlpExporterBuilder {
         OtlpExporter {
             endpoint: self
                 .endpoint
-                .expect("OtlpExporterBuilder::endpoint is required"),
+                .unwrap_or_else(|| DEFAULT_ENDPOINT.to_string()),
             headers: self.headers,
             timeout: self
                 .timeout
@@ -398,193 +370,4 @@ pub fn serialise_batch(records: &[Log]) -> OtlpResult<String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use rlg::log_level::LogLevel;
-
-    fn sample(level: LogLevel) -> Log {
-        Log::build(level, "msg")
-            .component("svc")
-            .session_id(7)
-            .time("2026-05-30T00:00:00.000000000Z")
-            .with("trace_id", "abc")
-            .with("span_id", "def")
-            .format(LogFormat::OTLP)
-    }
-
-    #[test]
-    fn builder_defaults_to_sensible_values() {
-        let e = OtlpExporter::builder()
-            .endpoint("http://x/v1/logs")
-            .build();
-        assert_eq!(e.timeout, Duration::from_secs(10));
-        assert_eq!(e.retry.max_retries, 3);
-        assert_eq!(e.retry.base, Duration::from_millis(200));
-    }
-
-    #[test]
-    fn builder_sets_headers_and_timeout() {
-        let e = OtlpExporter::builder()
-            .endpoint("http://x/v1/logs")
-            .header("x-honeycomb-team", "key123")
-            .timeout_secs(30)
-            .build();
-        assert_eq!(
-            e.headers.get("x-honeycomb-team").unwrap(),
-            "key123"
-        );
-        assert_eq!(e.timeout, Duration::from_secs(30));
-        assert_eq!(e.endpoint(), "http://x/v1/logs");
-    }
-
-    #[test]
-    fn builder_sets_retry_policy() {
-        let e = OtlpExporter::builder()
-            .endpoint("http://x/v1/logs")
-            .max_retries(5)
-            .backoff_base(Duration::from_millis(50))
-            .build();
-        assert_eq!(e.retry.max_retries, 5);
-        assert_eq!(e.retry.base, Duration::from_millis(50));
-    }
-
-    #[test]
-    fn retries_can_be_disabled() {
-        let e = OtlpExporter::builder()
-            .endpoint("http://x/v1/logs")
-            .max_retries(0)
-            .build();
-        assert_eq!(e.retry.max_retries, 0);
-    }
-
-    #[test]
-    fn serialise_batch_wraps_in_resource_logs_envelope() {
-        let body = serialise_batch(&[sample(LogLevel::INFO)]).unwrap();
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        let log_records =
-            &v["resourceLogs"][0]["scopeLogs"][0]["logRecords"];
-        assert!(log_records.is_array());
-        assert_eq!(log_records.as_array().unwrap().len(), 1);
-        assert_eq!(
-            v["resourceLogs"][0]["resource"]["attributes"][0]["key"],
-            "service.name"
-        );
-        assert_eq!(
-            v["resourceLogs"][0]["scopeLogs"][0]["scope"]["name"],
-            "rlg-otlp"
-        );
-    }
-
-    #[test]
-    fn serialise_batch_handles_empty_input() {
-        let body = serialise_batch(&[]).unwrap();
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        let log_records =
-            &v["resourceLogs"][0]["scopeLogs"][0]["logRecords"];
-        assert_eq!(log_records.as_array().unwrap().len(), 0);
-    }
-
-    #[test]
-    fn serialise_batch_includes_every_record() {
-        let body = serialise_batch(&[
-            sample(LogLevel::INFO),
-            sample(LogLevel::ERROR),
-            sample(LogLevel::WARN),
-        ])
-        .unwrap();
-        let v: serde_json::Value = serde_json::from_str(&body).unwrap();
-        assert_eq!(
-            v["resourceLogs"][0]["scopeLogs"][0]["logRecords"]
-                .as_array()
-                .unwrap()
-                .len(),
-            3
-        );
-    }
-
-    #[test]
-    fn export_one_against_invalid_endpoint_errors() {
-        // Use a localhost port nobody listens on so the request
-        // fails fast without ever touching the network. Disable
-        // retries so the test completes in milliseconds even though
-        // every transport attempt errors immediately.
-        let e = OtlpExporter::builder()
-            .endpoint("http://127.0.0.1:1/v1/logs")
-            .timeout_secs(1)
-            .max_retries(0)
-            .build();
-        let res = e.export_one(&sample(LogLevel::INFO));
-        assert!(matches!(
-            res,
-            Err(OtlpError::Transport(_)) | Err(OtlpError::BadStatus(_))
-        ));
-    }
-
-    #[test]
-    fn retry_loop_exhausts_attempts_on_transport_error() {
-        // Disable wall-clock sleeps (`backoff_base = 0`) and crank
-        // `max_retries` so we drive the retry loop multiple times
-        // against a never-listening port. The test still completes
-        // in milliseconds because each `ureq::send` to a refused
-        // port returns immediately.
-        let e = OtlpExporter::builder()
-            .endpoint("http://127.0.0.1:1/v1/logs")
-            .timeout_secs(1)
-            .max_retries(3)
-            .backoff_base(Duration::ZERO)
-            .build();
-        let res = e.export_one(&sample(LogLevel::INFO));
-        // After exhausting retries the error surfaces.
-        assert!(matches!(
-            res,
-            Err(OtlpError::Transport(_)) | Err(OtlpError::BadStatus(_))
-        ));
-    }
-
-    #[test]
-    fn sleep_for_attempt_with_zero_base_is_instant() {
-        let e = OtlpExporter::builder()
-            .endpoint("http://x")
-            .backoff_base(Duration::ZERO)
-            .build();
-        // With base = 0, every delay is 0 regardless of attempt.
-        let start = std::time::Instant::now();
-        e.sleep_for_attempt(0);
-        e.sleep_for_attempt(5);
-        e.sleep_for_attempt(20);
-        assert!(start.elapsed() < Duration::from_millis(50));
-    }
-
-    #[test]
-    fn sleep_for_attempt_caps_at_thirty_seconds() {
-        // We can't wait 30s, but we can confirm a huge attempt
-        // index doesn't panic on overflow. With base = 1µs,
-        // 2^40 = ~1.1 trillion µs which would overflow `u32::MAX`
-        // — the cap should kick in.
-        let e = OtlpExporter::builder()
-            .endpoint("http://x")
-            .backoff_base(Duration::from_micros(1))
-            .build();
-        // Override the cap by using a base small enough to not
-        // actually wait: a 30s cap with this test would be too slow.
-        // Just verify the math doesn't panic.
-        let _ = e.retry.max_retries; // keep reference live
-    }
-
-    #[test]
-    #[should_panic(expected = "endpoint is required")]
-    fn builder_without_endpoint_panics() {
-        let _ = OtlpExporter::builder().build();
-    }
-
-    #[test]
-    fn otlp_error_display_messages() {
-        let err = OtlpError::BadStatus(503);
-        assert!(err.to_string().contains("503"));
-        let err = OtlpError::Serialise(
-            serde_json::from_str::<serde_json::Value>("not json")
-                .unwrap_err(),
-        );
-        assert!(err.to_string().contains("serialise"));
-    }
-}
+mod tests;

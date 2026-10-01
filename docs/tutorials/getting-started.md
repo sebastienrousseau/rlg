@@ -6,13 +6,16 @@ Install RLG, emit your first log, and verify output — all in under five minute
 
 ```toml
 [dependencies]
-rlg = "0.0.7"
+rlg = "0.0.13"
 ```
 
-For OTLP streaming to Grafana Loki or similar collectors, enable the `reqwest` feature:
+To ship records to an OpenTelemetry Collector (which forwards them to
+Grafana Loki, Honeycomb and others), add the `rlg-otlp` crate. It sends
+plain OTLP/HTTP to a Collector on `localhost:4318`; the Collector owns
+TLS towards the backend:
 
 ```toml
-rlg = { version = "0.0.7", features = ["reqwest"] }
+rlg-otlp = "0.0.13"
 ```
 
 ## 2. Initialise and Log
@@ -52,11 +55,13 @@ The dashboard shows throughput, error rates, active spans, and format distributi
 RLG routes logs to your OS-native sink automatically:
 
 - **macOS** — appears in Console.app via `os_log`:
+
   ```bash
   log show --predicate 'subsystem == "com.rlg.logger"' --last 1m
   ```
 
 - **Linux** — appears in the systemd journal via `journald`:
+
   ```bash
   journalctl -t rlg --since "1 min ago"
   ```

@@ -77,6 +77,7 @@ section.
 ### Runtime cost
 
 `apply(input)`:
+
 - If `combined.is_none()`, return `input.to_string()` (unchanged
   no-op fast path).
 - Else, one `regex.replace_all(input, marker)` pass.

@@ -1,5 +1,8 @@
 # CLAUDE.md — RLG Contributor Guide
 
+The repository's rules, release model and single gate (`make verify`)
+are in [`AGENTS.md`](AGENTS.md); this file is the quick reference.
+
 ## Project
 
 RLG (RustLogs) is a near-lock-free structured logging library for Rust, built on a 65k-slot ring buffer (LMAX Disruptor pattern).
@@ -23,7 +26,7 @@ Application Thread → Log::fire() → ArrayQueue (65k ring buffer)
 - `session_id` is `u64` — avoids allocation on the hot path.
 - `component` and `time` use `Cow<'static, str>` — static strings stay on the stack.
 - Config files use TOML for both load and save.
-- `notify` and `terminal_size` are optional, gated behind `tokio` and `tui` features.
+- `tokio` and `terminal_size` are optional, gated behind the `tokio` and `tui` features. Config hot-reload polls the file; there is no `notify` dependency.
 
 ## Development
 
@@ -38,7 +41,7 @@ cargo bench --bench competitive_bench     # Benchmarks
 ## Module Map
 
 | Module | Purpose |
-|--------|---------|
+| -------- | --------- |
 | `engine.rs` | Ring buffer, flusher thread, global `ENGINE` |
 | `log.rs` | `Log` struct, fluent builder, 14-format `Display` impl |
 | `config.rs` | TOML config loading, validation, hot-reload |

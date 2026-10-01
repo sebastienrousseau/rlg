@@ -42,7 +42,7 @@ rlg::log::Log::info("authenticated")
 ## Level mapping
 
 | log | rlg |
-|---|---|
+| --- | --- |
 | `trace!` | `Log::trace` |
 | `debug!` | `Log::debug` |
 | `info!` | `Log::info` |

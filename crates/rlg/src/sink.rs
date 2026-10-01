@@ -14,15 +14,28 @@ use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::net::UnixDatagram;
 
+/// Stand-in for `std::os::unix::net::UnixDatagram` without Unix sockets.
+///
+/// It gives `PlatformSink::Journald` a type to hold on such platforms,
+/// where it is never constructed: `PlatformSink::native` falls back to
+/// stdout.
 #[cfg(not(unix))]
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct UnixDatagram;
 
 #[cfg(not(unix))]
 #[allow(dead_code)]
 impl UnixDatagram {
-    pub fn send(&self, _: &[u8]) -> std::io::Result<usize> {
+    /// Accepts and discards `payload`; reports zero bytes sent.
+    ///
+    /// # Errors
+    ///
+    /// Never; the signature matches the Unix socket's.
+    pub const fn send(
+        &self,
+        _payload: &[u8],
+    ) -> std::io::Result<usize> {
         Ok(0)
     }
 }

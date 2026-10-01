@@ -2,20 +2,20 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! Integration tests for the three MCP tools (`tail_log`,
-//! `filter_log`, `summarize_errors`) and the JSON-RPC 2.0
-//! dispatcher.
+//! Integration tests for the four MCP tools as plain functions
+//! (`tail_log`, `filter_log`, `summarize_errors`, `tail_logs_glob`).
 //!
 //! The tools are pure functions over a file path, so the tests
 //! write NDJSON fixtures to a temp file and assert on the tool
-//! outputs directly — no need to spawn the stdio transport loop.
+//! outputs directly — no transport involved. The protocol around
+//! them is covered by `tests/serve.rs` (an in-memory session),
+//! `tests/server.rs` (the binary over stdio) and `tests/http.rs`
+//! (the two HTTP transports).
 
 #![allow(missing_docs)]
 
 use rlg_cli::Filter;
-use rlg_mcp::{
-    Request, dispatch, filter_log, summarize_errors, tail_log,
-};
+use rlg_mcp::{filter_log, summarize_errors, tail_log, tail_logs_glob};
 use serde_json::json;
 use std::io::Write;
 use tempfile::NamedTempFile;
@@ -180,57 +180,42 @@ fn summarize_errors_on_empty_file_yields_empty_map() {
 }
 
 // ---------------------------------------------------------------------------
-// dispatch (JSON-RPC 2.0)
+// tail_logs_glob
 // ---------------------------------------------------------------------------
 
-fn req(method: &str, id: Option<serde_json::Value>) -> Request {
-    Request {
-        jsonrpc: "2.0".into(),
-        id,
-        method: method.into(),
-        params: json!({}),
-    }
+#[test]
+fn tail_logs_glob_reads_files_in_path_order() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(
+        dir.path().join("a.log"),
+        format!("{}\n", record(1, "INFO", "svc", "from a")),
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("b.log"),
+        format!("{}\n", record(2, "ERROR", "svc", "from b")),
+    )
+    .unwrap();
+    let pattern = format!("{}/*.log", dir.path().display());
+    let out = tail_logs_glob(&pattern, 10, None).expect("glob");
+    assert_eq!(out.len(), 2);
+    assert!(out[0].contains("from a"));
+    assert!(out[1].contains("from b"));
+
+    let errors = tail_logs_glob(
+        &pattern,
+        10,
+        Some(rlg::log_level::LogLevel::ERROR),
+    )
+    .expect("glob");
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].contains("from b"));
 }
 
 #[test]
-fn dispatch_initialize_returns_protocol_version() {
-    let r = dispatch(&req("initialize", Some(json!(1))))
-        .expect("initialize has a response");
-    let result = r.result.expect("ok result");
-    assert_eq!(result["protocolVersion"], "2025-06-18");
-    assert!(
-        result["serverInfo"]["name"]
-            .as_str()
-            .unwrap()
-            .starts_with("rlg-mcp")
-    );
-}
-
-#[test]
-fn dispatch_tools_list_returns_three_tools() {
-    let r = dispatch(&req("tools/list", Some(json!(2))))
-        .expect("tools/list has a response");
-    let result = r.result.expect("ok result");
-    let tools = result["tools"].as_array().expect("tools array");
-    let names: Vec<&str> =
-        tools.iter().filter_map(|t| t["name"].as_str()).collect();
-    assert!(names.contains(&"tail_log"));
-    assert!(names.contains(&"filter_log"));
-    assert!(names.contains(&"summarize_errors"));
-}
-
-#[test]
-fn dispatch_notifications_return_none() {
-    assert!(
-        dispatch(&req("notifications/initialized", None)).is_none()
-    );
-    assert!(dispatch(&req("notifications/cancelled", None)).is_none());
-}
-
-#[test]
-fn dispatch_unknown_method_returns_error() {
-    let r = dispatch(&req("bogus/method", Some(json!(3))))
-        .expect("has a response");
-    assert!(r.error.is_some(), "expected error variant");
-    assert!(r.result.is_none());
+fn tail_logs_glob_matching_nothing_is_empty_not_an_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let pattern = format!("{}/*.nothing", dir.path().display());
+    let out = tail_logs_glob(&pattern, 10, None).expect("glob");
+    assert!(out.is_empty());
 }

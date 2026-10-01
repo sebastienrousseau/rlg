@@ -1,0 +1,4 @@
+# Compliance tier this repository targets (AGENTS.md §5.1).
+tier: L2
+criticality: standard
+owner: sebastienrousseau

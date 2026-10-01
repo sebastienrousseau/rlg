@@ -51,7 +51,7 @@ This reduces the surface area for OOM conditions under sustained high throughput
 ## 5. Summary
 
 | Guarantee | Mechanism |
-|-----------|-----------|
+| ----------- | ----------- |
 | No data races | `crossbeam::ArrayQueue` + atomics |
 | No use-after-free in FFI | `CString` lifetime outlives every call |
 | No provenance violations | MIRI `-Zmiri-tree-borrows` on every CI run |

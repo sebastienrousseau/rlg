@@ -37,7 +37,7 @@ redaction + OTLP export.
 ## Level mapping
 
 | tracing | rlg |
-|---|---|
+| --- | --- |
 | `trace!` | `Log::trace` |
 | `debug!` | `Log::debug` |
 | `info!` | `Log::info` |
@@ -113,7 +113,7 @@ For automated timing, rlg ships the `rlg_time_it!` macro.
 Add `rlg` with the `tracing-layer` feature:
 
 ```toml
-rlg = { version = "0.0.11", features = ["tracing-layer"] }
+rlg = { version = "0.0.13", features = ["tracing-layer"] }
 ```
 
 Install both subscribers:

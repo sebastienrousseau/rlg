@@ -1,0 +1,12 @@
+{"session_id":1,"time":"2026-09-30T09:00:01.120Z","level":"INFO","component":"api","description":"GET /orders 200","format":"JSON","attributes":{"http.latency_ms":42,"route":"/orders"}}
+{"session_id":2,"time":"2026-09-30T09:00:01.480Z","level":"INFO","component":"api","description":"GET /orders/81 200","format":"JSON","attributes":{"http.latency_ms":18,"route":"/orders/:id"}}
+{"session_id":3,"time":"2026-09-30T09:00:02.010Z","level":"WARN","component":"db","description":"slow query","format":"JSON","attributes":{"latency_ms":950,"table":"orders"}}
+{"session_id":4,"time":"2026-09-30T09:00:02.300Z","level":"INFO","component":"auth","description":"token refreshed","format":"JSON","attributes":{"user_id":42}}
+{"session_id":5,"time":"2026-09-30T09:00:03.050Z","level":"ERROR","component":"db","description":"connection reset by peer","format":"JSON","attributes":{"latency_ms":3000,"pool":"primary"}}
+{"session_id":6,"time":"2026-09-30T09:00:03.200Z","level":"INFO","component":"api","description":"POST /checkout 201","format":"JSON","attributes":{"http.latency_ms":230,"route":"/checkout"}}
+{"session_id":7,"time":"2026-09-30T09:00:03.900Z","level":"ERROR","component":"payments","description":"card declined","format":"JSON","attributes":{"provider":"acme","code":"insufficient_funds"}}
+{"session_id":8,"time":"2026-09-30T09:00:04.100Z","level":"DEBUG","component":"cache","description":"miss","format":"JSON","attributes":{"key":"orders:81"}}
+{"session_id":9,"time":"2026-09-30T09:00:04.600Z","level":"ERROR","component":"db","description":"connection reset by peer","format":"JSON","attributes":{"latency_ms":3000,"pool":"primary"}}
+{"session_id":10,"time":"2026-09-30T09:00:05.250Z","level":"INFO","component":"api","description":"GET /health 200","format":"JSON","attributes":{"http.latency_ms":2,"route":"/health"}}
+{"session_id":11,"time":"2026-09-30T09:00:05.900Z","level":"FATAL","component":"payments","description":"provider unreachable","format":"JSON","attributes":{"provider":"acme"}}
+{"session_id":12,"time":"2026-09-30T09:00:06.400Z","level":"INFO","component":"api","description":"GET /orders 200","format":"JSON","attributes":{"http.latency_ms":37,"route":"/orders"}}

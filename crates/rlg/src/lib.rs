@@ -7,7 +7,7 @@
 //!
 //! `rlg` pushes structured log events through a 65k-slot ring buffer
 //! ([LMAX Disruptor](https://lmax-exchange.github.io/disruptor/) pattern)
-//! in ~1.4 µs. A background flusher thread handles serialization and
+//! with a few atomic operations. A background flusher thread handles serialization and
 //! dispatch to platform-native sinks (`os_log`, `journald`, files, stdout).
 //!
 //! ## Why RLG
@@ -40,9 +40,8 @@
 //!
 //! | Feature | Effect |
 //! |---------|--------|
-//! | `tokio` | Async config loading, hot-reload via `notify`. |
+//! | `tokio` | Async config loading and polling hot-reload. |
 //! | `tui` | Live terminal dashboard via `terminal_size`. |
-//! | `miette` | Pretty diagnostic error reports. |
 //! | `tracing-layer` | Composable `tracing_subscriber::Layer`. |
 //! | `debug_enabled` | Verbose internal engine diagnostics. |
 //!
@@ -121,6 +120,12 @@ mod kani_proofs;
 
 /// Shared utilities from `euxis-commons`.
 pub use euxis_commons as commons;
+
+/// The workspace README's code blocks, compiled and run as doctests so
+/// its Quick Start cannot drift from the API.
+#[cfg(doctest)]
+#[doc = include_str!("../../../README.md")]
+pub struct WorkspaceReadmeDoctests;
 
 // --- Flattened re-exports ---
 pub use crate::error::{RlgError, RlgResult};
