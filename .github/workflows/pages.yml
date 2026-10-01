@@ -2,13 +2,13 @@ name: GitHub Pages
 
 # Publishes `cargo doc` for every workspace crate, and the mdBook user
 # manual under /manual/, to https://doc.rustlogs.com/. Fires on every push to
-# main plus release tags so the site tracks HEAD and each release
-# rebuilds a fresh copy.
+# main, so the site tracks HEAD. Release tags are not a trigger: a tag
+# points at a merge commit main has already deployed, and the
+# github-pages environment only accepts deployments from main.
 
 on:
   push:
     branches: [main]
-    tags: ["v*.*.*"]
   workflow_dispatch:
 
 # Only one Pages deploy at a time; a newer run cancels an in-flight
