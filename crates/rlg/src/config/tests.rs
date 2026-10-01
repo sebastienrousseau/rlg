@@ -106,7 +106,7 @@ fn test_config_default_values() {
     assert_eq!(config.log_level, LogLevel::INFO);
     assert!(config.log_rotation.is_some());
     assert_eq!(config.log_format, "%level - %message");
-    assert!(!config.logging_destinations.is_empty());
+    assert_ne!(config.logging_destinations.len(), 0);
     assert!(config.env_vars.is_empty());
 }
 
@@ -306,7 +306,7 @@ fn test_config_envy_from_iter_succeeds_with_defaults() {
     // should succeed even with an empty iterator.
     let empty: Vec<(String, String)> = Vec::new();
     let cfg: Config = envy::from_iter(empty).unwrap();
-    assert!(!cfg.version.is_empty());
+    assert_ne!(cfg.version, "");
 }
 
 #[test]

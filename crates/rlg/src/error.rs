@@ -317,7 +317,7 @@ mod tests {
         ];
         for err in &variants {
             let dbg = format!("{err:?}");
-            assert!(!dbg.is_empty());
+            assert_ne!(dbg, "");
         }
     }
 
