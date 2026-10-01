@@ -12,9 +12,14 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to release, e.g. v0.0.13"
-        required: true
+        description: "Existing tag to release, e.g. v0.0.13 (required unless dry_run)"
+        required: false
         type: string
+      dry_run:
+        description: "Build and attest the binaries from this ref; publish nothing"
+        required: false
+        type: boolean
+        default: false
 
 env:
   # Single source of truth for the tag being released. On a dispatch
@@ -38,6 +43,9 @@ jobs:
   # ─── Verify ────────────────────────────────────────────────────────
   validate:
     name: Validate tag matches crate versions
+    # A dry run publishes nothing: skipping this skips every job that
+    # needs it (ci, publish, github-release, binaries-release).
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -258,3 +266,111 @@ jobs:
             sbom.cyclonedx.json.sig \
             sbom.cyclonedx.json.crt \
             --clobber
+
+  # ─── Binaries ──────────────────────────────────────────────────────
+  # Pre-built rlg, rlg-report and rlg-mcp for every primary platform,
+  # musl-static on Linux. Each archive carries the binaries, their
+  # generated manpages and completions, and the licences, and gets a
+  # SLSA build-provenance attestation. Runs on dry runs too, from the
+  # dispatched ref, so new release machinery is exercised before a tag.
+  binaries:
+    name: Binaries (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm }
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.dry_run && github.ref || inputs.tag || github.ref }}
+          persist-credentials: false
+      - name: Install the target
+        shell: bash
+        run: |
+          rustup target add "${{ matrix.target }}"
+          if [[ "${{ matrix.target }}" == *-musl ]]; then
+            sudo apt-get update -q && sudo apt-get install -yq musl-tools
+          fi
+      - name: Build
+        shell: bash
+        run: >
+          cargo build --release --locked --target "${{ matrix.target }}"
+          -p rlg-cli -p rlg-report -p rlg-mcp
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/rlg/Cargo.toml | head -1)
+          name="rlg-${version}-${{ matrix.target }}"
+          ext=""; [[ "${{ matrix.target }}" == *windows* ]] && ext=".exe"
+          mkdir -p "$name/man" "$name/completions"
+          for bin in rlg rlg-report rlg-mcp; do
+            cp "target/${{ matrix.target }}/release/${bin}${ext}" "$name/"
+          done
+          # Manpages and completions come from a host build of the CLIs.
+          for bin in rlg rlg-report; do
+            pkg=$([ "$bin" = rlg ] && echo rlg-cli || echo rlg-report)
+            cargo run -q --release --locked -p "$pkg" -- --manpage > "$name/man/$bin.1"
+            for shell in bash zsh fish powershell; do
+              cargo run -q --release --locked -p "$pkg" -- --completions "$shell" \
+                > "$name/completions/$bin.$shell"
+            done
+          done
+          cp LICENSE-APACHE LICENSE-MIT README.md "$name/"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            7z a -tzip "$name.zip" "$name" > /dev/null
+            echo "archive=$name.zip" >> "$GITHUB_OUTPUT"
+          else
+            tar -czf "$name.tar.gz" "$name"
+            echo "archive=$name.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check a Linux binary is static
+        if: contains(matrix.target, 'musl')
+        run: |
+          file "target/${{ matrix.target }}/release/rlg"
+          file "target/${{ matrix.target }}/release/rlg" | grep -q 'statically linked'
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.package.outputs.archive }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: binaries-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
+          if-no-files-found: error
+
+  binaries-release:
+    name: Attach binaries and SHA256SUMS
+    needs: [binaries, github-release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum rlg-* > SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "${RELEASE_TAG}" rlg-* SHA256SUMS \
+            --repo "${GITHUB_REPOSITORY}" --clobber
+
