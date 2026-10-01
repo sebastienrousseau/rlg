@@ -28,6 +28,14 @@ pub(crate) fn exchange(
     let mut stream = connect(target, deadline)?;
     stream.set_write_timeout(Some(remaining(deadline)?))?;
     stream.write_all(request).map_err(timed_out)?;
+    read_status(&mut stream, deadline)
+}
+
+/// Read until the final status line and headers have arrived.
+fn read_status(
+    stream: &mut TcpStream,
+    deadline: Instant,
+) -> io::Result<u16> {
     let mut buf = Vec::with_capacity(512);
     let mut chunk = [0_u8; 1024];
     loop {
