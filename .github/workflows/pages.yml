@@ -17,10 +17,9 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Read-only by default; only the deploy job can publish.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -28,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
           persist-credentials: false
@@ -37,9 +36,11 @@ jobs:
       # which several workspace crates use to annotate feature-gated
       # items. The `RUSTDOCFLAGS --cfg docsrs` combo mirrors what
       # docs.rs does.
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: nightly
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           shared-key: pages
 
@@ -68,7 +69,7 @@ jobs:
 
       # The user manual, built with mdBook from `docs/`, served at
       # /manual/ beside the API reference.
-      - uses: taiki-e/install-action@v2.87.15
+      - uses: taiki-e/install-action@4076c08d76dba979c11a7285295b0716c1d67908 # v2.87.15
         with:
           tool: mdbook@0.5.4
       - name: Build the user manual
@@ -87,9 +88,9 @@ jobs:
       - name: Write CNAME for the custom domain
         run: echo "doc.rustlogs.com" > target/doc/CNAME
 
-      - uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
 
-      - uses: actions/upload-pages-artifact@v5
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: target/doc
 
@@ -97,10 +98,13 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

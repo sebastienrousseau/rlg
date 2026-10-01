@@ -11,7 +11,7 @@
 # Only the `rlg-mcp` workspace member (and its path deps) is built; the
 # default rlg feature set pulls no journald/os_log system libraries.
 
-FROM rust:1.96-bookworm AS build
+FROM rust:1.96-bookworm@sha256:a339861ae23e9abb272cea45dfafde21760d2ce6577a70f8a926153677902663 AS build
 
 WORKDIR /src
 COPY . .
@@ -23,7 +23,7 @@ ENV RUSTFLAGS="--remap-path-prefix=/src=/build --remap-path-prefix=/usr/local/ca
 RUN cargo build --release --locked -p rlg-mcp
 
 # ── Runtime stage ────────────────────────────────────────────────
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot@sha256:9dac0a79194e45a7da0158a9c6da57b217585af0786db3845d1f0ec1a0dd182f
 
 LABEL org.opencontainers.image.title="rlg-mcp" \
       org.opencontainers.image.description="Model Context Protocol server exposing rlg (RustLogs) log streams as tools for on-call / SRE agent workflows." \
