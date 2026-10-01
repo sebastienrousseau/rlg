@@ -114,7 +114,7 @@ impl Server {
                 assert!(result.is_err(), "server stopped on its own");
                 return None;
             }
-            if TcpStream::connect(&addr).is_ok() {
+            if answers_http(&addr) {
                 return Some(Self {
                     addr,
                     stop: Some(stop),
@@ -125,6 +125,32 @@ impl Server {
         }
         panic!("server did not start listening on {addr}");
     }
+}
+
+/// True once something on `addr` answers an HTTP request. A bare
+/// TCP connect is not enough: a child process another test spawns can
+/// inherit a listening socket on the same port (the free-port probe,
+/// on a platform without atomic close-on-exec), accept the handshake
+/// and never answer, while this server's own bind failed.
+fn answers_http(addr: &str) -> bool {
+    let Ok(mut stream) = TcpStream::connect(addr) else {
+        return false;
+    };
+    let timeout = Some(Duration::from_millis(500));
+    if stream.set_read_timeout(timeout).is_err()
+        || stream
+            .write_all(
+                format!(
+                    "GET /ready HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n"
+                )
+                .as_bytes(),
+            )
+            .is_err()
+    {
+        return false;
+    }
+    let mut head = [0_u8; 9];
+    stream.read_exact(&mut head).is_ok() && head.starts_with(b"HTTP/1.")
 }
 
 impl Drop for Server {
