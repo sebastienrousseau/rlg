@@ -19,8 +19,18 @@ pub const HOT_RELOAD_POLL_INTERVAL: std::time::Duration =
 type Fingerprint = (Option<std::time::SystemTime>, u64);
 
 fn file_fingerprint(path: &Path) -> std::io::Result<Fingerprint> {
-    let meta = fs::metadata(path)?;
-    Ok((meta.modified().ok(), meta.len()))
+    Ok(fingerprint_of(&fs::metadata(path)?))
+}
+
+/// The same, without blocking the runtime: for the polling task.
+async fn file_fingerprint_async(
+    path: &Path,
+) -> std::io::Result<Fingerprint> {
+    Ok(fingerprint_of(&tokio::fs::metadata(path).await?))
+}
+
+fn fingerprint_of(meta: &fs::Metadata) -> Fingerprint {
+    (meta.modified().ok(), meta.len())
 }
 
 impl Config {
@@ -72,7 +82,8 @@ impl Config {
         seen: &mut Fingerprint,
         config: &Arc<RwLock<Self>>,
     ) {
-        let Ok(now) = file_fingerprint(Path::new(path)) else {
+        let Ok(now) = file_fingerprint_async(Path::new(path)).await
+        else {
             return;
         };
         if now == *seen {
