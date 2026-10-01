@@ -2,8 +2,8 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! The minimal HTTP/1.1 client protocol the async exporter needs,
-//! with no I/O of its own.
+//! The minimal HTTP/1.1 client protocol both exporters share, with
+//! no I/O of its own.
 //!
 //! An OTLP export is one `POST` whose only interesting answer is the
 //! status code, so the exchange is kept as small as it can be: one
@@ -19,7 +19,7 @@ use std::io;
 
 /// The most response header bytes read before giving up on a
 /// collector that never finishes its status line and headers.
-pub(crate) const MAX_RESPONSE_HEAD: usize = 16 * 1024;
+const MAX_RESPONSE_HEAD: usize = 16 * 1024;
 
 /// Headers the client writes itself; a caller may not set them.
 const RESERVED_HEADERS: [&str; 5] = [
@@ -214,6 +214,33 @@ pub(crate) fn parse_status(buf: &[u8]) -> io::Result<Option<u16>> {
     Ok(None)
 }
 
+/// Append a chunk read from the collector to `buf` and return the
+/// final status once its head is complete.
+///
+/// # Errors
+/// [`io::ErrorKind::UnexpectedEof`] for an empty chunk (the
+/// collector closed first), [`io::ErrorKind::InvalidData`] for a
+/// malformed status line or a head over [`MAX_RESPONSE_HEAD`].
+pub(crate) fn accept_chunk(
+    buf: &mut Vec<u8>,
+    chunk: &[u8],
+) -> io::Result<Option<u16>> {
+    if chunk.is_empty() {
+        return Err(io::ErrorKind::UnexpectedEof.into());
+    }
+    buf.extend_from_slice(chunk);
+    if let Some(status) = parse_status(buf)? {
+        return Ok(Some(status));
+    }
+    if buf.len() > MAX_RESPONSE_HEAD {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "collector response headers too large",
+        ));
+    }
+    Ok(None)
+}
+
 fn find_head_end(buf: &[u8]) -> Option<usize> {
     buf.windows(4).position(|w| w == b"\r\n\r\n")
 }
@@ -342,6 +369,26 @@ mod tests {
                 .unwrap(),
             None
         );
+    }
+
+    #[test]
+    fn accepts_chunks_until_the_head_is_complete() {
+        let mut buf = Vec::new();
+        assert_eq!(
+            accept_chunk(&mut buf, b"HTTP/1.1 2").unwrap(),
+            None
+        );
+        assert_eq!(
+            accept_chunk(&mut buf, b"04 No Content\r\n\r\n").unwrap(),
+            Some(204)
+        );
+        let eof = accept_chunk(&mut Vec::new(), b"").unwrap_err();
+        assert_eq!(eof.kind(), io::ErrorKind::UnexpectedEof);
+        let mut big = Vec::new();
+        let huge =
+            accept_chunk(&mut big, &[b'x'; MAX_RESPONSE_HEAD + 1])
+                .unwrap_err();
+        assert_eq!(huge.kind(), io::ErrorKind::InvalidData);
     }
 
     #[test]

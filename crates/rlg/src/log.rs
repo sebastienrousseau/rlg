@@ -16,9 +16,13 @@ mod write;
 use write::Part::{Map, Num, Raw, Str, Value};
 use write::{write_logfmt_value, write_parts};
 
-/// `file:line` for a call site, built without the `format!` machinery:
-/// `fire()` runs on the caller's thread for every record.
-fn caller_string(caller: &std::panic::Location<'_>) -> String {
+/// `file:line` for a call site, built without the `format!` machinery.
+/// The flusher calls it once per record `fire()` sent; under Miri,
+/// which runs no flusher, nothing does.
+#[cfg(not(miri))]
+pub(crate) fn caller_string(
+    caller: &std::panic::Location<'_>,
+) -> String {
     let mut line = itoa::Buffer::new();
     let line = line.format(caller.line());
     let file = caller.file();
@@ -93,13 +97,8 @@ impl Log {
     /// the clone. Use `log()` only when you need to retain the entry.
     #[track_caller]
     pub fn log(&self) {
-        crate::engine::ENGINE.inc_format(self.format);
-        let event = crate::engine::LogEvent {
-            level: self.level,
-            level_num: self.level.to_numeric(),
-            log: self.clone(),
-        };
-        crate::engine::ENGINE.ingest(event);
+        crate::engine::ENGINE
+            .ingest(crate::engine::LogEvent::new(self.clone()));
     }
 
     /// Build an INFO-level log entry.
@@ -207,21 +206,21 @@ impl Log {
     /// Consume this entry and push it into the ring buffer.
     ///
     /// Cost: one `Log` move (~128 bytes). Serialization is deferred.
-    /// Automatically captures `file:line` via `#[track_caller]`.
+    /// Automatically captures `file:line` via `#[track_caller]`; the
+    /// flusher adds it as the `caller` attribute.
     #[track_caller]
-    pub fn fire(mut self) {
-        let caller = std::panic::Location::caller();
-        self.attributes.insert(
-            "caller".to_string(),
-            serde_json::Value::String(caller_string(caller)),
-        );
-        crate::engine::ENGINE.inc_format(self.format);
-        let event = crate::engine::LogEvent {
-            level: self.level,
-            level_num: self.level.to_numeric(),
-            log: self,
-        };
-        crate::engine::ENGINE.ingest(event);
+    pub fn fire(self) {
+        crate::engine::ENGINE.ingest(self.into_fired_event());
+    }
+
+    /// The event `fire()` ingests: this entry plus its call site,
+    /// which stays a `&'static Location` until the flusher renders it.
+    #[track_caller]
+    fn into_fired_event(self) -> crate::engine::LogEvent {
+        crate::engine::LogEvent {
+            caller: Some(std::panic::Location::caller()),
+            ..crate::engine::LogEvent::new(self)
+        }
     }
 
     fn write_logfmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

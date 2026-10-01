@@ -1,6 +1,6 @@
 [package]
 name = "rlg-mcp"
-version = "0.0.13"
+version = "0.0.14"
 edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
@@ -48,8 +48,8 @@ name = "serve_a_session"
 path = "examples/serve_a_session.rs"
 
 [dependencies]
-rlg = { version = "0.0.13", path = "../rlg" }
-rlg-cli = { version = "0.0.13", path = "../rlg-cli" }
+rlg = { version = "0.0.14", path = "../rlg" }
+rlg-cli = { version = "0.0.14", path = "../rlg-cli" }
 # The official MCP SDK: protocol revisions 2024-11-05 through
 # 2026-07-28, stdio and streamable HTTP. The legacy HTTP+SSE bridge in
 # src/transport.rs is the only protocol code left in this crate.

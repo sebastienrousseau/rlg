@@ -438,6 +438,7 @@ mod tests {
             level: LogLevel::DEBUG,
             level_num: LogLevel::DEBUG.to_numeric(),
             log: rlg::log::Log::debug("should be dropped"),
+            caller: None,
         };
         engine.ingest(event);
 
@@ -642,6 +643,7 @@ mod tests {
                 level: LogLevel::INFO,
                 level_num: LogLevel::INFO.to_numeric(),
                 log: rlg::log::Log::info("fill"),
+                caller: None,
             };
             engine.ingest(event);
         }
@@ -892,6 +894,7 @@ mod tests {
             level: LogLevel::INFO,
             level_num: LogLevel::INFO.to_numeric(),
             log: rlg::log::Log::info("fill1"),
+            caller: None,
         };
         engine.ingest(event1); // succeeds, queue now full
 
@@ -899,6 +902,7 @@ mod tests {
             level: LogLevel::INFO,
             level_num: LogLevel::INFO.to_numeric(),
             log: rlg::log::Log::info("overflow"),
+            caller: None,
         };
         engine.ingest(event2); // queue full → enters while loop → break
     }

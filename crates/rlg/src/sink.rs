@@ -102,11 +102,11 @@ mod syslog_ffi {
             logopt: c_int,
             facility: c_int,
         );
-        fn syslog(
-            priority: c_int,
-            format: *const c_char,
-            arg: *const c_char,
-        );
+        // Variadic in C. Declaring the `%s` argument as a fixed
+        // parameter is undefined behaviour: on aarch64 Apple targets
+        // variadic arguments travel on the stack, not in registers,
+        // so `syslog` read a stale stack word as the string pointer.
+        fn syslog(priority: c_int, format: *const c_char, ...);
     }
 
     static INIT: OnceLock<()> = OnceLock::new();
@@ -131,9 +131,9 @@ mod syslog_ffi {
     /// remains valid for the duration of the call.
     pub(super) unsafe fn emit(priority: c_int, msg: *const c_char) {
         ensure_open();
-        // SAFETY: caller upholds `msg` validity. We pass a static "%s"
-        // format with exactly one `%s` argument, which matches the variadic
-        // contract `syslog(3)` expects (no varargs UB).
+        // SAFETY: caller upholds `msg` validity. The static "%s" format
+        // consumes exactly the one pointer passed through the variadic
+        // tail, as `syslog(3)` expects.
         unsafe { syslog(priority, c"%s".as_ptr(), msg) };
     }
 }

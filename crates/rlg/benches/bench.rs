@@ -88,6 +88,7 @@ fn write_benchmark(c: &mut Criterion) {
                 level: LogLevel::INFO,
                 level_num: 6,
                 log: clf_log.clone(),
+                caller: None,
             };
             rlg::engine::ENGINE.ingest(black_box(event));
         })

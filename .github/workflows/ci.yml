@@ -190,3 +190,18 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: cargo clippy --locked --workspace --all-features --lib --bins -- -D warnings
 
+  # The documentation as docs.rs and the Pages site build it: nightly,
+  # --cfg docsrs, warnings denied. Pages only builds after a merge, so
+  # a new rustdoc lint would otherwise surface on main, not here.
+  docs-nightly:
+    name: Docs build (nightly, docsrs)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install nightly --profile minimal
+      - run: cargo +nightly doc --locked --workspace --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+

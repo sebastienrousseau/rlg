@@ -5,8 +5,8 @@
 
 //! Near-lock-free ingestion engine backed by a bounded ring buffer.
 //!
-//! The global [`ENGINE`][crate::engine::ENGINE] accepts
-//! [`LogEvent`][crate::engine::LogEvent]s via
+//! The global [`ENGINE` static](crate::engine::ENGINE) accepts
+//! [`LogEvent` values](crate::engine::LogEvent) via
 //! [`LockFreeEngine::ingest()`][crate::engine::LockFreeEngine::ingest]
 //! using only atomic operations. A dedicated background thread drains events
 //! in batches of 64 and writes them through [`crate::sink::PlatformSink`].
@@ -22,6 +22,8 @@ use crate::tui::TuiMetrics;
 #[cfg(not(miri))]
 use crate::tui::spawn_tui_thread;
 use std::fmt;
+#[cfg(not(miri))]
+use std::sync::atomic::fence;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::thread;
@@ -47,6 +49,23 @@ pub struct LogEvent {
     pub level_num: u8,
     /// Structured log data. Formatted on the flusher thread, not here.
     pub log: crate::log::Log,
+    /// Call site captured by [`Log::fire`](crate::log::Log::fire). The
+    /// flusher adds it to `log` as the `caller` attribute before
+    /// formatting, so the caller's thread never builds that string.
+    pub caller: Option<&'static std::panic::Location<'static>>,
+}
+
+impl LogEvent {
+    /// Wrap `log` as an event at its own level, with no call site.
+    #[must_use]
+    pub const fn new(log: crate::log::Log) -> Self {
+        Self {
+            level: log.level,
+            level_num: log.level.to_numeric(),
+            log,
+            caller: None,
+        }
+    }
 }
 
 /// The near-lock-free ingestion engine.
@@ -72,6 +91,10 @@ pub struct LockFreeEngine {
     filter_level: AtomicU8,
     /// Flusher thread handle for lock-free `unpark()`. No Mutex involved.
     flusher_thread_handle: Option<thread::Thread>,
+    /// Set by the flusher just before it parks. Producers only read it,
+    /// so a busy flusher costs them no shared write; the first producer
+    /// to see it set clears it and wakes the flusher.
+    flusher_idle: Arc<AtomicBool>,
     /// `JoinHandle` for `shutdown()` only. **Never locked on the hot path.**
     flusher_join: Mutex<Option<thread::JoinHandle<()>>>,
 }
@@ -98,38 +121,97 @@ impl fmt::Debug for LockFreeEngine {
 pub static ENGINE: LazyLock<LockFreeEngine> =
     LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
+/// Push `event`, evicting from its shard when full (see
+/// [`ShardedQueue::push_evicting`]).
+///
+/// Every event that does not stay in the queue is counted once in
+/// `dropped_events`, and once by [`count_event`] since the flusher will
+/// never see it.
+fn push_evicting(
+    queue: &ShardedQueue,
+    metrics: &TuiMetrics,
+    event: LogEvent,
+) {
+    queue.push_evicting(event, |dropped| {
+        count_dropped(metrics, dropped);
+    });
+}
+
+/// Count an event that left the engine without reaching the sink.
+fn count_dropped(metrics: &TuiMetrics, event: &LogEvent) {
+    count_event(metrics, event);
+    metrics.inc_dropped();
+}
+
+/// Add one event to the totals, level, error and format counters.
+///
+/// Runs where an event leaves the queue (on the flusher, or on the
+/// rare eviction path), never on every `ingest`: the counters then
+/// have one writer in the common case, and producers do not contend
+/// on their cache line.
+fn count_event(metrics: &TuiMetrics, event: &LogEvent) {
+    metrics.inc_events();
+    metrics.inc_level(event.level);
+    if event.level_num >= LogLevel::ERROR.to_numeric() {
+        metrics.inc_errors();
+    }
+    metrics.inc_format(event.log.format);
+}
+
 /// Start the `rlg-flusher` thread over `queue`.
 #[cfg(not(miri))]
 fn spawn_flusher(
     queue: Arc<ShardedQueue>,
     shutdown: Arc<AtomicBool>,
+    idle: Arc<AtomicBool>,
+    metrics: Arc<TuiMetrics>,
 ) -> thread::JoinHandle<()> {
     // Lightweight OS thread: runtime agnostic.
     thread::Builder::new()
         .name("rlg-flusher".into())
-        .spawn(move || run_flusher(&queue, &shutdown))
+        .spawn(move || run_flusher(&queue, &shutdown, &idle, &metrics))
         .expect("Failed to spawn rlg-flusher background thread")
 }
 
 /// The flusher loop: drain a batch, format and emit it, and stop once
 /// shutdown is flagged and the queue is empty.
 #[cfg(not(miri))]
-fn run_flusher(queue: &ShardedQueue, shutdown: &AtomicBool) {
+fn run_flusher(
+    queue: &ShardedQueue,
+    shutdown: &AtomicBool,
+    idle: &AtomicBool,
+    metrics: &TuiMetrics,
+) {
     let mut sink = PlatformSink::native();
     let mut fmt_buf = Vec::with_capacity(512);
     loop {
         let mut batch: [Option<LogEvent>; MAX_DRAIN_BATCH_SIZE] =
             std::array::from_fn(|_| None);
         drain_into(queue, &mut batch);
-        for event in batch.iter().flatten() {
+        for event in batch.iter_mut().flatten() {
+            attach_caller(event);
+            count_event(metrics, event);
             emit(&mut sink, &mut fmt_buf, event);
         }
         if shutdown.load(Ordering::Relaxed) && queue.is_empty() {
             break;
         }
-        // Park briefly as fallback; real wakeup comes from unpark() in ingest().
+        park_when_idle(queue, idle);
+    }
+}
+
+/// Park until a producer wakes the flusher, or 5 ms pass. The flag is
+/// raised before the final emptiness check, so a producer that pushed
+/// after that check sees it and wakes the thread; a wake-up lost in the
+/// narrow race between the two is covered by the timeout.
+#[cfg(not(miri))]
+fn park_when_idle(queue: &ShardedQueue, idle: &AtomicBool) {
+    idle.store(true, Ordering::SeqCst);
+    fence(Ordering::SeqCst);
+    if queue.is_empty() {
         thread::park_timeout(Duration::from_millis(5));
     }
+    idle.store(false, Ordering::Release);
 }
 
 /// Fill `batch` from the front with queued events until either runs out.
@@ -138,6 +220,19 @@ fn drain_into(queue: &ShardedQueue, batch: &mut [Option<LogEvent>]) {
     for slot in batch {
         let Some(event) = queue.pop() else { break };
         *slot = Some(event);
+    }
+}
+
+/// Add the call site `fire()` captured as the `caller` attribute.
+#[cfg(not(miri))]
+fn attach_caller(event: &mut LogEvent) {
+    if let Some(caller) = event.caller.take() {
+        event.log.attributes.insert(
+            "caller".to_string(),
+            serde_json::Value::String(crate::log::caller_string(
+                caller,
+            )),
+        );
     }
 }
 
@@ -166,6 +261,7 @@ impl LockFreeEngine {
         let shutdown_flag = Arc::new(AtomicBool::new(false));
         let metrics = Arc::new(TuiMetrics::default());
         let filter_level = AtomicU8::new(0); // Default to ALL
+        let flusher_idle = Arc::new(AtomicBool::new(false));
 
         // Under MIRI, skip spawning background threads to avoid
         // "main thread terminated without waiting" errors.
@@ -174,6 +270,8 @@ impl LockFreeEngine {
             let handle = spawn_flusher(
                 Arc::clone(&queue),
                 Arc::clone(&shutdown_flag),
+                Arc::clone(&flusher_idle),
+                Arc::clone(&metrics),
             );
             // Spawn the TUI dashboard thread if RLG_TUI=1
             if std::env::var("RLG_TUI").is_ok_and(|v| v == "1") {
@@ -197,6 +295,7 @@ impl LockFreeEngine {
             metrics,
             filter_level,
             flusher_thread_handle,
+            flusher_idle,
             flusher_join: Mutex::new(flusher_handle),
         }
     }
@@ -205,38 +304,26 @@ impl LockFreeEngine {
     ///
     /// If the buffer is full, the oldest event is evicted to make room.
     /// Dropped events are tracked via `TuiMetrics::dropped_events`.
+    ///
+    /// The event, level, error and format counters are updated as the
+    /// flusher drains each event (or when one is dropped), so they
+    /// trail `ingest` by at most one flush.
     pub fn ingest(&self, event: LogEvent) {
         if event.level_num < self.filter_level.load(Ordering::Acquire) {
             return;
         }
+        push_evicting(&self.queue, &self.metrics, event);
+        self.wake_flusher();
+    }
 
-        self.metrics.inc_events();
-        self.metrics.inc_level(event.level);
-
-        if event.level_num >= LogLevel::ERROR.to_numeric() {
-            self.metrics.inc_errors();
-        }
-
-        // If the buffer is full, evict and retry with bounded retries.
-        //
-        // `pop_local` targets the same shard as `push` so the eviction
-        // makes room for the retry on the shard the producer is
-        // actually contending on. Under the default (1-shard) build
-        // this is identical to the historical pop-then-push loop.
-        if let Err(rejected) = self.queue.push(event) {
-            self.metrics.inc_dropped();
-            let mut to_push = rejected;
-            for _ in 0..3 {
-                let _ = self.queue.pop_local();
-                match self.queue.push(to_push) {
-                    Ok(()) => break,
-                    Err(e) => to_push = e,
-                }
-            }
-        }
-
-        // Wake the flusher thread — no Mutex on the hot path.
-        if let Some(thread) = &self.flusher_thread_handle {
+    /// Wake the flusher if it is parked. Only the first producer to see
+    /// it idle pays for the `unpark`; the rest only read the flag, so
+    /// producers do not contend on the flusher's park state.
+    fn wake_flusher(&self) {
+        if self.flusher_idle.load(Ordering::SeqCst)
+            && self.flusher_idle.swap(false, Ordering::AcqRel)
+            && let Some(thread) = &self.flusher_thread_handle
+        {
             thread.unpark();
         }
     }
@@ -253,6 +340,9 @@ impl LockFreeEngine {
     }
 
     /// Increments the format counter in the TUI metrics.
+    ///
+    /// The engine counts each event's format itself as it drains it;
+    /// call this only for records that bypass [`Self::ingest`].
     pub fn inc_format(&self, format: crate::log_format::LogFormat) {
         self.metrics.inc_format(format);
     }
@@ -320,107 +410,4 @@ impl FastSerializer {
 
 #[cfg(test)]
 #[cfg_attr(miri, allow(unused_imports))]
-mod tests {
-    use super::*;
-    use crate::LogLevel;
-    use crate::log::Log;
-
-    fn make_event(level: LogLevel) -> LogEvent {
-        LogEvent {
-            level,
-            level_num: level.to_numeric(),
-            log: Log::build(level, "test"),
-        }
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn fast_serializer_round_trip() {
-        let mut buf = Vec::new();
-        FastSerializer::append_u64(&mut buf, 1234);
-        FastSerializer::append_f64(&mut buf, 3.5);
-        assert_eq!(buf, b"12343.5");
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn ingest_overfills_small_queue_and_drops() {
-        // Capacity 1 — every ingest after the first hits the retry loop
-        // (covers the `Err(e) => to_push = e` continuation in the retry).
-        let engine = LockFreeEngine::new(1);
-        for _ in 0..32 {
-            engine.ingest(make_event(LogLevel::INFO));
-        }
-        engine.shutdown();
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn ingest_under_concurrent_overfill_hits_retry_err_branch() {
-        // 8 producer threads hammer a capacity-1 queue concurrently.
-        // Statistically guaranteed to hit the `Err(e) => to_push = e`
-        // arm in the retry loop (line 204 in src/engine.rs) when a
-        // peer thread refills the slot between `pop` and `push`.
-        let engine = Arc::new(LockFreeEngine::new(1));
-        let mut handles = Vec::new();
-        for _ in 0..8 {
-            let e = engine.clone();
-            handles.push(thread::spawn(move || {
-                for _ in 0..2_000 {
-                    e.ingest(make_event(LogLevel::INFO));
-                }
-            }));
-        }
-        for h in handles {
-            h.join().unwrap();
-        }
-        engine.shutdown();
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn ingest_below_filter_short_circuits() {
-        let engine = LockFreeEngine::new(8);
-        engine.set_filter(LogLevel::ERROR.to_numeric());
-        // DEBUG is below ERROR — should be filtered out before push.
-        engine.ingest(make_event(LogLevel::DEBUG));
-        engine.shutdown();
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn engine_records_errors_and_spans() {
-        let engine = LockFreeEngine::new(8);
-        engine.ingest(make_event(LogLevel::ERROR));
-        engine.inc_format(crate::log_format::LogFormat::JSON);
-        engine.inc_spans();
-        engine.inc_spans();
-        assert_eq!(engine.active_spans(), 2);
-        engine.dec_spans();
-        assert_eq!(engine.active_spans(), 1);
-        engine.shutdown();
-    }
-
-    #[test]
-    #[cfg_attr(miri, ignore)]
-    fn shutdown_is_idempotent() {
-        let engine = LockFreeEngine::new(4);
-        engine.ingest(make_event(LogLevel::INFO));
-        engine.shutdown();
-        // Second shutdown: flusher_join has already been drained, so the
-        // `Some(handle) = guard.take()` branch is None this time.
-        engine.shutdown();
-    }
-
-    #[test]
-    fn apply_config_updates_filter() {
-        let engine = LockFreeEngine::new(4);
-        let cfg = crate::config::Config {
-            log_level: LogLevel::WARN,
-            ..crate::config::Config::default()
-        };
-        engine.apply_config(&cfg);
-        assert_eq!(engine.filter_level(), LogLevel::WARN.to_numeric());
-        engine.shutdown();
-    }
-}
+mod tests;

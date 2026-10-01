@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.13"
+rlg = "0.0.14"
 ```
 
 ### Build from source
@@ -87,7 +87,7 @@ the application needs.
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.13", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.14", features = ["tokio", "tracing-layer"] }
 ```
 
 ---
@@ -140,8 +140,8 @@ Two architectural choices motivate the design:
 
 1. **Atomic ingestion, deferred formatting.** `Log::fire()`
    only does the work that *cannot* be deferred: capture
-   `file:line` via `#[track_caller]`, increment the per-format
-   metrics counter, and push into the ring buffer. The
+   `file:line` via `#[track_caller]` and push into the ring
+   buffer. Metrics counting, the
    serialisation (`fmt_json`, `fmt_mcp`, `fmt_otlp`, …) and the
    `os_log` / `journald` / `write_all` syscalls all run on the
    flusher thread, off the caller's critical path, with no

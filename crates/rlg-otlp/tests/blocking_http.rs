@@ -147,3 +147,63 @@ fn a_tripped_breaker_rejects_without_a_request() {
         Err(OtlpError::CircuitOpen)
     ));
 }
+
+#[test]
+fn a_silent_collector_times_out() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url =
+        format!("http://{}/v1/logs", listener.local_addr().unwrap());
+    let start = std::time::Instant::now();
+    let res = exporter(&url, 0).export_one(&sample());
+    assert!(
+        matches!(&res, Err(OtlpError::Transport(e)) if e.kind() == std::io::ErrorKind::TimedOut),
+        "{res:?}"
+    );
+    assert!(start.elapsed() < Duration::from_secs(4));
+    drop(listener);
+}
+
+#[test]
+fn a_non_http_answer_is_a_transport_error() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url =
+        format!("http://{}/v1/logs", listener.local_addr().unwrap());
+    let server = std::thread::spawn(move || {
+        let (sock, _) = listener.accept().unwrap();
+        let mut reader = BufReader::new(sock);
+        let _ = read_request(&mut reader);
+        reader
+            .get_mut()
+            .write_all(b"SSH-2.0-OpenSSH_9.6\r\n\r\n")
+            .unwrap();
+    });
+    let res = exporter(&url, 0).export_one(&sample());
+    assert!(
+        matches!(&res, Err(OtlpError::Transport(e)) if e.kind() == std::io::ErrorKind::InvalidData),
+        "{res:?}"
+    );
+    server.join().unwrap();
+}
+
+#[test]
+fn https_and_unsafe_headers_are_refused_before_any_request() {
+    let https = OtlpExporter::builder()
+        .endpoint("https://api.honeycomb.io/v1/logs")
+        .max_retries(0)
+        .build()
+        .export_one(&sample());
+    assert!(
+        matches!(https, Err(OtlpError::InvalidEndpoint(_))),
+        "{https:?}"
+    );
+    let injected = OtlpExporter::builder()
+        .endpoint("http://127.0.0.1:1/v1/logs")
+        .header("x-api-key", "k\r\nHost: evil")
+        .max_retries(0)
+        .build()
+        .export_one(&sample());
+    assert!(
+        matches!(injected, Err(OtlpError::InvalidHeader(_))),
+        "{injected:?}"
+    );
+}

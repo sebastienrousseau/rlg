@@ -82,9 +82,10 @@ string or takes a lock. Everything expensive happens on the flusher.
   server, and `transport.rs` (shared verbatim across the suite's MCP
   servers) the stdio, streamable HTTP and HTTP+SSE transports.
 - **`rlg-otlp`** sends OTLP/HTTP JSON to a local Collector, which owns
-  TLS ([ADR 0015](adr/0015-otlp-local-collector-transport.md)). The
-  blocking exporter uses `ureq`; the async one an in-house HTTP/1.1
-  client (`http.rs`). Both share retry, jitter and circuit-breaking
+  TLS ([ADR 0015](adr/0015-otlp-local-collector-transport.md)). Both
+  exporters use an in-house HTTP/1.1 client (`http.rs`), the blocking
+  one over `std::net` and the async one over Tokio, and share retry,
+  jitter and circuit-breaking
   from `backoff.rs` ([ADR 0010](adr/0010-otlp-pluggable-transport.md)).
 - **`rlg-redact`** scans each value once, against a single regex that
   fuses every built-in pattern into one alternation

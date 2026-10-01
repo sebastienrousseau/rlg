@@ -442,6 +442,7 @@ mod tests {
             level: LogLevel::INFO,
             level_num: 6,
             log: log.clone(),
+            caller: None,
         };
         assert_eq!(event.level, LogLevel::INFO);
         assert_eq!(event.level_num, 6);

@@ -55,9 +55,11 @@ pub mod backoff;
 
 pub use crate::backoff::{CircuitBreaker, RetryPolicy};
 
-/// The in-house HTTP/1.1 exchange behind the async exporter.
-#[cfg(feature = "async")]
+/// The in-house HTTP/1.1 exchange both exporters share.
 mod http;
+
+/// The blocking exporter's socket I/O.
+mod blocking_http;
 
 /// Async HTTP/JSON transport over Tokio and plain `http://`.
 /// Enable with the `async` feature.
@@ -78,6 +80,7 @@ pub const DEFAULT_ENDPOINT: &str = "http://localhost:4318/v1/logs";
 use crate::backoff::{
     cheap_random_0_to_1, is_retriable, record_outcome, status_outcome,
 };
+use crate::http::Endpoint;
 use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use std::collections::HashMap;
@@ -88,10 +91,11 @@ use thiserror::Error;
 /// Errors raised by [`OtlpExporter`].
 #[derive(Debug, Error)]
 pub enum OtlpError {
-    /// The HTTP transport failed before a response arrived (DNS, TCP,
-    /// timeout, or an `https://` endpoint, which is not supported).
+    /// The blocking transport failed: the collector could not be
+    /// reached, timed out ([`std::io::ErrorKind::TimedOut`]), or did
+    /// not answer with HTTP/1.x ([`std::io::ErrorKind::InvalidData`]).
     #[error("OTLP transport error: {0}")]
-    Transport(#[from] Box<ureq::Error>),
+    Transport(std::io::Error),
     /// The collector responded with a non-2xx status code.
     #[error("OTLP collector returned status {0}")]
     BadStatus(u16),
@@ -154,7 +158,10 @@ impl OtlpExporter {
     ///
     /// # Errors
     /// Returns [`OtlpError`] on transport failure, non-2xx response,
-    /// or serialisation failure.
+    /// or serialisation failure, and [`OtlpError::InvalidEndpoint`]
+    /// or [`OtlpError::InvalidHeader`], before any request, when the
+    /// builder was given an endpoint other than `http://` or an
+    /// unsafe header.
     pub fn export_one(&self, record: &Log) -> OtlpResult<()> {
         self.export_batch(std::slice::from_ref(record))
     }
@@ -169,23 +176,20 @@ impl OtlpExporter {
     }
 
     fn post(&self, body: &str) -> OtlpResult<()> {
+        let target = Endpoint::parse(&self.endpoint)
+            .map_err(OtlpError::InvalidEndpoint)?;
+        http::validate_headers(&self.headers)
+            .map_err(OtlpError::InvalidHeader)?;
         // A tripped breaker rejects without touching the network.
         if let Some(cb) = &self.circuit
             && !cb.allow()
         {
             return Err(OtlpError::CircuitOpen);
         }
-        // ureq turns every non-2xx status into an `Err` by default,
-        // which would retry a 4xx and report a 5xx as a transport
-        // error. `status_outcome` classifies the status instead.
-        let agent = ureq::Agent::config_builder()
-            .timeout_global(Some(self.timeout))
-            .http_status_as_error(false)
-            .build()
-            .new_agent();
+        let request = http::encode_post(&target, &self.headers, body);
         let mut attempt: u32 = 0;
         let result = loop {
-            let result = self.send(&agent, body);
+            let result = self.send(&target, &request);
             if !is_retriable(&result)
                 || attempt >= self.retry.max_retries
             {
@@ -198,18 +202,17 @@ impl OtlpExporter {
         result
     }
 
-    /// One attempt: POST `body` and classify the answer.
-    fn send(&self, agent: &ureq::Agent, body: &str) -> OtlpResult<()> {
-        let mut req = agent
-            .post(&self.endpoint)
-            .header("content-type", "application/json");
-        for (k, v) in &self.headers {
-            req = req.header(k.as_str(), v.as_str());
-        }
-        let response = req
-            .send(body)
-            .map_err(|e| OtlpError::Transport(Box::new(e)))?;
-        status_outcome(response.status().as_u16())
+    /// One attempt: 2xx is success, any other status is
+    /// [`OtlpError::BadStatus`].
+    fn send(
+        &self,
+        target: &Endpoint,
+        request: &[u8],
+    ) -> OtlpResult<()> {
+        let status =
+            blocking_http::exchange(target, request, self.timeout)
+                .map_err(OtlpError::Transport)?;
+        status_outcome(status)
     }
 
     /// Sleep for the delay computed by the retry policy, including

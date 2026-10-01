@@ -59,6 +59,7 @@ fn test_engine_queue_full_and_errors() {
         level: rlg::LogLevel::ERROR,
         level_num: 8,
         log: rlg::log::Log::error("error"),
+        caller: None,
     };
     ENGINE.ingest(event_err.clone());
 

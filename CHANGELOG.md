@@ -7,6 +7,85 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.0.14] — unreleased
+
+The **follow-through** cut: what releasing 0.0.13 exposed. A
+memory-safety bug in the macOS sink is fixed, `fire()` costs less than
+half as much under contention, the blocking OTLP exporter drops `ureq`,
+the documentation site deploys again, and release pages stop carrying
+unsigned duplicate SBOMs.
+
+Workspace-lockstep versioning: all 10 publishable crates are at
+`0.0.14`. `xtask` stays at `0.0.0`.
+
+### Changed
+
+- Producers no longer write to the flusher's park state on every
+  record: the flusher raises an idle flag before parking and only the
+  first producer to see it wakes the thread. With eight threads logging
+  at once, `fire()` costs about 54% less per thread (3.9 to 1.8 µs on
+  the development machine; 3.0 to 0.95 µs with `fast-queue`), and a
+  record fired at an idle engine is still written in about 57 µs. A new
+  `Contended Emission (8 threads)` benchmark group tracks it.
+- The event, level, error and format counters in `TuiMetrics` are now
+  updated by the flusher as it drains each event (and on the eviction
+  path for dropped ones), not by every producer in `ingest` and
+  `fire()`: the counters have a single writer in the common case, and
+  producers no longer contend on their cache line. Counts now trail
+  `ingest` by at most one flush, and events below the level filter no
+  longer reach the format counters. With eight threads, `fire()` is
+  about 10% cheaper per thread (median 1.93 to 1.74 µs on a loaded
+  machine). The public types and methods are unchanged.
+- **Breaking**: `fire()` no longer builds the `caller` attribute on
+  the calling thread. It carries the `&'static Location` in a new
+  `LogEvent::caller` field, and the flusher renders `file:line` into
+  the attribute before formatting, so records look exactly as before.
+  That string and its map insert were about 100 ns of every `fire()`.
+  With eight threads, `fire()` costs about 38% less per thread (median
+  2.55 to 1.59 µs, faster in 10 of 10 interleaved runs). Code that
+  builds a `LogEvent` literal needs `caller: None`, or the new
+  `LogEvent::new(log)`. `Log::with` keeps converting values eagerly:
+  measured, the `serde_json` conversion is 1–7 ns of the ~45 ns an
+  attribute costs, and deferring it would need `T: 'static` plus a
+  boxed copy.
+- **Breaking** (`rlg-otlp`): the blocking `OtlpExporter` now uses the
+  crate's own HTTP/1.1 client over `std::net`, like the async exporter,
+  and `ureq` is gone: 38 fewer crates in the lockfile and 34 fewer
+  cargo-vet exemptions. `OtlpError::Transport` wraps `std::io::Error`
+  (`TimedOut` for a deadline, `InvalidData` for a non-HTTP answer). An
+  `https://` endpoint or an unsafe header is reported on export as
+  `InvalidEndpoint` or `InvalidHeader` before any request is sent.
+
+### Fixed
+
+- **Memory safety** (macOS): the `os_log` sink declared `syslog(3)` with
+  a fixed third parameter, but the C function is variadic. On Apple
+  Silicon, variadic arguments are passed on the stack, so `syslog` read
+  a stale stack word as the message pointer: the flusher could crash in
+  `strlen`, or log bytes from an arbitrary address. The declaration is
+  now variadic. A release build firing 20,000 records crashed 3 runs in
+  3 on the previous commit and runs clean with the fix. Present since
+  0.0.9; CI never reached this path because `GITHUB_ACTIONS` routes the
+  sink to stdout.
+- `TuiMetrics::dropped_events` under-counted under contention. When the
+  ring buffer was full, `ingest` counted one drop and then evicted up to
+  three events uncounted; with eight threads on a full queue, 47% of the
+  lost events went unrecorded. Each eviction that removes an event, and
+  a new event that loses every retry, is now counted exactly once.
+- The documentation site stopped deploying at 0.0.13: today's nightly
+  rustdoc rejects module links that repeat a path its label already
+  resolves, while stable cannot resolve the short form, so six links in
+  `config`, `engine` and `rotation` now carry descriptive labels that
+  both accept. CI builds the docs the way docs.rs and Pages do on every
+  pull request.
+- The config hot-reload poller read file metadata with a blocking call
+  on a Tokio worker; it now uses `tokio::fs`.
+- Releases attached unsigned duplicate SBOMs next to the signed ones;
+  only the signed files are uploaded now.
+- An MCP HTTP test could connect to another test's subprocess when both
+  were handed the same port; test servers now use ports outside the
+  ephemeral range.
+
 ## [0.0.13] — unreleased
 
 The **smaller-tree** cut. rlg-mcp moves onto the official MCP SDK and

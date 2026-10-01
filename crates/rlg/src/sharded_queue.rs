@@ -5,8 +5,8 @@
 //! Sharded producer queue backing the engine's ring buffer.
 //!
 //! Wraps `N` `crossbeam-queue::ArrayQueue<LogEvent>` shards behind a
-//! single facade with the same `push` / `pop` / `is_empty` surface
-//! `crate::engine::LockFreeEngine` was previously using directly.
+//! single facade: `push_evicting` for producers, `pop` / `is_empty`
+//! for the flusher.
 //!
 //! `N` is a compile-time constant chosen by the feature set:
 //!
@@ -69,8 +69,8 @@ fn thread_shard() -> usize {
     })
 }
 
-/// Sharded bounded queue with the minimal `push` / `pop` / `is_empty`
-/// surface that `LockFreeEngine` requires.
+/// Sharded bounded queue with the minimal `push_evicting` / `pop` /
+/// `is_empty` surface that `LockFreeEngine` requires.
 #[derive(Debug)]
 pub(crate) struct ShardedQueue {
     shards: Box<[ArrayQueue<LogEvent>]>,
@@ -101,24 +101,36 @@ impl ShardedQueue {
         Self { shards }
     }
 
-    /// Push an event. Each producer thread has a sticky shard index
-    /// assigned round-robin on first call, so subsequent pushes from
-    /// the same thread hit the same shard with no contention on the
-    /// shard-selection path.
+    /// Push an event; if its shard is full, evict the oldest event
+    /// on that shard and retry, up to three times. Each producer
+    /// thread has a sticky shard index assigned round-robin on first
+    /// call, so its pushes and evictions hit the same shard with no
+    /// contention on the shard-selection path.
     ///
-    /// # Errors
-    /// Returns the event back to the caller if the thread-local
-    /// shard is at capacity — the same contract as
-    /// [`crossbeam_queue::ArrayQueue::push`].
-    pub(crate) fn push(&self, event: LogEvent) -> Result<(), LogEvent> {
-        self.shards[thread_shard()].push(event)
-    }
-
-    /// Pop from the caller's thread-local shard. Used only by the
-    /// retry-eviction path in `LockFreeEngine::ingest` so the pop
-    /// happens on the same shard as the failed push.
-    pub(crate) fn pop_local(&self) -> Option<LogEvent> {
-        self.shards[thread_shard()].pop()
+    /// Every event that does not stay in the queue is passed to
+    /// `dropped` exactly once: each one an eviction actually removes,
+    /// and `event` itself if every retry loses the race for the freed
+    /// slot. The rejected event stays inside this loop rather than
+    /// being handed back by value.
+    pub(crate) fn push_evicting(
+        &self,
+        event: LogEvent,
+        mut dropped: impl FnMut(&LogEvent),
+    ) {
+        let shard = &self.shards[thread_shard()];
+        let Err(mut rejected) = shard.push(event) else {
+            return;
+        };
+        for _ in 0..3 {
+            if let Some(evicted) = shard.pop() {
+                dropped(&evicted);
+            }
+            match shard.push(rejected) {
+                Ok(()) => return,
+                Err(e) => rejected = e,
+            }
+        }
+        dropped(&rejected);
     }
 
     /// Pop any available event across all shards. Called by the
@@ -159,6 +171,7 @@ mod tests {
             level,
             level_num: level.to_numeric(),
             log: Log::info("test"),
+            caller: None,
         }
     }
 
@@ -171,7 +184,9 @@ mod tests {
     #[test]
     fn push_then_pop_round_trips() {
         let q = ShardedQueue::new(8);
-        q.push(make_event(LogLevel::INFO)).unwrap();
+        q.push_evicting(make_event(LogLevel::INFO), |_| {
+            panic!("an empty queue has room")
+        });
         assert!(!q.is_empty());
         let e = q.pop().unwrap();
         assert_eq!(e.level, LogLevel::INFO);
@@ -190,7 +205,7 @@ mod tests {
             let q = q.clone();
             handles.push(thread::spawn(move || {
                 for _ in 0..64 {
-                    let _ = q.push(make_event(LogLevel::INFO));
+                    q.push_evicting(make_event(LogLevel::INFO), |_| {});
                 }
             }));
         }
