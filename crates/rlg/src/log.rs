@@ -17,7 +17,9 @@ use write::Part::{Map, Num, Raw, Str, Value};
 use write::{write_logfmt_value, write_parts};
 
 /// `file:line` for a call site, built without the `format!` machinery.
-/// The flusher calls it once per record `fire()` sent.
+/// The flusher calls it once per record `fire()` sent; under Miri,
+/// which runs no flusher, nothing does.
+#[cfg(not(miri))]
 pub(crate) fn caller_string(
     caller: &std::panic::Location<'_>,
 ) -> String {

@@ -52,12 +52,14 @@ fn test_log_write_logfmt_with_attributes() {
     assert!(!output_no.contains(" key="));
 }
 
+#[cfg(not(miri))]
 #[track_caller]
 fn here() -> &'static std::panic::Location<'static> {
     std::panic::Location::caller()
 }
 
 #[test]
+#[cfg(not(miri))]
 fn caller_string_is_file_colon_line() {
     for location in [here(), here(), here()] {
         assert_eq!(
