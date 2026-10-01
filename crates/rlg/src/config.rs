@@ -5,11 +5,11 @@
 
 //! TOML-based configuration: loading, validation, diffing, and hot-reload.
 //!
-//! Load from a file with [`Config::load`][crate::config::Config::load],
-//! or build programmatically via
-//! [`Config::default`][crate::config::Config::default] and
-//! [`Config::set`][crate::config::Config::set]. Serialize back to TOML
-//! with [`Config::save_to_file`][crate::config::Config::save_to_file].
+//! Load a `Config` from a file with its
+//! [`load`](crate::config::Config::load) function, or build one with
+//! [`default`](crate::config::Config::default) and
+//! [`set`](crate::config::Config::set). Serialize back to TOML with
+//! [`save_to_file`](crate::config::Config::save_to_file).
 //!
 //! Enable the `tokio` feature for async loading and file-watcher hot-reload.
 

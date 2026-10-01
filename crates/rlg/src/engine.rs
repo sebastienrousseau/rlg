@@ -5,8 +5,8 @@
 
 //! Near-lock-free ingestion engine backed by a bounded ring buffer.
 //!
-//! The global [`ENGINE`][crate::engine::ENGINE] accepts
-//! [`LogEvent`][crate::engine::LogEvent]s via
+//! The global [`ENGINE` static](crate::engine::ENGINE) accepts
+//! [`LogEvent` values](crate::engine::LogEvent) via
 //! [`LockFreeEngine::ingest()`][crate::engine::LockFreeEngine::ingest]
 //! using only atomic operations. A dedicated background thread drains events
 //! in batches of 64 and writes them through [`crate::sink::PlatformSink`].

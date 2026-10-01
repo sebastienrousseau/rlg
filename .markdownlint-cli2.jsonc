@@ -17,5 +17,5 @@
     "MD036": false
   },
   "globs": ["**/*.md"],
-  "ignores": ["target/**", "fuzz/target/**", "**/node_modules/**"]
+  "ignores": [".git/**", "target/**", "fuzz/target/**", "**/node_modules/**"]
 }
