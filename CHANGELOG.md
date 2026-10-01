@@ -25,6 +25,13 @@ Workspace-lockstep versioning: all 10 publishable crates are at
   the development machine; 3.0 to 0.95 µs with `fast-queue`), and a
   record fired at an idle engine is still written in about 57 µs. A new
   `Contended Emission (8 threads)` benchmark group tracks it.
+- **Breaking** (`rlg-otlp`): the blocking `OtlpExporter` now uses the
+  crate's own HTTP/1.1 client over `std::net`, like the async exporter,
+  and `ureq` is gone: 38 fewer crates in the lockfile and 34 fewer
+  cargo-vet exemptions. `OtlpError::Transport` wraps `std::io::Error`
+  (`TimedOut` for a deadline, `InvalidData` for a non-HTTP answer). An
+  `https://` endpoint or an unsafe header is reported on export as
+  `InvalidEndpoint` or `InvalidHeader` before any request is sent.
 
 ### Fixed
 
@@ -39,6 +46,8 @@ Workspace-lockstep versioning: all 10 publishable crates are at
   `config`, `engine` and `rotation` now carry descriptive labels that
   both accept. CI builds the docs the way docs.rs and Pages do on every
   pull request.
+- The config hot-reload poller read file metadata with a blocking call
+  on a Tokio worker; it now uses `tokio::fs`.
 - Releases attached unsigned duplicate SBOMs next to the signed ones;
   only the signed files are uploaded now.
 - An MCP HTTP test could connect to another test's subprocess when both

@@ -125,18 +125,10 @@ impl AsyncOtlpExporter {
         let mut chunk = [0_u8; 1024];
         loop {
             let n = stream.read(&mut chunk).await?;
-            if n == 0 {
-                return Err(io::ErrorKind::UnexpectedEof.into());
-            }
-            buf.extend_from_slice(&chunk[..n]);
-            if let Some(status) = http::parse_status(&buf)? {
+            if let Some(status) =
+                http::accept_chunk(&mut buf, &chunk[..n])?
+            {
                 return Ok(status);
-            }
-            if buf.len() > http::MAX_RESPONSE_HEAD {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "collector response headers too large",
-                ));
             }
         }
     }

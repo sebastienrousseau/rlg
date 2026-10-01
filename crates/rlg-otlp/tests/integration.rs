@@ -93,5 +93,5 @@ fn unreachable_endpoint_produces_transport_error() {
     let err = exporter.export_one(&record).expect_err(
         "unreachable endpoint must yield a Transport error",
     );
-    matches!(err, OtlpError::Transport(_));
+    assert!(matches!(err, OtlpError::Transport(_)), "{err:?}");
 }

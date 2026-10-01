@@ -72,9 +72,12 @@ polling watcher in `Config::hot_reload_async`).
 - Deployments that exported straight to a SaaS endpoint over
   `https://` with the `async` feature must add a Collector. The
   crate documentation carries a minimal configuration.
-- The blocking exporter still uses `ureq` (a required dependency,
-  not an optional one). Moving it onto `src/http.rs` would remove
-  `ureq` as well; that is left as a separate decision.
+- In 0.0.14 the blocking exporter moved onto `src/http.rs` too,
+  over a `std::net::TcpStream` with one deadline per attempt, and
+  `ureq` left the tree with 37 crates it pulled in.
+  `OtlpError::Transport` now wraps `std::io::Error`, and the
+  blocking exporter reports `InvalidEndpoint` and `InvalidHeader`
+  on export, since its `build()` stays infallible.
 
 ## Alternatives considered
 

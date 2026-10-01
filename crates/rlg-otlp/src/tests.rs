@@ -126,7 +126,7 @@ fn retry_loop_exhausts_attempts_on_transport_error() {
     // Disable wall-clock sleeps (`backoff_base = 0`) and crank
     // `max_retries` so we drive the retry loop multiple times
     // against a never-listening port. The test still completes
-    // in milliseconds because each `ureq::send` to a refused
+    // in milliseconds because each attempt against a refused
     // port returns immediately.
     let e = OtlpExporter::builder()
         .endpoint("http://127.0.0.1:1/v1/logs")
