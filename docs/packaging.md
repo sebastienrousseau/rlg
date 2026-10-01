@@ -69,6 +69,13 @@ rlg --manpage                 > rlg.1
 Supported shells: bash, zsh, fish, elvish, PowerShell. `make completions`
 writes all of them for both binaries into `target/completions/`.
 
+## Reproducibility
+
+The crate archives (`cargo package`) are byte-for-byte reproducible:
+CI packages the workspace in two separate checkouts and compares the
+SHA-256 of every `.crate`. No such claim is made for the compiled
+binaries, whose bytes depend on the toolchain and build paths.
+
 ## Verifying a release
 
 Releases are signed tags `v<VERSION>`. Each GitHub release carries SPDX

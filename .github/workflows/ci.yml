@@ -155,3 +155,27 @@ jobs:
           push: never
           runCmd: make
 
+  # The crate archives crates.io receives are reproducible: packaging
+  # the workspace in two separate checkouts gives identical bytes.
+  reproducible-packages:
+    name: Reproducible crate packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: a
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: b
+      - name: Package twice and compare
+        run: |
+          set -euo pipefail
+          for d in a b; do
+            (cd "$d" && cargo package --locked --workspace --exclude xtask --no-verify -q)
+            (cd "$d/target/package" && sha256sum *.crate) > "$d.sums"
+          done
+          cat a.sums
+          diff a.sums b.sums
+
