@@ -12,7 +12,7 @@ Call flow:
 
 1. `Log::info("msg").fire()` builds a `LogEvent` and calls `ENGINE.ingest()`.
 2. `ingest()` checks the event's level against an atomic filter. Events below the threshold are dropped immediately.
-3. `ingest()` pushes the event into the caller's shard. If the shard is full, it counts a dropped event, then evicts the oldest entry on that shard and retries, up to three times.
+3. `ingest()` pushes the event into the caller's shard. If the shard is full, it evicts the oldest entry on that shard and retries, up to three times. Every event that does not stay in the buffer is counted once in `TuiMetrics::dropped_events`: each eviction that removes one, and the new event if every retry loses the race.
 4. `ingest()` unparks the flusher thread via a cached `std::thread::Thread` handle — no `Mutex` on the hot path.
 
 ## 2. The Flusher Thread

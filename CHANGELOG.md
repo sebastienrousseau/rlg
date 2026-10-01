@@ -18,6 +18,11 @@ Workspace-lockstep versioning: all 10 publishable crates are at
 
 ### Fixed
 
+- `TuiMetrics::dropped_events` under-counted under contention. When the
+  ring buffer was full, `ingest` counted one drop and then evicted up to
+  three events uncounted; with eight threads on a full queue, 47% of the
+  lost events went unrecorded. Each eviction that removes an event, and
+  a new event that loses every retry, is now counted exactly once.
 - The documentation site stopped deploying at 0.0.13: today's nightly
   rustdoc rejects module links that repeat a path its label already
   resolves, while stable cannot resolve the short form, so six links in

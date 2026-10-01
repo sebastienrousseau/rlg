@@ -98,6 +98,37 @@ impl fmt::Debug for LockFreeEngine {
 pub static ENGINE: LazyLock<LockFreeEngine> =
     LazyLock::new(|| LockFreeEngine::new(RING_BUFFER_CAPACITY));
 
+/// Push `event`; if its shard is full, evict and retry with bounded
+/// retries.
+///
+/// `pop_local` targets the same shard as `push` so the eviction makes
+/// room for the retry on the shard the producer is actually contending
+/// on. Under the default (1-shard) build this is identical to the
+/// historical pop-then-push loop.
+///
+/// Every event that does not stay in the queue is counted once in
+/// `dropped_events`: each one an eviction actually removes, and the new
+/// event itself if every retry loses the race for the freed slot.
+fn push_evicting(
+    queue: &ShardedQueue,
+    metrics: &TuiMetrics,
+    event: LogEvent,
+) {
+    let Err(mut rejected) = queue.push(event) else {
+        return;
+    };
+    for _ in 0..3 {
+        if queue.pop_local().is_some() {
+            metrics.inc_dropped();
+        }
+        match queue.push(rejected) {
+            Ok(()) => return,
+            Err(e) => rejected = e,
+        }
+    }
+    metrics.inc_dropped();
+}
+
 /// Start the `rlg-flusher` thread over `queue`.
 #[cfg(not(miri))]
 fn spawn_flusher(
@@ -217,23 +248,7 @@ impl LockFreeEngine {
             self.metrics.inc_errors();
         }
 
-        // If the buffer is full, evict and retry with bounded retries.
-        //
-        // `pop_local` targets the same shard as `push` so the eviction
-        // makes room for the retry on the shard the producer is
-        // actually contending on. Under the default (1-shard) build
-        // this is identical to the historical pop-then-push loop.
-        if let Err(rejected) = self.queue.push(event) {
-            self.metrics.inc_dropped();
-            let mut to_push = rejected;
-            for _ in 0..3 {
-                let _ = self.queue.pop_local();
-                match self.queue.push(to_push) {
-                    Ok(()) => break,
-                    Err(e) => to_push = e,
-                }
-            }
-        }
+        push_evicting(&self.queue, &self.metrics, event);
 
         // Wake the flusher thread — no Mutex on the hot path.
         if let Some(thread) = &self.flusher_thread_handle {
@@ -330,6 +345,49 @@ mod tests {
             level,
             level_num: level.to_numeric(),
             log: Log::build(level, "test"),
+        }
+    }
+
+    /// Under contention on a full queue, every event pushed ends up
+    /// either in the queue or counted as dropped: nothing is lost
+    /// uncounted and nothing is counted twice.
+    #[test]
+    #[cfg_attr(miri, ignore)] // spawns threads
+    fn every_event_is_queued_or_counted_as_dropped() {
+        const THREADS: usize = 8;
+        const EACH: usize = 2_000;
+        for round in 0..20 {
+            let queue = Arc::new(ShardedQueue::new(8));
+            let metrics = Arc::new(TuiMetrics::default());
+            let producers: Vec<_> = (0..THREADS)
+                .map(|_| {
+                    let (queue, metrics) =
+                        (Arc::clone(&queue), Arc::clone(&metrics));
+                    thread::spawn(move || {
+                        for _ in 0..EACH {
+                            push_evicting(
+                                &queue,
+                                &metrics,
+                                make_event(LogLevel::INFO),
+                            );
+                        }
+                    })
+                })
+                .collect();
+            for producer in producers {
+                producer.join().unwrap();
+            }
+            let mut queued = 0;
+            while queue.pop().is_some() {
+                queued += 1;
+            }
+            let dropped =
+                metrics.dropped_events.load(Ordering::Relaxed);
+            assert_eq!(
+                queued + dropped,
+                THREADS * EACH,
+                "round {round}: {queued} queued, {dropped} dropped"
+            );
         }
     }
 
