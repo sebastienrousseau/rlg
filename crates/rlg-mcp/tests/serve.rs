@@ -77,9 +77,13 @@ async fn the_handshake_negotiates_a_current_revision() {
         info.capabilities.resources.is_some(),
         "resources capability"
     );
-    // The SDK client asks for its latest handshake revision; the server
-    // must agree to it rather than fall back.
-    assert_eq!(info.protocol_version, ProtocolVersion::LATEST);
+    // The SDK client asks for its latest revision that still has an
+    // `initialize` handshake; the server must agree to it rather than
+    // fall back. (`LATEST` may name a revision with no handshake.)
+    assert_eq!(
+        info.protocol_version,
+        ProtocolVersion::LATEST_WITH_INITIALIZE
+    );
     let _ = client.cancel().await.expect("clean close");
 }
 
