@@ -23,6 +23,10 @@ cargo test  --all-features                                     # unit + integrat
 cargo bench --bench competitive_bench                          # perf-sensitive changes only
 ```
 
+### Tests come with the change
+
+A pull request that adds functionality or changes behaviour adds tests for it in the same pull request, in the automated suite that `cargo test` runs. A bug fix adds a test that fails without the fix. CI holds workspace line coverage at 95% or more, so untested code fails the build.
+
 On macOS, run integration tests with `RLG_FALLBACK_STDOUT=1` to bypass the `os_log` FFI dispatch when not needed.
 
 ### Miri (undefined-behaviour check)
