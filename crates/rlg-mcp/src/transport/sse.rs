@@ -210,3 +210,18 @@ impl<H> fmt::Debug for SseState<H> {
         f.debug_struct("SseState").finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn debug_output_hides_the_handler_factory() {
+        let state = SseState::<()> {
+            factory: Box::new(|| ()),
+            sessions: Sessions::default(),
+            shutdown: CancellationToken::new(),
+        };
+        assert_eq!(format!("{state:?}"), "SseState { .. }");
+    }
+}
