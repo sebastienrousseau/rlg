@@ -52,7 +52,7 @@ rlg = { version = "0.0.14", path = "../rlg" }
 rlg-cli = { version = "0.0.14", path = "../rlg-cli" }
 # The official MCP SDK: protocol revisions 2024-11-05 through
 # 2026-07-28, stdio and streamable HTTP. The legacy HTTP+SSE bridge in
-# src/transport.rs is the only protocol code left in this crate.
+# src/transport/sse.rs is the only protocol code left in this crate.
 rmcp = { version = "3.4", features = ["server", "macros", "transport-io", "transport-streamable-http-server"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
 tokio-util = "0.7"

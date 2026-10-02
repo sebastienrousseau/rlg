@@ -26,34 +26,20 @@
 //! There is no authentication here: put the server behind a gateway
 //! you trust before binding a routable address.
 //!
-//! This file depends only on the SDK and on a [`ServerHandler`]
-//! passed in, so it is copied verbatim into every Rust server of the
-//! suite. Nothing in it knows what the tools are.
+//! This module (`transport.rs` and `transport/`) depends only on the
+//! SDK and on a [`ServerHandler`] passed in, so it is copied verbatim
+//! into every Rust server of the suite. Nothing in it knows what the
+//! tools are.
 
-use std::collections::HashMap;
-use std::fmt;
 use std::io;
-use std::pin::Pin;
 use std::process::ExitCode;
-use std::sync::{Arc, Mutex};
-use std::task::{Context, Poll};
 
 use axum::Router;
-use axum::body::Bytes;
-use axum::extract::{Query, State};
-use axum::http::StatusCode;
-use axum::response::sse::{Event, KeepAlive, Sse};
-use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
-use futures::channel::mpsc;
-use futures::{SinkExt, Stream, StreamExt};
-use rmcp::model::{ClientJsonRpcMessage, ServerJsonRpcMessage};
 use rmcp::transport::streamable_http_server::session::local::LocalSessionManager;
 use rmcp::transport::streamable_http_server::{
     StreamableHttpServerConfig, StreamableHttpService,
 };
 use rmcp::{ServerHandler, ServiceExt};
-use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
@@ -165,40 +151,58 @@ where
     let mut options = Options::default();
     let mut args = args.into_iter().map(Into::into);
     while let Some(arg) = args.next() {
-        let (flag, inline) = match arg.split_once('=') {
-            Some((flag, value)) => (flag.to_owned(), Some(value.to_owned())),
-            None => (arg, None),
-        };
-        let value = |args: &mut dyn Iterator<Item = String>| {
-            inline
-                .clone()
-                .or_else(|| args.next())
-                .ok_or_else(|| format!("{flag} needs a value"))
-        };
+        let (flag, inline) = split_flag(arg);
         match flag.as_str() {
             "--help" | "-h" => return Ok(Command::Help),
             "--version" | "-V" => return Ok(Command::Version),
-            "--transport" => {
-                let name = value(&mut args)?;
-                options.transport =
-                    Transport::parse(&name).ok_or_else(|| {
-                        format!(
-                            "unknown transport `{name}`; choose stdio, \
-                         streamable-http or sse"
-                        )
-                    })?;
-            }
-            "--host" => options.host = value(&mut args)?,
-            "--port" => {
-                let text = value(&mut args)?;
-                options.port = text
-                    .parse()
-                    .map_err(|_| format!("`{text}` is not a port number"))?;
-            }
-            other => return Err(format!("unknown argument `{other}`")),
+            other => apply_flag(&mut options, other, inline, &mut args)?,
         }
     }
     Ok(Command::Serve(options))
+}
+
+/// Split `--flag=value` at its first `=`; a bare `--flag` has no
+/// inline value.
+fn split_flag(arg: String) -> (String, Option<String>) {
+    match arg.split_once('=') {
+        Some((flag, value)) => (flag.to_owned(), Some(value.to_owned())),
+        None => (arg, None),
+    }
+}
+
+/// Set the option `flag` names, from its inline value or else the next
+/// argument. An unknown flag fails before any argument is read.
+fn apply_flag(
+    options: &mut Options,
+    flag: &str,
+    inline: Option<String>,
+    rest: &mut dyn Iterator<Item = String>,
+) -> Result<(), String> {
+    if !matches!(flag, "--transport" | "--host" | "--port") {
+        return Err(format!("unknown argument `{flag}`"));
+    }
+    let value = inline
+        .or_else(|| rest.next())
+        .ok_or_else(|| format!("{flag} needs a value"))?;
+    match flag {
+        "--transport" => options.transport = parse_transport(&value)?,
+        "--port" => options.port = parse_port(&value)?,
+        _ => options.host = value,
+    }
+    Ok(())
+}
+
+fn parse_transport(name: &str) -> Result<Transport, String> {
+    Transport::parse(name).ok_or_else(|| {
+        format!(
+            "unknown transport `{name}`; choose stdio, streamable-http or sse"
+        )
+    })
+}
+
+fn parse_port(text: &str) -> Result<u16, String> {
+    text.parse()
+        .map_err(|_| format!("`{text}` is not a port number"))
 }
 
 /// Serve `factory`'s handler as `name` according to the command line.
@@ -360,276 +364,8 @@ where
         .await
 }
 
-// --- The 2024-11-05 HTTP+SSE transport ---------------------------------
-//
-// The SDK dropped the server side of this transport in 3.x. It is a
-// small thing: one event stream per session, and a POST endpoint that
-// feeds messages into it. The SDK's service runs over an in-memory
-// pair of channels, exactly as it would over a socket.
-
-/// One session's inbox: the channel its posted messages go down.
-type Inbox = mpsc::Sender<ClientJsonRpcMessage>;
-
-/// The live sessions, by id.
-type Sessions = Arc<Mutex<HashMap<String, Inbox>>>;
-
-/// What the two SSE handlers share.
-struct SseState<H> {
-    factory: Box<dyn Fn() -> H + Send + Sync>,
-    sessions: Sessions,
-    /// Cancelled when the server stops, ending every session.
-    shutdown: CancellationToken,
-}
-
-/// `?sessionId=...` on the message endpoint.
-#[derive(Debug, Deserialize)]
-struct SessionQuery {
-    #[serde(rename = "sessionId")]
-    session_id: String,
-}
-
-async fn serve_sse<H, F>(listener: TcpListener, factory: F) -> io::Result<()>
-where
-    H: ServerHandler,
-    F: Fn() -> H + Send + Sync + 'static,
-{
-    let shutdown = CancellationToken::new();
-    let state = Arc::new(SseState {
-        factory: Box::new(factory),
-        sessions: Sessions::default(),
-        shutdown: shutdown.clone(),
-    });
-    let router = Router::new()
-        .route(SSE_PATH, get(open_stream::<H>))
-        .route(MESSAGE_PATH, post(post_message::<H>))
-        // Without the trailing slash too: clients differ on whether
-        // they keep it, and a 404 over a slash is a poor way to fail.
-        .route(MESSAGE_PATH.trim_end_matches('/'), post(post_message::<H>))
-        .with_state(state);
-    axum::serve(listener, router)
-        .with_graceful_shutdown(async move {
-            interrupted().await;
-            shutdown.cancel();
-        })
-        .await
-}
-
-/// `GET /sse`: start a session and stream its events.
-///
-/// The first event is `endpoint`, naming where this session's
-/// messages are posted. Every message the server sends after that is a
-/// `message` event carrying one JSON-RPC message.
-async fn open_stream<H: ServerHandler>(
-    State(state): State<Arc<SseState<H>>>,
-) -> Response {
-    let id = uuid::Uuid::new_v4().simple().to_string();
-    let (inbox, from_client) = mpsc::channel::<ClientJsonRpcMessage>(32);
-    let (to_client, outbox) = mpsc::channel::<ServerJsonRpcMessage>(32);
-    let ct = state.shutdown.child_token();
-    let _ = state
-        .sessions
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .insert(id.clone(), inbox);
-
-    let handler = (state.factory)();
-    let session_ct = ct.clone();
-    drop(tokio::spawn(async move {
-        // The service ends when its client stream closes -- the POST
-        // side dropped -- or when the token is cancelled. Either way
-        // there is nobody to report to.
-        if let Ok(running) = handler
-            .serve_with_ct((to_client, from_client), session_ct)
-            .await
-        {
-            let _ = running.waiting().await;
-        }
-    }));
-
-    let endpoint = Event::default()
-        .event("endpoint")
-        .data(format!("{MESSAGE_PATH}?sessionId={id}"));
-    let messages = outbox.map(|message| {
-        serde_json::to_string(&message)
-            .map(|json| Event::default().event("message").data(json))
-    });
-    let events = futures::stream::once(async { Ok(endpoint) }).chain(messages);
-    let stream = SessionStream {
-        events: Box::pin(events),
-        guard: SessionGuard {
-            id,
-            sessions: Arc::clone(&state.sessions),
-            ct,
-        },
-    };
-    Sse::new(stream)
-        .keep_alive(KeepAlive::default())
-        .into_response()
-}
-
-/// `POST /messages/?sessionId=...`: one JSON-RPC message in, `202` out.
-///
-/// The reply, if any, goes down the session's event stream, which is
-/// what makes this the older transport: the HTTP response carries
-/// nothing.
-async fn post_message<H: ServerHandler>(
-    State(state): State<Arc<SseState<H>>>,
-    Query(query): Query<SessionQuery>,
-    body: Bytes,
-) -> Response {
-    let message: ClientJsonRpcMessage = match serde_json::from_slice(&body) {
-        Ok(message) => message,
-        Err(e) => {
-            return (StatusCode::BAD_REQUEST, format!("invalid JSON-RPC: {e}"))
-                .into_response();
-        }
-    };
-    let inbox = state
-        .sessions
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .get(&query.session_id)
-        .cloned();
-    let Some(mut inbox) = inbox else {
-        return (StatusCode::NOT_FOUND, "no such session").into_response();
-    };
-    match inbox.send(message).await {
-        Ok(()) => StatusCode::ACCEPTED.into_response(),
-        // The service has gone but the stream has not yet been torn
-        // down: the session is over.
-        Err(_) => (StatusCode::GONE, "session closed").into_response(),
-    }
-}
-
-/// Ends the session when the event stream is dropped -- which is how
-/// a client hangs up.
-struct SessionGuard {
-    id: String,
-    sessions: Sessions,
-    ct: CancellationToken,
-}
-
-impl Drop for SessionGuard {
-    fn drop(&mut self) {
-        let _ = self
-            .sessions
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .remove(&self.id);
-        self.ct.cancel();
-    }
-}
-
-/// The event stream of one session, with its guard attached.
-struct SessionStream {
-    events:
-        Pin<Box<dyn Stream<Item = Result<Event, serde_json::Error>> + Send>>,
-    #[allow(dead_code, reason = "held for its Drop")]
-    guard: SessionGuard,
-}
-
-impl Stream for SessionStream {
-    type Item = Result<Event, serde_json::Error>;
-
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
-        self.events.as_mut().poll_next(cx)
-    }
-}
-
-impl<H> fmt::Debug for SseState<H> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SseState").finish_non_exhaustive()
-    }
-}
+mod sse;
+use sse::serve_sse;
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_arguments_means_stdio() {
-        assert_eq!(
-            parse(Vec::<String>::new()),
-            Ok(Command::Serve(Options::default()))
-        );
-    }
-
-    #[test]
-    fn the_http_transports_take_host_and_port() {
-        let want = Options {
-            transport: Transport::StreamableHttp,
-            host: "0.0.0.0".to_owned(),
-            port: 9000,
-        };
-        assert_eq!(
-            parse([
-                "--transport",
-                "streamable-http",
-                "--host",
-                "0.0.0.0",
-                "--port",
-                "9000"
-            ]),
-            Ok(Command::Serve(want.clone()))
-        );
-        // `--flag=value` is the same as `--flag value`.
-        assert_eq!(
-            parse([
-                "--transport=streamable-http",
-                "--host=0.0.0.0",
-                "--port=9000"
-            ]),
-            Ok(Command::Serve(want))
-        );
-        assert_eq!(
-            parse(["--transport", "sse"]),
-            Ok(Command::Serve(Options {
-                transport: Transport::Sse,
-                ..Options::default()
-            }))
-        );
-    }
-
-    #[test]
-    fn help_and_version_win_over_everything_else() {
-        assert_eq!(parse(["--help"]), Ok(Command::Help));
-        assert_eq!(parse(["-h"]), Ok(Command::Help));
-        assert_eq!(parse(["--version"]), Ok(Command::Version));
-        assert_eq!(parse(["--transport", "sse", "-V"]), Ok(Command::Version));
-    }
-
-    #[test]
-    fn bad_arguments_are_named() {
-        assert!(
-            parse(["--transport", "carrier-pigeon"])
-                .is_err_and(|e| e.contains("carrier-pigeon"))
-        );
-        assert!(
-            parse(["--port", "eighty"]).is_err_and(|e| e.contains("eighty"))
-        );
-        assert!(parse(["--port", "70000"]).is_err_and(|e| e.contains("70000")));
-        assert!(parse(["--port"]).is_err_and(|e| e.contains("needs a value")));
-        assert!(parse(["--bogus"]).is_err_and(|e| e.contains("--bogus")));
-    }
-
-    #[test]
-    fn the_usage_text_names_every_flag_and_path() {
-        let text = usage("any-mcp");
-        for needle in [
-            "any-mcp",
-            "--transport",
-            "--host",
-            "--port",
-            "--version",
-            "--help",
-            STREAMABLE_HTTP_PATH,
-            SSE_PATH,
-            MESSAGE_PATH,
-        ] {
-            assert!(text.contains(needle), "usage lacks {needle}:\n{text}");
-        }
-    }
-}
+mod tests;

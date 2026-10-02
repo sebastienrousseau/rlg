@@ -79,8 +79,9 @@ string or takes a lock. Everything expensive happens on the flusher.
   `summarize_errors`, `tail_logs_glob`), one prompt and two resources
   through the official MCP SDK. `ops.rs` holds the operations as plain
   functions, `model.rs` the tool arguments and results, `lib.rs` the
-  server, and `transport.rs` (shared verbatim across the suite's MCP
-  servers) the stdio, streamable HTTP and HTTP+SSE transports.
+  server, and `transport.rs` with `transport/sse.rs` (shared across the
+  suite's MCP servers) the stdio, streamable HTTP and HTTP+SSE
+  transports.
 - **`rlg-otlp`** sends OTLP/HTTP JSON to a local Collector, which owns
   TLS ([ADR 0015](adr/0015-otlp-local-collector-transport.md)). Both
   exporters use an in-house HTTP/1.1 client (`http.rs`), the blocking
