@@ -8,9 +8,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default; a job that needs more says so itself.
+permissions:
+  contents: read
+
 jobs:
   ci:
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@main
+    permissions:
+      contents: read
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
     with:
       rust-version: 'stable'
       run-coverage: true
@@ -18,13 +24,21 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   security:
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@main
+    # CodeQL uploads its results as code-scanning alerts.
+    permissions:
+      contents: read
+      security-events: write
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
     with:
       language: rust
 
   docs:
     if: github.ref == 'refs/heads/main'
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@main
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
     with:
       type: rust
       redirect-crate: rlg
@@ -54,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The version the baseline was measured with; bump both together.
-      - uses: taiki-e/install-action@v2.87.15
+      - uses: taiki-e/install-action@4076c08d76dba979c11a7285295b0716c1d67908 # v2.87.15
         with:
           tool: rust-code-analysis-cli@0.0.25
       - run: scripts/complexity-gate.py
@@ -90,7 +104,7 @@ jobs:
       - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: "**/*.md"
-      - uses: taiki-e/install-action@v2.87.15
+      - uses: taiki-e/install-action@4076c08d76dba979c11a7285295b0716c1d67908 # v2.87.15
         with:
           tool: mdbook@0.5.4
       - name: Build the user manual

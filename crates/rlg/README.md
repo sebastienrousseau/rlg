@@ -7,8 +7,8 @@
 <h1 align="center">rlg</h1>
 
 <p align="center">
-  Near-lock-free structured logging for Rust. Sub-microsecond ingestion
-  via a 65k-slot ring buffer, deferred formatting, and native OS sinks.
+  Near-lock-free structured logging for Rust: a 65,536-slot ring buffer,
+  formatting deferred to a background thread, and native OS sinks.
 </p>
 
 <p align="center">

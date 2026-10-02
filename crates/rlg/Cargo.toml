@@ -5,11 +5,11 @@ edition = "2024"
 rust-version = "1.88.0"
 license = "MIT OR Apache-2.0"
 description = """
-A near-lock-free structured logging library for Rust. Sub-microsecond
-ingestion via a 65k-slot ring buffer (LMAX Disruptor pattern), deferred
-formatting, and native OS sinks (`os_log` on macOS via `syslog(3)`,
-`journald` on Linux). 14 output formats including JSON, MCP, OTLP,
-ECS, GELF, CEF, and Logfmt.
+Near-lock-free structured logging for Rust. A 65,536-slot ring buffer
+takes records with a few atomic operations; a background thread formats
+them and writes to native OS sinks (`os_log` on macOS via `syslog(3)`,
+`journald` on Linux), a file or stdout. 14 output formats, including
+JSON, ECS, GELF, OTLP, CEF, MCP and logfmt.
 """
 repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"

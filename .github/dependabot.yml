@@ -29,3 +29,20 @@ updates:
       github-actions:
         patterns:
           - "*"
+  # Base images are pinned by digest (OpenSSF Scorecard
+  # Pinned-Dependencies); these keep the digests current.
+  - package-ecosystem: docker
+    directories: ["/", "/pkg/docker"]
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      docker:
+        patterns:
+          - "*"
