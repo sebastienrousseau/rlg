@@ -97,6 +97,23 @@ Download `${f}.sig` and `${f}.crt` instead of the bundle, and pass
   `https://token.actions.githubusercontent.com` means the OIDC
   token came from **GitHub Actions**, not another IdP.
 
+## Verify a signed tag
+
+Release tags are signed with the maintainer's SSH keys, listed in
+[`KEYS.asc`](../KEYS.asc) as allowed-signers lines. In a clone:
+
+```bash
+grep '^sebastian.rousseau@gmail.com namespaces=' KEYS.asc > allowed_signers
+git -c gpg.ssh.allowedSignersFile=allowed_signers verify-tag v0.0.14
+```
+
+A good tag prints `Good "git" signature for
+sebastian.rousseau@gmail.com with ED25519 key SHA256:...`; the
+fingerprint must be one `KEYS.asc` lists. `git verify-commit` checks a
+commit the same way. Commits from 2024 carry the OpenPGP key at the
+end of `KEYS.asc` (`gpg --import KEYS.asc`), and merge commits made on
+github.com carry GitHub's key from <https://github.com/web-flow.gpg>.
+
 ## Compare an SBOM against your Cargo.lock
 
 The SBOMs enumerate every transitive dependency the release was
