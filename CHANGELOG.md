@@ -7,6 +7,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Release SBOMs are signed with cosign v3 and ship one Sigstore bundle
+  per SBOM (`sbom.<fmt>.json.sigstore.json`) in place of the separate
+  `.sig` and `.crt` files. Verify with `cosign verify-blob --bundle`;
+  `pkg/VERIFY.md` keeps the steps for releases up to v0.0.14, and
+  `make verify-release` handles both layouts.
+
+### Fixed
+
+- `make verify-release` reported success when the first SBOM failed
+  verification and the second passed; it now stops at the first
+  failure.
+
 ## [0.0.14] — unreleased
 
 The **follow-through** cut: what releasing 0.0.13 exposed. A

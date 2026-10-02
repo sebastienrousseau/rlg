@@ -45,9 +45,11 @@ Every release now ships:
 - **`sbom.spdx.json`** — SPDX 2.3 SBOM of the release ref.
 - **`sbom.cyclonedx.json`** — CycloneDX 1.5 SBOM of the release
   ref.
-- **`<file>.sig`** and **`<file>.crt`** for each SBOM — keyless
-  sigstore signature + certificate bundle produced by
-  `cosign sign-blob --yes`.
+- **`<file>.sigstore.json`** for each SBOM — a keyless Sigstore
+  bundle (signature, certificate and transparency-log proof)
+  produced by `cosign sign-blob --yes --bundle`. Releases up to
+  v0.0.14 shipped `<file>.sig` and `<file>.crt` instead; cosign v3
+  made the bundle the required output in v0.0.15.
 
 Signing runs on the `github-release` job of
 `.github/workflows/release.yml`. The job already carries the

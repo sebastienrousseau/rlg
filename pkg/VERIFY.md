@@ -7,8 +7,11 @@ ships with:
 
 - `sbom.spdx.json` — SPDX SBOM (industry default).
 - `sbom.cyclonedx.json` — CycloneDX SBOM (EU CRA baseline).
-- `<file>.sig` + `<file>.crt` for each SBOM — keyless sigstore
-  signature + certificate bundle.
+- `<file>.sigstore.json` for each SBOM: a keyless Sigstore bundle
+  holding the signature, the signing certificate and the
+  transparency-log proof. Releases up to v0.0.14 shipped
+  `<file>.sig` + `<file>.crt` instead; see
+  [Releases up to v0.0.14](#releases-up-to-v0014).
 
 This document is the consumer runbook for verifying those artefacts
 end-to-end. Design rationale in
@@ -30,8 +33,10 @@ curl -sSfLO "https://github.com/sigstore/cosign/releases/latest/download/cosign-
 sudo pacman -S cosign
 
 # Go
-go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+go install github.com/sigstore/cosign/v3/cmd/cosign@latest
 ```
+
+Bundles need cosign v3 or later.
 
 Verify:
 
@@ -48,15 +53,10 @@ and its signature bundle:
 TAG=v0.1.0
 BASE="https://github.com/sebastienrousseau/rlg/releases/download/${TAG}"
 
-# SPDX
-curl -sLO "${BASE}/sbom.spdx.json"
-curl -sLO "${BASE}/sbom.spdx.json.sig"
-curl -sLO "${BASE}/sbom.spdx.json.crt"
-
-# CycloneDX
-curl -sLO "${BASE}/sbom.cyclonedx.json"
-curl -sLO "${BASE}/sbom.cyclonedx.json.sig"
-curl -sLO "${BASE}/sbom.cyclonedx.json.crt"
+for f in sbom.spdx.json sbom.cyclonedx.json; do
+  curl -sLO "${BASE}/${f}"
+  curl -sLO "${BASE}/${f}.sigstore.json"
+done
 ```
 
 Verify:
@@ -64,8 +64,7 @@ Verify:
 ```bash
 for f in sbom.spdx.json sbom.cyclonedx.json; do
   cosign verify-blob \
-    --certificate "${f}.crt" \
-    --signature "${f}.sig" \
+    --bundle "${f}.sigstore.json" \
     --certificate-identity-regexp \
         "https://github.com/sebastienrousseau/rlg/.github/workflows/release.yml@refs/tags/v[0-9]+.*" \
     --certificate-oidc-issuer \
@@ -79,6 +78,13 @@ outcome — mismatched signature, wrong issuer, revoked certificate,
 non-matching identity — is a **stop-the-line** event: do not consume
 the artefact.
 
+### Releases up to v0.0.14
+
+Those releases carry a detached signature and certificate per SBOM.
+Download `${f}.sig` and `${f}.crt` instead of the bundle, and pass
+`--certificate "${f}.crt" --signature "${f}.sig"` in place of
+`--bundle`; the identity and issuer flags are the same.
+
 ## What each certificate identity means
 
 - `certificate-identity-regexp` pinned to
@@ -90,6 +96,23 @@ the artefact.
 - `certificate-oidc-issuer` pinned to
   `https://token.actions.githubusercontent.com` means the OIDC
   token came from **GitHub Actions**, not another IdP.
+
+## Verify a signed tag
+
+Release tags are signed with the maintainer's SSH keys, listed in
+[`KEYS.asc`](../KEYS.asc) as allowed-signers lines. In a clone:
+
+```bash
+grep '^sebastian.rousseau@gmail.com namespaces=' KEYS.asc > allowed_signers
+git -c gpg.ssh.allowedSignersFile=allowed_signers verify-tag v0.0.14
+```
+
+A good tag prints `Good "git" signature for
+sebastian.rousseau@gmail.com with ED25519 key SHA256:...`; the
+fingerprint must be one `KEYS.asc` lists. `git verify-commit` checks a
+commit the same way. Commits from 2024 carry the OpenPGP key at the
+end of `KEYS.asc` (`gpg --import KEYS.asc`), and merge commits made on
+github.com carry GitHub's key from <https://github.com/web-flow.gpg>.
 
 ## Compare an SBOM against your Cargo.lock
 
@@ -131,7 +154,7 @@ release.yml at tags/v<version>
     ├─ signs each with `cosign sign-blob --yes`
     │
     ▼
-sbom.<fmt>.json + .sig + .crt on the release page
+sbom.<fmt>.json + .sigstore.json on the release page
 ```
 
 Break any link in that chain and verification fails. That is the

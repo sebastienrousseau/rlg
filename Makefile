@@ -109,15 +109,17 @@ verify-release: ensure-cosign ## Verify a release's sigstore-signed SBOMs (TAG=<
 	tmpdir="$$(mktemp -d)"; \
 	cd "$$tmpdir" && \
 	for f in sbom.spdx.json sbom.cyclonedx.json; do \
-		curl -sfLO "$${BASE}/$${f}"          && \
-		curl -sfLO "$${BASE}/$${f}.sig"      && \
-		curl -sfLO "$${BASE}/$${f}.crt"      && \
-		cosign verify-blob                    \
-			--certificate "$${f}.crt"        \
-			--signature   "$${f}.sig"        \
+		curl -sfLO "$${BASE}/$${f}" || exit 1; \
+		if curl -sfLO "$${BASE}/$${f}.sigstore.json"; then \
+			sig="--bundle $${f}.sigstore.json"; \
+		else \
+			curl -sfLO "$${BASE}/$${f}.sig" && curl -sfLO "$${BASE}/$${f}.crt" || exit 1; \
+			sig="--certificate $${f}.crt --signature $${f}.sig"; \
+		fi; \
+		cosign verify-blob $$sig \
 			--certificate-identity-regexp 'https://github.com/sebastienrousseau/rlg/.github/workflows/release.yml@refs/tags/v[0-9]+.*' \
 			--certificate-oidc-issuer     https://token.actions.githubusercontent.com \
-			"$${f}"; \
+			"$${f}" || exit 1; \
 	done
 	@echo "Release $(TAG) verified."
 
