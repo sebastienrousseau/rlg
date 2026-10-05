@@ -11,7 +11,7 @@
 # Only the `rlg-mcp` workspace member (and its path deps) is built; the
 # default rlg feature set pulls no journald/os_log system libraries.
 
-FROM rust:1.98-bookworm@sha256:93ce27a88655056a51dbdd8f5f2d7ddc071c7b0070fb288a37b5a285fc83971e AS build
+FROM rust:1.99-bookworm@sha256:59037199c44290f2befcdd58dcc540164763fc296950255aaefeef096a1866b0 AS build
 
 WORKDIR /src
 COPY . .
