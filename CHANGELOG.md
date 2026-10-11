@@ -5,10 +5,13 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.15] - 2026-10-11
 
 ### Changed
 
+- Bumped `config` from 0.15.26 to 0.15.27 in the minor-and-patch group.
+- Bumped `anchore/sbom-action` from 0.24.2 to 0.24.3 in the release workflow.
+- Updated Docker builds to `rust:1.99-bookworm`.
 - Release SBOMs are signed with cosign v3 and ship one Sigstore bundle
   per SBOM (`sbom.<fmt>.json.sigstore.json`) in place of the separate
   `.sig` and `.crt` files. Verify with `cosign verify-blob --bundle`;
@@ -21,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   verification and the second passed; it now stops at the first
   failure.
 
-## [0.0.14] — unreleased
+## [0.0.14] - 2026-08-27
 
 The **follow-through** cut: what releasing 0.0.13 exposed. A
 memory-safety bug in the macOS sink is fixed, `fire()` costs less than

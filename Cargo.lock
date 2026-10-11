@@ -373,9 +373,9 @@ checksum = "1d07550c9036bf2ae0c684c4297d503f838287c83c53686d05370d0e139ae570"
 
 [[package]]
 name = "config"
-version = "0.15.26"
+version = "0.15.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "790374c727a4cb20877dd2cc99ce7011cbe03b0b8df083acccd37df0d161304d"
+checksum = "38e9fbc53afcec54441422f1c596cd054655b32e70e1cbac956651b7b175a404"
 dependencies = [
  "pathdiff",
  "serde_core",
@@ -1463,7 +1463,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rlg"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "config",
  "criterion",
@@ -1498,7 +1498,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1515,7 +1515,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-ebpf"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "libc",
@@ -1525,7 +1525,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "axum",
  "criterion",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-otlp"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "rlg",
@@ -1558,7 +1558,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-redact"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "regex",
@@ -1568,7 +1568,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-report"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1586,7 +1586,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-test"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "parking_lot",
@@ -1596,7 +1596,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-tower"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "http",
@@ -1611,7 +1611,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-wasm"
-version = "0.0.14"
+version = "0.0.15"
 dependencies = [
  "criterion",
  "rlg",
