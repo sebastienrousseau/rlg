@@ -68,7 +68,7 @@ cargo check --all-features
 cargo test  --all-features
 ```
 
-`rlg` targets Rust **1.88.0** (MSRV) and edition 2024. It runs
+`rlg` targets Rust **1.89.0** (MSRV) and edition 2024. It runs
 on macOS, Linux, and WSL; Windows is supported on a best-effort
 basis via the stdout fallback sink.
 

@@ -118,14 +118,14 @@ jobs:
   # every library and binary. Tests may need newer toolchains through
   # dev-dependencies; see docs/POLICIES.md.
   msrv:
-    name: MSRV (1.88.0) builds
+    name: MSRV (1.89.0) builds
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup toolchain install 1.88.0 --profile minimal
-      - run: cargo +1.88.0 check --locked --workspace --all-features --lib --bins
+      - run: rustup toolchain install 1.89.0 --profile minimal
+      - run: cargo +1.89.0 check --locked --workspace --all-features --lib --bins
 
   # The GNUmakefile install contract on a clean runner: binaries,
   # generated manpages and completions land in an FHS tree under

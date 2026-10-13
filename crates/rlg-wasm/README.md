@@ -37,7 +37,7 @@ A component-model interface definition ships at
 rlg-wasm = "0.0.15"
 ```
 
-Requires Rust **1.88.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.
+Requires Rust **1.89.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.
 
 ## Build a WASM bundle
 
