@@ -52,6 +52,7 @@ msrv_sites=(
   "DEVELOPMENT.md|minimum supported version is \*\*[0-9.]+\*\*"
   "docs/POLICIES.md|The floor is Rust [0-9.]+\*\*|MSRV \([0-9.]+\) builds|cargo \+[0-9.]+ check"
   "docs/packaging.md|minimum supported Rust is \*\*[0-9.]+\*\*|builds with the [0-9.]+ toolchain"
+  "CLAUDE.md|MSRV [0-9]+\.[0-9]+\.[0-9]+"
 )
 for site in "${msrv_sites[@]}"; do
   IFS='|' read -r -a parts <<<"$site"
