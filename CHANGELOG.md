@@ -22,6 +22,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The GitHub Actions group and the Rust 1.99 Docker base images
   (Dependabot #221, #222).
+- The minor-and-patch group (tokio 1.53.2, toml 1.1.8, libc 0.2.190,
+  rmcp 3.5.1, tokio-util 0.7.20, uuid 1.28.0), Dependabot #220. uuid
+  1.28 requires rustc 1.89, the new floor. `cargo vet` needs the
+  maintainer's decisions for these and for config 0.15.27, unvetted
+  on `main`: `.git/vet-v0.0.16.sh` asks for each.
 
 ## [0.0.15] - 2026-10-11
 
