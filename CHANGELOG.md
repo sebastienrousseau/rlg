@@ -5,6 +5,29 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - Unreleased
+
+### Changed
+
+- **Breaking: the MSRV is now Rust 1.89.0** (was 1.88.0) for every
+  crate, one floor shared with the maintainer's other Rust crates. The
+  manifests, `build.rs`, `flake.nix`, the MSRV CI job, the READMEs and
+  the policy and packaging docs state it.
+- **`scripts/check-doc-versions.sh` checks the MSRV.** Every crate
+  manifest and every statement of the floor must match `rust-version`.
+- **Install snippets name 0.0.15.** Four in the guides still said
+  0.0.14, which kept the docs check red on `main`.
+
+### Dependencies
+
+- The GitHub Actions group and the Rust 1.99 Docker base images
+  (Dependabot #221, #222).
+- The minor-and-patch group (tokio 1.53.2, toml 1.1.8, libc 0.2.190,
+  rmcp 3.5.1, tokio-util 0.7.20, uuid 1.28.0), Dependabot #220. uuid
+  1.28 requires rustc 1.89, the new floor. `cargo vet` needs the
+  maintainer's decisions for these and for config 0.15.27, unvetted
+  on `main`: `.git/vet-v0.0.16.sh` asks for each.
+
 ## [0.0.15] - 2026-10-11
 
 ### Changed

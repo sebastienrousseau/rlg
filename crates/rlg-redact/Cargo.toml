@@ -2,7 +2,7 @@
 name = "rlg-redact"
 version = "0.0.15"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 PII and secret redaction for rlg records. Built-in regex patterns for

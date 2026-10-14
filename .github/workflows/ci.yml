@@ -16,7 +16,7 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
     with:
       rust-version: 'stable'
       run-coverage: true
@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
     with:
       language: rust
 
@@ -38,7 +38,7 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@7061363af0a1da9d60c5901bd2874ac83ff7e34e # main
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
     with:
       type: rust
       redirect-crate: rlg
@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The version the baseline was measured with; bump both together.
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: rust-code-analysis-cli@0.0.25
       - run: scripts/complexity-gate.py
@@ -104,7 +104,7 @@ jobs:
       - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
         with:
           globs: "**/*.md"
-      - uses: taiki-e/install-action@83ac0ad63c0167e6f06796fab0fce28db1bf3db0 # v2.87.22
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
         with:
           tool: mdbook@0.5.4
       - name: Build the user manual
@@ -118,14 +118,14 @@ jobs:
   # every library and binary. Tests may need newer toolchains through
   # dev-dependencies; see docs/POLICIES.md.
   msrv:
-    name: MSRV (1.88.0) builds
+    name: MSRV (1.89.0) builds
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup toolchain install 1.88.0 --profile minimal
-      - run: cargo +1.88.0 check --locked --workspace --all-features --lib --bins
+      - run: rustup toolchain install 1.89.0 --profile minimal
+      - run: cargo +1.89.0 check --locked --workspace --all-features --lib --bins
 
   # The GNUmakefile install contract on a clean runner: binaries,
   # generated manpages and completions land in an FHS tree under

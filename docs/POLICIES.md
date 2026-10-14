@@ -4,12 +4,13 @@
 
 ## Minimum supported Rust version
 
-**The floor is Rust 1.88.0** (edition 2024), declared as `rust-version`
-in every crate.
+**The floor is Rust 1.89.0** (edition 2024), declared as `rust-version`
+in every crate. It was raised from 1.88.0 in 0.0.16 to share one floor
+with the maintainer's other Rust crates.
 
 - **What it covers**: building every library and binary in the
   workspace, with all features, from the committed `Cargo.lock`. The CI
-  job `MSRV (1.88.0) builds` runs `cargo +1.88.0 check --locked
+  job `MSRV (1.89.0) builds` runs `cargo +1.89.0 check --locked
   --workspace --all-features --lib --bins` on every pull request.
 - **What it does not cover**: the test suite. Dev-dependencies may need a
   newer toolchain (today `serial_test` 4 needs 1.93.1); contributors use

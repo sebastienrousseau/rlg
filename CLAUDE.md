@@ -54,7 +54,7 @@ cargo bench --bench competitive_bench     # Benchmarks
 
 ## Conventions
 
-- Edition 2024, MSRV 1.88.0
+- Edition 2024, MSRV 1.89.0
 - `#![deny(clippy::all, clippy::pedantic, clippy::nursery)]`
 - `unsafe_code = "deny"` (exception: platform FFI in `sink.rs`)
 - Thread-spawning tests use `#[cfg_attr(miri, ignore)]`

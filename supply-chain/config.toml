@@ -162,10 +162,6 @@ criteria = "safe-to-deploy"
 version = "1.0.5"
 criteria = "safe-to-deploy"
 
-[[exemptions.config]]
-version = "0.15.26"
-criteria = "safe-to-deploy"
-
 [[exemptions.cpufeatures]]
 version = "0.3.0"
 criteria = "safe-to-deploy"
@@ -255,10 +251,6 @@ version = "0.3.34"
 criteria = "safe-to-deploy"
 
 [[exemptions.futures-channel]]
-version = "0.3.34"
-criteria = "safe-to-deploy"
-
-[[exemptions.futures-core]]
 version = "0.3.34"
 criteria = "safe-to-deploy"
 
@@ -430,10 +422,6 @@ criteria = "safe-to-deploy"
 version = "0.9.12"
 criteria = "safe-to-deploy"
 
-[[exemptions.pastey]]
-version = "0.2.3"
-criteria = "safe-to-deploy"
-
 [[exemptions.pathdiff]]
 version = "0.2.3"
 criteria = "safe-to-deploy"
@@ -594,10 +582,6 @@ criteria = "safe-to-deploy"
 version = "0.1.20"
 criteria = "safe-to-deploy"
 
-[[exemptions.serde_spanned]]
-version = "0.6.9"
-criteria = "safe-to-deploy"
-
 [[exemptions.serde_urlencoded]]
 version = "0.7.1"
 criteria = "safe-to-deploy"
@@ -650,10 +634,6 @@ criteria = "safe-to-deploy"
 version = "2.0.21"
 criteria = "safe-to-deploy"
 
-[[exemptions.tokio]]
-version = "1.53.1"
-criteria = "safe-to-deploy"
-
 [[exemptions.tokio-macros]]
 version = "2.7.0"
 criteria = "safe-to-deploy"
@@ -666,28 +646,12 @@ criteria = "safe-to-deploy"
 version = "0.4.6"
 criteria = "safe-to-run"
 
-[[exemptions.tokio-util]]
-version = "0.7.19"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml]]
-version = "0.8.23"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml]]
-version = "1.1.6+spec-1.1.0"
-criteria = "safe-to-deploy"
-
 [[exemptions.toml_datetime]]
 version = "0.6.11"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml_edit]]
 version = "0.22.27"
-criteria = "safe-to-deploy"
-
-[[exemptions.toml_parser]]
-version = "1.1.3+spec-1.1.0"
 criteria = "safe-to-deploy"
 
 [[exemptions.toml_write]]
@@ -716,10 +680,6 @@ criteria = "safe-to-deploy"
 
 [[exemptions.tracing-attributes]]
 version = "0.1.31"
-criteria = "safe-to-deploy"
-
-[[exemptions.tracing-core]]
-version = "0.1.36"
 criteria = "safe-to-deploy"
 
 [[exemptions.tracing-subscriber]]

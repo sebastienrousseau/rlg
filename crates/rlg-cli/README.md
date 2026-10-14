@@ -27,7 +27,7 @@
 cargo install rlg-cli
 ```
 
-The binary is named `rlg`. Requires Rust **1.88.0** or newer (edition 2024).
+The binary is named `rlg`. Requires Rust **1.89.0** or newer (edition 2024).
 
 ## Usage
 

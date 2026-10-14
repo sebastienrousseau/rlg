@@ -2,7 +2,7 @@
 name = "rlg-report"
 version = "0.0.15"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 Log digest / analytics for rlg. Reads JSON-shaped rlg records from

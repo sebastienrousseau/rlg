@@ -17,7 +17,7 @@
   <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
   <a href="https://www.bestpractices.dev/projects/15160"><img src="https://img.shields.io/cii/level/15160?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
   <a href="#license"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
-  <a href="https://github.com/sebastienrousseau/rlg/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.88.0-93450a.svg?style=for-the-badge&logo=rust" alt="Minimum supported Rust version 1.88.0" /></a>
+  <a href="https://github.com/sebastienrousseau/rlg/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.89.0-93450a.svg?style=for-the-badge&logo=rust" alt="Minimum supported Rust version 1.89.0" /></a>
 </p>
 
 <p align="center">
@@ -100,8 +100,8 @@ reverses it). The binaries generate both themselves:
 
 ## Requirements
 
-- **Rust 1.88.0 or newer** (edition 2024). CI builds every library and
-  binary on 1.88.0; see the [toolchain policy](docs/POLICIES.md).
+- **Rust 1.89.0 or newer** (edition 2024). CI builds every library and
+  binary on 1.89.0; see the [toolchain policy](docs/POLICIES.md).
 - **macOS or Linux** for the native sinks (`os_log`, `journald`).
   Everywhere else, including Windows, rlg writes to a file or stdout.
 
@@ -338,7 +338,7 @@ Report vulnerabilities according to [`SECURITY.md`](SECURITY.md).
 - **Output stability**: the bytes a format produces are an interface. A
   change to them for the same record is breaking even when no signature
   moves, and is recorded the same way.
-- **Minimum toolchain**: Rust 1.88.0, enforced in CI; a rise is its own
+- **Minimum toolchain**: Rust 1.89.0, enforced in CI; a rise is its own
   CHANGELOG entry with the reason. [`docs/POLICIES.md`](docs/POLICIES.md)
   has the full policy.
 
