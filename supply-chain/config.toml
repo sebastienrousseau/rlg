@@ -163,7 +163,7 @@ version = "1.0.5"
 criteria = "safe-to-deploy"
 
 [[exemptions.config]]
-version = "0.15.26"
+version = "0.15.27"
 criteria = "safe-to-deploy"
 
 [[exemptions.cpufeatures]]
@@ -651,7 +651,7 @@ version = "2.0.21"
 criteria = "safe-to-deploy"
 
 [[exemptions.tokio]]
-version = "1.53.1"
+version = "1.53.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.tokio-macros]]
