@@ -27,9 +27,9 @@ from xml.sax.saxutils import escape
 
 NOINDEX_PAGES = {"help.html", "settings.html"}
 NOINDEX_TAG = '<meta name="robots" content="noindex">'
-REDIRECT = re.compile(r'<meta\s+http-equiv="refresh"', re.I)
-CANONICAL = re.compile(r'<link\s+rel="canonical"\s+href="([^"]*)"', re.I)
-NOINDEX = re.compile(r'<meta\s+name="robots"\s+content="[^"]*noindex', re.I)
+REDIRECT = re.compile(r'<meta\s+http-equiv="refresh"', re.IGNORECASE)
+CANONICAL = re.compile(r'<link\s+rel="canonical"\s+href="([^"]*)"', re.IGNORECASE)
+NOINDEX = re.compile(r'<meta\s+name="robots"\s+content="[^"]*noindex', re.IGNORECASE)
 ROBOTS_RULES = ("Disallow: /*?search=", "Disallow: /*&search=", "Disallow: /src/")
 
 
