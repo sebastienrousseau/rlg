@@ -50,7 +50,7 @@ pin-project-lite = "0.2"
 [dev-dependencies]
 criterion = "0.8"
 http-body-util = "0.1"
-tokio = { version = "1", default-features = false, features = ["macros", "rt"] }
+tokio = { version = "1.54", default-features = false, features = ["macros", "rt"] }
 tower = { version = "0.5", features = ["util"] }
 
 [lints.rust]
