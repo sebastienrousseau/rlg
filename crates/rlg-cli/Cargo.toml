@@ -31,6 +31,11 @@ path = "src/lib.rs"
 [[bin]]
 name = "rlg"
 path = "src/main.rs"
+# The binary shares its name with the `rlg` library crate, so
+# `cargo doc --workspace` wrote both into target/doc/rlg/ and the
+# binary's pages replaced the library's (cargo#6313). The library
+# documents the CLI's API as `rlg_cli`.
+doc = false
 
 [[bench]]
 name = "parse"
