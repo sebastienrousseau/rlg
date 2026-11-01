@@ -9,7 +9,7 @@ signing conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Toolchain
 
-- **Rust**: the minimum supported version is **1.88.0** (edition 2024),
+- **Rust**: the minimum supported version is **1.89.0** (edition 2024),
   set as `rust-version` in each crate. Development uses the version
   pinned in `mise.toml` (`mise install`).
 - **Nightly** is needed only for Miri and fuzzing.

@@ -28,7 +28,7 @@
 cargo install rlg-report
 ```
 
-Requires Rust **1.88.0** or newer (edition 2024).
+Requires Rust **1.89.0** or newer (edition 2024).
 
 ## CLI
 

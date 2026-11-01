@@ -5,6 +5,48 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2026-11-01
+
+### Changed
+
+- **Breaking: the MSRV is now Rust 1.89.0** (was 1.88.0) for every
+  crate, one floor shared with the maintainer's other Rust crates. The
+  manifests, `build.rs`, `flake.nix`, the MSRV CI job, the READMEs and
+  the policy and packaging docs state it.
+- **`scripts/check-doc-versions.sh` checks the MSRV.** Every crate
+  manifest and every statement of the floor must match `rust-version`.
+- **Install snippets name 0.0.15.** Four in the guides still said
+  0.0.14, which kept the docs check red on `main`.
+
+### Fixed
+
+- **The `rlg` API docs at doc.rustlogs.com lost most of their pages.**
+  The `rlg` binary in `rlg-cli` and the `rlg` library both documented
+  into `rlg/` (cargo#6313), so the binary's pages replaced the
+  library's: `rlg/index.html` linked items that returned 404, and the
+  CLI's private `LevelArg` was published as library API. The binary is
+  now `doc = false`.
+- **Search engines indexed hundreds of duplicate docs URLs.** rustdoc
+  pages had no canonical link and its search box creates `?search=`
+  variants of every page. The Pages deploy now runs
+  `scripts/docs-seo.py`, which adds a canonical link to every page,
+  marks `help.html` and `settings.html` noindex, writes `sitemap.xml`
+  from the pages the build ships, and writes `robots.txt` that blocks
+  `?search=` URLs and `src/`. CI runs it with `--check` on every pull
+  request. The internal `xtask` crate is no longer published.
+
+### Dependencies
+
+- **tokio 1.54 is required** by every crate, so no release affected
+  by RUSTSEC-2026-0386 can resolve; the lock is at 1.54.1.
+- The GitHub Actions group and the Rust 1.99 Docker base images
+  (Dependabot #221, #222, #227, #228).
+- The minor-and-patch group (tokio 1.53.2, toml 1.1.8, libc 0.2.190,
+  rmcp 3.5.1, tokio-util 0.7.20, uuid 1.28.0), Dependabot #220. uuid
+  1.28 requires rustc 1.89, the new floor. `cargo vet` needs the
+  maintainer's decisions for these and for config 0.15.27, unvetted
+  on `main`: `.git/vet-v0.0.16.sh` asks for each.
+
 ## [0.0.15] - 2026-10-11
 
 ### Changed

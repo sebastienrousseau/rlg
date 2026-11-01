@@ -1,8 +1,8 @@
 [package]
 name = "rlg-redact"
-version = "0.0.15"
+version = "0.0.16"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 PII and secret redaction for rlg records. Built-in regex patterns for
@@ -44,7 +44,7 @@ harness = false
 path = "benches/scrub.rs"
 
 [dependencies]
-rlg = { version = "0.0.15", path = "../rlg" }
+rlg = { version = "0.0.16", path = "../rlg" }
 regex = "1.12"
 serde_json = "1.0"
 

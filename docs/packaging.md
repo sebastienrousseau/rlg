@@ -27,7 +27,7 @@ enforced by `cargo deny --all-features check` in CI.
 
 ## Toolchain
 
-The minimum supported Rust is **1.88.0** for building the libraries and
+The minimum supported Rust is **1.89.0** for building the libraries and
 binaries; the test suite may need newer (see
 [POLICIES.md](POLICIES.md)). A rise in the floor is a CHANGELOG entry.
 
@@ -90,7 +90,7 @@ is the step-by-step runbook.
 | :--- | :--- | :--- |
 | Arch (AUR) | `PKGBUILD` | builds `rlg`, installs completions; `pkgver` is CI-checked against the workspace |
 | Debian (debcargo) | `debian/debcargo.toml` | overlay for the `rlg` library crate |
-| Nix | `flake.nix` | builds with the 1.88.0 toolchain |
+| Nix | `flake.nix` | builds with the 1.89.0 toolchain |
 | OCI | `pkg/docker/Dockerfile.mcp` | the `rlg-mcp` image published to `ghcr.io` |
 
 ## Where rlg is packaged

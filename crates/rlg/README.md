@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.15"
+rlg = "0.0.16"
 ```
 
 ### Build from source
@@ -68,7 +68,7 @@ cargo check --all-features
 cargo test  --all-features
 ```
 
-`rlg` targets Rust **1.88.0** (MSRV) and edition 2024. It runs
+`rlg` targets Rust **1.89.0** (MSRV) and edition 2024. It runs
 on macOS, Linux, and WSL; Windows is supported on a best-effort
 basis via the stdout fallback sink.
 
@@ -87,7 +87,7 @@ the application needs.
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.15", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.16", features = ["tokio", "tracing-layer"] }
 ```
 
 ---

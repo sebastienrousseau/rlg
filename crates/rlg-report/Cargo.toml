@@ -1,8 +1,8 @@
 [package]
 name = "rlg-report"
-version = "0.0.15"
+version = "0.0.16"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 Log digest / analytics for rlg. Reads JSON-shaped rlg records from
@@ -43,8 +43,8 @@ harness = false
 path = "benches/aggregate.rs"
 
 [dependencies]
-rlg = { version = "0.0.15", path = "../rlg" }
-rlg-cli = { version = "0.0.15", path = "../rlg-cli" }
+rlg = { version = "0.0.16", path = "../rlg" }
+rlg-cli = { version = "0.0.16", path = "../rlg-cli" }
 clap = { version = "4.6", features = ["derive"] }
 # Shell completions, generated from the same `Cli` definition.
 clap_complete = "4.6"

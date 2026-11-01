@@ -1,8 +1,8 @@
 [package]
 name = "rlg-mcp"
-version = "0.0.15"
+version = "0.0.16"
 edition = "2024"
-rust-version = "1.88.0"
+rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
 description = """
 Model Context Protocol (MCP) server exposing rlg log streams as tools
@@ -48,13 +48,13 @@ name = "serve_a_session"
 path = "examples/serve_a_session.rs"
 
 [dependencies]
-rlg = { version = "0.0.15", path = "../rlg" }
-rlg-cli = { version = "0.0.15", path = "../rlg-cli" }
+rlg = { version = "0.0.16", path = "../rlg" }
+rlg-cli = { version = "0.0.16", path = "../rlg-cli" }
 # The official MCP SDK: protocol revisions 2024-11-05 through
 # 2026-07-28, stdio and streamable HTTP. The legacy HTTP+SSE bridge in
 # src/transport/sse.rs is the only protocol code left in this crate.
 rmcp = { version = "3.4", features = ["server", "macros", "transport-io", "transport-streamable-http-server"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
 tokio-util = "0.7"
 axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "query"] }
 futures = "0.3"
@@ -70,7 +70,7 @@ tempfile = "3"
 # The client half of the SDK, so tests and the example can hold a real
 # session against the server through an in-memory pipe.
 rmcp = { version = "3.4", features = ["client"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "io-util", "time"] }
+tokio = { version = "1.54", features = ["rt-multi-thread", "macros", "io-util", "time"] }
 
 [lints.rust]
 missing_copy_implementations = "warn"

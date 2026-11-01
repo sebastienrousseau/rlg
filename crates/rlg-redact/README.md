@@ -26,10 +26,10 @@
 
 ```toml
 [dependencies]
-rlg-redact = "0.0.15"
+rlg-redact = "0.0.16"
 ```
 
-Requires Rust **1.88.0** or newer (edition 2024).
+Requires Rust **1.89.0** or newer (edition 2024).
 
 ## Usage
 
