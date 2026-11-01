@@ -34,7 +34,7 @@ A component-model interface definition ships at
 
 ```toml
 [dependencies]
-rlg-wasm = "0.0.15"
+rlg-wasm = "0.0.16"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.
