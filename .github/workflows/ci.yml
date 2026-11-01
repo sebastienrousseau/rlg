@@ -215,7 +215,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup toolchain install nightly --profile minimal
-      - run: cargo +nightly doc --locked --workspace --all-features --no-deps
+      - run: cargo +nightly doc --locked --workspace --exclude xtask --all-features --no-deps
         env:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"
+      # The metadata pages.yml adds before deploying: canonical links,
+      # sitemap.xml and robots.txt (scripts/docs-seo.py).
+      - run: |
+          scripts/docs-seo.py target/doc https://doc.rustlogs.com
+          scripts/docs-seo.py --check target/doc https://doc.rustlogs.com
 

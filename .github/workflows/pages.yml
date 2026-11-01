@@ -50,6 +50,7 @@ jobs:
         run: |
           cargo doc \
             --workspace \
+            --exclude xtask \
             --all-features \
             --no-deps
 
@@ -62,7 +63,7 @@ jobs:
           <!doctype html>
           <meta charset="utf-8">
           <meta http-equiv="refresh" content="0; url=rlg/">
-          <link rel="canonical" href="rlg/">
+          <link rel="canonical" href="https://doc.rustlogs.com/rlg/index.html">
           <title>rlg — RustLogs</title>
           <p>Redirecting to <a href="rlg/">rlg documentation</a>.</p>
           HTML
@@ -74,6 +75,17 @@ jobs:
           tool: mdbook@0.5.4
       - name: Build the user manual
         run: mdbook build --dest-dir target/doc/manual
+
+      # Search-engine metadata (scripts/docs-seo.py). rustdoc pages
+      # carry no canonical link and its search box creates endless
+      # `?search=` duplicates of every item page, so each page gets a
+      # canonical, robots.txt keeps crawlers off `?search=` URLs and
+      # `src/`, and sitemap.xml lists only the pages this build ships,
+      # so removed items stop being rediscovered.
+      - name: Add canonical links, sitemap.xml and robots.txt
+        run: |
+          scripts/docs-seo.py target/doc https://doc.rustlogs.com
+          scripts/docs-seo.py --check target/doc https://doc.rustlogs.com
 
       # A `.nojekyll` file tells GH Pages to serve the tree
       # verbatim — otherwise underscored directories (like
