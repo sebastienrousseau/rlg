@@ -37,6 +37,12 @@ user-id = 6743 # Ed Page (epage)
 start = "2024-10-23"
 end = "2027-10-14"
 
+[[trusted.serde_json]]
+criteria = "safe-to-deploy"
+user-id = 3618 # David Tolnay (dtolnay)
+start = "2019-02-28"
+end = "2027-11-02"
+
 [[trusted.serde_spanned]]
 criteria = "safe-to-deploy"
 user-id = 6743 # Ed Page (epage)
