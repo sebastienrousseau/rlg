@@ -16,7 +16,7 @@ jobs:
   ci:
     permissions:
       contents: read
-    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
+    uses: sebastienrousseau/pipelines/.github/workflows/rust-ci.yml@83114142d0a14e9c6302a9ba9e716a0cc53e4e01 # main 2026-10-13
     with:
       rust-version: 'stable'
       run-coverage: true
@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
+    uses: sebastienrousseau/pipelines/.github/workflows/security.yml@83114142d0a14e9c6302a9ba9e716a0cc53e4e01 # main 2026-10-13
     with:
       language: rust
 
@@ -38,7 +38,7 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@980375f1d96368885ff65cc4c7f1ff355a5a4095 # main 2026-10-13
+    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@83114142d0a14e9c6302a9ba9e716a0cc53e4e01 # main 2026-10-13
     with:
       type: rust
       redirect-crate: rlg
@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # The version the baseline was measured with; bump both together.
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: rust-code-analysis-cli@0.0.25
       - run: scripts/complexity-gate.py
@@ -101,10 +101,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+      - uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
         with:
           globs: "**/*.md"
-      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: mdbook@0.5.4
       - name: Build the user manual
