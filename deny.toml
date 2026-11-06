@@ -38,15 +38,6 @@ allow-wildcard-paths = true
 # Documented duplicate exemptions. Each entry must justify itself —
 # not a dumping ground.
 skip = [
-    # The `config` crate (0.15.x) pulls in toml 0.8 + its
-    # supporting parser stack, while rlg's flagship uses toml 1.x
-    # directly. Two versions coexist until config upgrades.
-    # Tracked: https://github.com/mehcode/config-rs/issues (open)
-    { name = "toml", version = "0.8.*" },
-    { name = "toml_datetime", version = "0.6.*" },
-    { name = "serde_spanned", version = "0.6.*" },
-    { name = "winnow", version = "0.7.*" },
-
     # `syn` is mid-migration from 2 to 3 across the ecosystem:
     # `clap_derive` and `darling` (behind the MCP SDK's macros) are on
     # 3, while `tokio-macros`, `tracing-attributes`, `async-trait`,

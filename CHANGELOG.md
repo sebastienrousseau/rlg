@@ -5,6 +5,18 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.17] - 2026-11-06
+
+### Dependencies
+
+- **euxis-commons 0.0.7 is required** (was 0.0.5). It moves to toml
+  1.0, so builds compile one copy of `toml`, `serde_spanned`,
+  `toml_datetime` and `winnow` instead of two, and the four
+  `deny.toml` skips that hid the duplicates are removed.
+- The GitHub Actions group, the Docker base images, the
+  minor-and-patch group and euxis-commons 0.0.5 (Dependabot #225,
+  #227, #230, #231, #232).
+
 ## [0.0.16] - 2026-11-01
 
 ### Changed
