@@ -118,9 +118,6 @@ pub mod utils;
 #[cfg(kani)]
 mod kani_proofs;
 
-/// Shared utilities from `euxis-commons`.
-pub use euxis_commons as commons;
-
 /// The workspace README's code blocks, compiled and run as doctests so
 /// its Quick Start cannot drift from the API.
 #[cfg(doctest)]

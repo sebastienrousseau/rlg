@@ -646,10 +646,11 @@ dependencies = [
 
 [[package]]
 name = "euxis-commons"
-version = "0.0.7"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eed1c4fdf7cf8e64c2cd2fc7a899af6f3bce32314f38e5b2d96ea6f9f68a6e0"
+checksum = "d2e0be83a0d0c0c4d7d4549389085f79f0ff0037b1c2f47f1cfd13e01eae92cb"
 dependencies = [
+ "getrandom",
  "serde",
  "thiserror",
  "toml",

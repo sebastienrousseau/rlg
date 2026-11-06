@@ -244,7 +244,7 @@ pub fn parse_datetime(datetime_str: &str) -> RlgResult<String> {
 /// A `String` containing the span ID.
 #[must_use]
 pub fn generate_span_id() -> String {
-    crate::commons::id::generate_random_hex()[..16].to_string()
+    euxis_commons::id::generate_random_hex()[..16].to_string()
 }
 
 /// Generates a highly unique, 32-character pseudo-random hex string suitable for OTLP trace IDs.
@@ -253,7 +253,7 @@ pub fn generate_span_id() -> String {
 /// A `String` containing the trace ID.
 #[must_use]
 pub fn generate_trace_id() -> String {
-    crate::commons::id::generate_random_hex()
+    euxis_commons::id::generate_random_hex()
 }
 
 /// Checks if a directory is writable.

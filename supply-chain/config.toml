@@ -239,7 +239,7 @@ version = "0.3.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.euxis-commons]]
-version = "0.0.7"
+version = "0.0.8"
 criteria = "safe-to-deploy"
 
 [[exemptions.fastrand]]
