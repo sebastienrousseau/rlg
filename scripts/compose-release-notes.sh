@@ -43,5 +43,5 @@ sums=$(cd "$assets" && find . -maxdepth 1 -type f ! -name SHA256SUMS -print |
   sed 's|^\./||' | LC_ALL=C sort | xargs sha256sum)
 
 fence='```'
-printf '%s\n\n%s\n\n## Checksums\n\n%stext\n%s\n%s\n\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
+printf '%s\n\n%s\n\n## Checksums\n\nSHA-256 of every asset attached to this release:\n\n%stext\n%s\n%s\n\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
   "$highlights" "$changed" "$fence" "$sums" "$fence" "$repo" "$previous" "$tag"
