@@ -31,8 +31,7 @@ it is a regression, whatever else it improves.
    name it (`scripts/check-doc-versions.sh`), and so must the MCP
    manifests (`scripts/check-mcp-manifests.sh`).
 3. **Commits** are signed, `<type>: <subject>` in at most 50 characters,
-   with an `Assisted-by:` trailer when an agent helped. Agents never add
-   `Signed-off-by:`.
+   with an `Assisted-by:` trailer when an agent helped.
 4. **No new suppressions.** `clippy::pedantic` and `clippy::nursery` are
    denied; fix the finding instead of allowing it.
 5. **Complexity ceilings** (cyclomatic 10, cognitive 15, Halstead
