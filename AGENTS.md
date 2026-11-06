@@ -61,10 +61,14 @@ version checks: what CI runs on every pull request.
 
 ## Leave alone
 
-- `crates/rlg-mcp/src/transport.rs` and `transport/` are shared with the
-  suite's other MCP servers (oxml-mcp, noyalib-mcp); only the file
-  headers and line wrapping differ. Change them in all of them
-  together, never here alone.
+- `crates/rlg-mcp/src/transport.rs` and `transport/` began as a copy of
+  the transport module in the suite's other MCP servers (oxml-mcp,
+  noyalib-mcp), but the copies have diverged: each was hardened at a
+  different time and in different ways (noyalib-mcp has no stdin line
+  cap, for one), and their command lines differ. A shared crate is
+  planned to replace them. Until it exists, check a transport fix
+  against the other copies and port it where it applies; never assume
+  they match.
 - `supply-chain/imports.lock` is written by `cargo vet`, not by hand.
 - `LICENSE-*`, `KEYS.asc` and signing configuration change only when the
   task is explicitly about them.
