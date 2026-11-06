@@ -16,6 +16,50 @@
 use std::io::Write as _;
 use std::process::{Command, Stdio};
 
+/// Kills the child when dropped, so a failed assertion cannot leave a
+/// server running.
+struct Process(std::process::Child);
+
+impl Drop for Process {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[test]
+fn an_oversized_unterminated_line_does_not_wait_for_eof() {
+    // A client that sends one line past the 16 MiB cap, and never ends
+    // it, is cut off; it does not get to grow the server's buffer
+    // until the pipe closes.
+    let mut process = Process(
+        Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .expect("server starts"),
+    );
+    let mut input = process.0.stdin.take().expect("stdin");
+    if let Err(error) =
+        input.write_all(&vec![b' '; 16 * 1024 * 1024 + 1])
+    {
+        assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+    }
+    let started = std::time::Instant::now();
+    let status = loop {
+        if let Some(status) = process.0.try_wait().expect("status") {
+            break Some(status);
+        }
+        if started.elapsed() >= std::time::Duration::from_secs(5) {
+            break None;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    };
+    assert!(status.is_some(), "an unbounded stdio line was buffered");
+    drop(input);
+}
+
 const INITIALIZE: &str = r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0"}}}"#;
 const INITIALIZED: &str =
     r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
