@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.17"
+rlg = "0.0.18"
 ```
 
 ### Build from source
@@ -87,7 +87,7 @@ the application needs.
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.17", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.18", features = ["tokio", "tracing-layer"] }
 ```
 
 ---

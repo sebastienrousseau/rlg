@@ -64,19 +64,19 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.17"
+rlg = "0.0.18"
 ```
 
 Satellites install the same way, all at the same version:
 
 ```toml
 [dependencies]
-rlg-otlp   = "0.0.17"  # ship records to an OpenTelemetry Collector
-rlg-tower  = "0.0.17"  # per-request access logs for tower services
-rlg-redact = "0.0.17"  # scrub secrets and PII before they are written
+rlg-otlp   = "0.0.18"  # ship records to an OpenTelemetry Collector
+rlg-tower  = "0.0.18"  # per-request access logs for tower services
+rlg-redact = "0.0.18"  # scrub secrets and PII before they are written
 
 [dev-dependencies]
-rlg-test   = "0.0.17"  # assert on captured records in tests
+rlg-test   = "0.0.18"  # assert on captured records in tests
 ```
 
 ### Command-line tools
@@ -134,7 +134,7 @@ platform sink. This block is compiled and run by `cargo test`.
 
 ## The rlg ecosystem
 
-Ten crates at lockstep version `0.0.17`, released together.
+Ten crates at lockstep version `0.0.18`, released together.
 
 | Component | Purpose | Use case |
 | :--- | :--- | :--- |

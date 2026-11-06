@@ -1,6 +1,6 @@
 # Maintainer: Sebastien Rousseau <sebastienrousseau@users.noreply.github.com>
 pkgname=rust-rlg
-pkgver=0.0.17
+pkgver=0.0.18
 pkgrel=1
 pkgdesc="Brutalist, lock-free observability engine with AI-native telemetry support"
 arch=('x86_64' 'aarch64')

@@ -27,8 +27,8 @@
 
 ```toml
 [dependencies]
-rlg        = "0.0.17"
-rlg-tower  = "0.0.17"
+rlg        = "0.0.18"
+rlg-tower  = "0.0.18"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).
