@@ -5,6 +5,34 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.18] - 2026-11-06
+
+### Changed
+
+- **Breaking: `rlg::commons` is removed.** rlg re-exported the whole of
+  euxis-commons as `rlg::commons`, which would have made the modules
+  euxis-commons 0.0.8 deprecates part of rlg's API. Code that used it
+  depends on `euxis-commons` directly instead.
+
+### Fixed
+
+- **rlg-mcp's transports are hardened** (#236). Both HTTP transports
+  refuse a Host the server does not answer to and a non-local Origin
+  (403); `/messages/` accepts only `application/json` (415);
+  `--max-sessions` (64 by default) caps open sessions (503 past it);
+  and a stdin line past 16 MiB ends the session instead of being
+  buffered until the pipe closes.
+- **Release pages introduce their checksums** (#235).
+  `scripts/compose-release-notes.sh` prints "SHA-256 of every asset
+  attached to this release:" above the checksums block; the 0.0.16
+  and 0.0.17 pages were published without it.
+
+### Dependencies
+
+- **euxis-commons 0.0.8 is required** (was 0.0.7), with only the
+  error, config, validation, id and counter features rlg uses. The
+  retry, time and env features are no longer enabled.
+
 ## [0.0.17] - 2026-11-06
 
 ### Dependencies

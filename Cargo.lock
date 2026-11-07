@@ -646,10 +646,11 @@ dependencies = [
 
 [[package]]
 name = "euxis-commons"
-version = "0.0.7"
+version = "0.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eed1c4fdf7cf8e64c2cd2fc7a899af6f3bce32314f38e5b2d96ea6f9f68a6e0"
+checksum = "d2e0be83a0d0c0c4d7d4549389085f79f0ff0037b1c2f47f1cfd13e01eae92cb"
 dependencies = [
+ "getrandom",
  "serde",
  "thiserror",
  "toml",
@@ -1457,7 +1458,7 @@ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
 
 [[package]]
 name = "rlg"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "config",
  "criterion",
@@ -1492,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1509,7 +1510,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-ebpf"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "libc",
@@ -1519,7 +1520,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "axum",
  "criterion",
@@ -1539,7 +1540,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-otlp"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "rlg",
@@ -1552,7 +1553,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-redact"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "regex",
@@ -1562,7 +1563,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-report"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1580,7 +1581,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-test"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "parking_lot",
@@ -1590,7 +1591,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-tower"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "http",
@@ -1605,7 +1606,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-wasm"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "criterion",
  "rlg",

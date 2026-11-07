@@ -1,6 +1,6 @@
 [package]
 name = "rlg"
-version = "0.0.17"
+version = "0.0.18"
 edition = "2024"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
@@ -71,7 +71,7 @@ required-features = ["tokio"]
 config = { version = "0.15.22", default-features = false, features = ["toml"] }
 crossbeam-queue = "0.3.12"
 envy = "0.4.2"
-euxis-commons = { version = "0.0.7", default-features = false, features = ["error", "config", "validation", "retry", "id", "time", "env", "counter"], package = "euxis-commons" }
+euxis-commons = { version = "0.0.8", default-features = false, features = ["error", "config", "validation", "id", "counter"], package = "euxis-commons" }
 hostname = "0.4.2"
 itoa = "1.0.18"
 log = "0.4.30"

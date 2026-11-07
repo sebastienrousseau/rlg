@@ -56,8 +56,8 @@ pub enum RlgError {
     NativeSinkError(String),
 }
 
-impl From<crate::commons::error::CommonError> for RlgError {
-    fn from(err: crate::commons::error::CommonError) -> Self {
+impl From<euxis_commons::error::CommonError> for RlgError {
+    fn from(err: euxis_commons::error::CommonError) -> Self {
         Self::Custom(err.to_string())
     }
 }
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn test_common_error_conversion() {
         let common_err =
-            crate::commons::error::CommonError::custom("test");
+            euxis_commons::error::CommonError::custom("test");
         let rlg_err: RlgError = common_err.into();
         assert!(matches!(rlg_err, RlgError::Custom(_)));
         assert!(rlg_err.to_string().contains("test"));

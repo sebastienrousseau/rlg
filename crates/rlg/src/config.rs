@@ -84,8 +84,8 @@ pub enum ConfigError {
     WatcherError(std::io::Error),
 }
 
-impl From<crate::commons::config::ConfigError> for ConfigError {
-    fn from(err: crate::commons::config::ConfigError) -> Self {
+impl From<euxis_commons::config::ConfigError> for ConfigError {
+    fn from(err: euxis_commons::config::ConfigError) -> Self {
         Self::ValidationError(err.to_string())
     }
 }
@@ -292,7 +292,7 @@ impl Config {
     ///
     /// This function returns an error if any configuration setting is invalid.
     pub fn validate(&self) -> Result<(), ConfigError> {
-        let mut v = crate::commons::validation::Validator::new();
+        let mut v = euxis_commons::validation::Validator::new();
         v.check("version", || not_empty(&self.version))
             .check("profile", || not_empty(&self.profile))
             .check("log_format", || not_empty(&self.log_format));
@@ -448,8 +448,8 @@ impl TryFrom<env::Vars> for Config {
 /// A trimmed value must not be empty, for [`Config::validate`].
 fn not_empty(
     value: &str,
-) -> crate::commons::validation::ValidationResult<()> {
-    crate::commons::validation::validate_not_empty(value.trim())
+) -> euxis_commons::validation::ValidationResult<()> {
+    euxis_commons::validation::validate_not_empty(value.trim())
         .map(|_| ())
 }
 

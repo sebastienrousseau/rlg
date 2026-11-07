@@ -39,7 +39,7 @@ fn test_config_save_to_file_fail_unit() {
 
 #[test]
 fn test_commons_config_error_conversion() {
-    let commons_err = crate::commons::config::ConfigError::MissingKey(
+    let commons_err = euxis_commons::config::ConfigError::MissingKey(
         "test_key".to_string(),
     );
     let config_err: ConfigError = commons_err.into();

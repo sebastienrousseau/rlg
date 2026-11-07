@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn test_rlg_error_from_common_error() {
         let common_err =
-            rlg::commons::error::CommonError::custom("test common");
+            euxis_commons::error::CommonError::custom("test common");
         let rlg_err: rlg::RlgError = common_err.into();
         assert!(rlg_err.to_string().contains("test common"));
     }
