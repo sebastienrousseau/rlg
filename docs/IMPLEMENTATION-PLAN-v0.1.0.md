@@ -2,6 +2,10 @@
 
 # rlg — Implementation Plan to v0.1.0
 
+> **Superseded** on 2026-11-27 by
+> [`IMPLEMENTATION-PLAN.md`](IMPLEMENTATION-PLAN.md). Kept because
+> ADRs 0003 to 0014 cite its phase numbers.
+>
 > **Status:** Draft for review. Every phase is scoped as one signed commit,
 > pushed to a working branch, verified green on CI before the next phase
 > starts.
