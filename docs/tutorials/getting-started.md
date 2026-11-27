@@ -6,7 +6,7 @@ Install RLG, emit your first log, and verify output — all in under five minute
 
 ```toml
 [dependencies]
-rlg = "0.0.18"
+rlg = "0.0.19"
 ```
 
 To ship records to an OpenTelemetry Collector (which forwards them to
@@ -15,7 +15,7 @@ plain OTLP/HTTP to a Collector on `localhost:4318`; the Collector owns
 TLS towards the backend:
 
 ```toml
-rlg-otlp = "0.0.18"
+rlg-otlp = "0.0.19"
 ```
 
 ## 2. Initialise and Log

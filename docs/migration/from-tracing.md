@@ -113,7 +113,7 @@ For automated timing, rlg ships the `rlg_time_it!` macro.
 Add `rlg` with the `tracing-layer` feature:
 
 ```toml
-rlg = { version = "0.0.18", features = ["tracing-layer"] }
+rlg = { version = "0.0.19", features = ["tracing-layer"] }
 ```
 
 Install both subscribers:
@@ -128,6 +128,35 @@ tracing::subscriber::set_global_default(subscriber).unwrap();
 
 Every `tracing::info!` now routes through rlg's engine —
 structured storage, redaction, OTLP export all apply.
+
+Each record carries the context of the spans it was emitted in: the
+fields of every span in scope (root first, so an inner span wins a
+clash, and the event's own fields win over all), fields filled in
+later with `Span::record`, the innermost span's name (`span`), the
+path from the root (`span_path`, such as `request/allocate`), and a
+`trace_id` and `span_id`.
+
+```rust
+use rlg::log_format::LogFormat;
+use rlg::tracing::RlgLayer;
+use tracing_subscriber::prelude::*;
+
+tracing_subscriber::registry()
+    .with(tracing_subscriber::EnvFilter::from_default_env())
+    .with(RlgLayer::new().with_format(LogFormat::JSON))
+    .init();
+
+let request = tracing::info_span!("request", request_id = %id, status = tracing::field::Empty);
+let _guard = request.enter();
+request.record("status", 200);
+tracing::info!("done"); // carries request_id, status, span, trace_id, span_id
+```
+
+`RlgLayer::with_scrub` runs every record through a scrubber (such as
+`rlg_redact::Redactor` with its `tracing` feature), and
+`RlgLayer::with_span_sink` hands closed spans to an exporter (such as
+`rlg_otlp::SpanExporter` with its `tracing` feature, which sends
+them as OTLP traces).
 
 ## Related
 
