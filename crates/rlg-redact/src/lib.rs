@@ -253,6 +253,16 @@ impl Redactor {
     }
 }
 
+/// Lets a [`Redactor`] scrub the `tracing` path:
+/// `RlgLayer::new().with_scrub(Redactor::with_defaults())` redacts
+/// every record the layer emits and every closed span's attributes.
+#[cfg(feature = "tracing")]
+impl rlg::tracing::Scrub for Redactor {
+    fn scrub(&self, log: Log) -> Log {
+        Self::scrub(self, log)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

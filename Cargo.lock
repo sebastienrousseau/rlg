@@ -1628,6 +1628,8 @@ dependencies = [
  "regex",
  "rlg",
  "serde_json",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
