@@ -180,31 +180,22 @@ impl SpanExporterBuilder {
     pub fn from_lookup(
         lookup: impl Fn(&str) -> Option<String>,
     ) -> Option<Self> {
-        let get = |k: &str| lookup(k).filter(|v| !v.trim().is_empty());
-        if get("OTEL_SDK_DISABLED")
+        let env = Env(&lookup);
+        if env
+            .get("OTEL_SDK_DISABLED")
             .is_some_and(|v| v.trim().eq_ignore_ascii_case("true"))
         {
             return None;
         }
-        let endpoint = get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
-            .or_else(|| {
-                get("OTEL_EXPORTER_OTLP_ENDPOINT").map(|base| {
-                    format!("{}/v1/traces", base.trim_end_matches('/'))
-                })
-            })?;
-        let mut builder = Self::default().endpoint(endpoint);
-        if let Some(name) = get("OTEL_SERVICE_NAME") {
+        let mut builder = Self::default().endpoint(env.endpoint()?);
+        if let Some(name) = env.get("OTEL_SERVICE_NAME") {
             builder = builder.service_name(name);
         }
-        let headers = get("OTEL_EXPORTER_OTLP_TRACES_HEADERS")
-            .or_else(|| get("OTEL_EXPORTER_OTLP_HEADERS"))
-            .unwrap_or_default();
-        for (name, value) in
-            headers.split(',').filter_map(|kv| kv.split_once('='))
-        {
-            builder = builder.header(name.trim(), value.trim());
-        }
-        Some(builder)
+        Some(
+            env.headers()
+                .into_iter()
+                .fold(builder, |b, (k, v)| b.header(k, v)),
+        )
     }
 
     /// The collector's traces URL; default [`DEFAULT_TRACES_ENDPOINT`].
@@ -298,6 +289,35 @@ impl SpanExporterBuilder {
             counters,
             endpoint: self.endpoint.into(),
         })
+    }
+}
+
+/// Environment lookups for [`SpanExporterBuilder::from_lookup`],
+/// with empty values treated as unset.
+struct Env<'a, F: Fn(&str) -> Option<String>>(&'a F);
+
+impl<F: Fn(&str) -> Option<String>> Env<'_, F> {
+    fn get(&self, key: &str) -> Option<String> {
+        (self.0)(key).filter(|v| !v.trim().is_empty())
+    }
+
+    fn endpoint(&self) -> Option<String> {
+        self.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT").or_else(|| {
+            self.get("OTEL_EXPORTER_OTLP_ENDPOINT").map(|base| {
+                format!("{}/v1/traces", base.trim_end_matches('/'))
+            })
+        })
+    }
+
+    fn headers(&self) -> Vec<(String, String)> {
+        let raw = self
+            .get("OTEL_EXPORTER_OTLP_TRACES_HEADERS")
+            .or_else(|| self.get("OTEL_EXPORTER_OTLP_HEADERS"))
+            .unwrap_or_default();
+        raw.split(',')
+            .filter_map(|kv| kv.split_once('='))
+            .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
+            .collect()
     }
 }
 
