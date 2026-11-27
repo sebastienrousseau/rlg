@@ -53,9 +53,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Dependencies
 
-- The GitHub Actions group, the Docker base images, the
-  minor-and-patch group and parking_lot 0.13 (Dependabot #239, #244,
-  #245, #246).
+- The GitHub Actions group, the Docker base images and the
+  minor-and-patch group (Dependabot #244, #245, #246).
+- parking_lot stays at 0.12 (Dependabot #239 is not taken): 0.13
+  needs rustc 1.95, above the 1.89 MSRV. Dependabot now skips it.
 
 ## [0.0.18] - 2026-11-06
 
