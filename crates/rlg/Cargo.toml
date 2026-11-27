@@ -92,6 +92,12 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["r
 [target.'cfg(target_os = "linux")'.dependencies]
 io-uring = { version = "0.7", optional = true }
 
+# Not used directly: a version floor. `terminal_size` (the `tui`
+# feature) pulls rustix on Unix, and rustix before 1.1.6 is affected
+# by RUSTSEC-2026-0486, so `tui` requires the patched release.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1.1.6", default-features = false, optional = true }
+
 [build-dependencies]
 version_check = "0.9.5"
 
@@ -132,7 +138,7 @@ fast-queue = []
 # `docs/adr/0011-io-uring-file-sink.md`.
 uring = ["dep:io-uring"]
 tokio = ["dep:tokio"]
-tui = ["dep:terminal_size"]
+tui = ["dep:terminal_size", "dep:rustix"]
 tracing-layer = ["dep:tracing-subscriber"]
 
 [package.metadata.docs.rs]

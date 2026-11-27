@@ -636,9 +636,8 @@ fn streamable_http_refuses_what_the_stateless_revision_forbids() {
     );
     assert_eq!(r.status, 405);
 
-    // A body that is not JSON is refused at the HTTP layer. The SDK
-    // says 415, an unsupported media type, which is how it reads a
-    // body that claims to be JSON and is not.
+    // A body that is not JSON is refused at the HTTP layer with 400,
+    // a malformed request (rmcp 3.12 changed this from 415).
     let r = Http::send(
         &server.addr,
         "POST",
@@ -646,7 +645,7 @@ fn streamable_http_refuses_what_the_stateless_revision_forbids() {
         &[ACCEPT_BOTH, JSON, version],
         "{not json",
     );
-    assert_eq!(r.status, 415);
+    assert_eq!(r.status, 400);
 }
 
 #[test]
