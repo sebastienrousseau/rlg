@@ -172,6 +172,8 @@ impl Visit for RlgVisitor {
 mod layer;
 #[cfg(feature = "tracing-layer")]
 mod span;
+#[cfg(feature = "tracing-layer")]
+mod traceparent;
 
 #[cfg(feature = "tracing-layer")]
 pub use layer::RlgLayer;

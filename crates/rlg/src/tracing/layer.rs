@@ -33,7 +33,9 @@ use tracing_subscriber::registry::{LookupSpan, Scope};
 /// | `span_id` | 16 hex characters, the innermost span's id |
 ///
 /// The ids are the ones a [`SpanSink`] receives, so logs and exported
-/// spans link up in a collector. `LogFormat::OTLP` renders them as
+/// spans link up in a collector. A root span created with a valid W3C
+/// `traceparent` field (`traceparent = %header`) joins that trace,
+/// with the remote span as its parent; the field is consumed. `LogFormat::OTLP` renders them as
 /// `traceId` and `spanId`.
 ///
 /// # Example
@@ -215,6 +217,7 @@ where
             |parent| SpanData::new(parent.extensions().get()),
         );
         data.absorb(collect(|v| attrs.record(v)));
+        data.adopt_traceparent();
         span.extensions_mut().insert(data);
     }
 

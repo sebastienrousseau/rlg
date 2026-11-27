@@ -9,6 +9,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- **W3C `traceparent` adoption.** A root span created with a valid
+  `traceparent` field joins that trace, with the remote span as its
+  parent, so traces continue across services. A malformed value
+  starts a new trace.
 - **`rlg::engine::set_sink`** chooses the engine's sink in code
   (stdout, a file, journald, `os_log`) before the first record, in
   place of `PlatformSink::native()`. No environment variable is
