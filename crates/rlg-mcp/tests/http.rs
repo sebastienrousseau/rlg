@@ -847,6 +847,27 @@ fn sse_refuses_a_foreign_host_or_origin() {
 }
 
 #[test]
+fn sse_refuses_an_oversized_message() {
+    // A message is parsed only after its size is checked: one byte
+    // past 1 MiB is refused with 413 before serde sees it.
+    let server = Server::start("sse");
+    let mut stream = Http::send(&server.addr, "GET", "/sse", &[], "");
+    let (_, endpoint) = stream.next_event();
+    let frame = r#"{"jsonrpc":"2.0","id":1,"method":"ping","params":{"_meta":{"pad":""}}}"#;
+    let pad = "x".repeat((1 << 20) + 1 - frame.len());
+    let big =
+        frame.replace(r#""pad":"""#, &format!(r#""pad":"{pad}""#));
+    assert_eq!(big.len(), (1 << 20) + 1);
+    let r = Http::send(&server.addr, "POST", &endpoint, &[JSON], &big);
+    assert_eq!(r.status, 413);
+
+    let fits = frame
+        .replace(r#""pad":"""#, &format!(r#""pad":"{}""#, &pad[1..]));
+    let r = Http::send(&server.addr, "POST", &endpoint, &[JSON], &fits);
+    assert_eq!(r.status, 202);
+}
+
+#[test]
 fn sse_takes_json_posts_only() {
     // `text/plain` is what a browser may send cross-origin without a
     // preflight, so it is refused rather than parsed.

@@ -31,7 +31,7 @@ use serde::Deserialize;
 use tokio::net::TcpListener;
 use tokio_util::sync::CancellationToken;
 
-use super::guard::{Guard, require_json};
+use super::guard::{Guard, require_json, require_size};
 use super::{MESSAGE_PATH, Options, SSE_PATH, interrupted};
 
 /// One session's inbox: the channel its posted messages go down.
@@ -180,6 +180,7 @@ async fn post_message<H: ServerHandler>(
         .guard
         .check(&headers)
         .and_then(|()| require_json(&headers))
+        .and_then(|()| require_size(&body))
     {
         return refused.into_response();
     }
