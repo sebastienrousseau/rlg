@@ -75,7 +75,7 @@ version = "3.0.11"
 criteria = "safe-to-deploy"
 
 [[exemptions.anyhow]]
-version = "1.0.104"
+version = "1.0.105"
 criteria = "safe-to-deploy"
 
 [[exemptions.assert_cmd]]
@@ -210,18 +210,6 @@ criteria = "safe-to-deploy"
 version = "0.24.1"
 criteria = "safe-to-deploy"
 
-[[exemptions.defmt]]
-version = "1.1.1"
-criteria = "safe-to-run"
-
-[[exemptions.defmt-macros]]
-version = "1.1.1"
-criteria = "safe-to-run"
-
-[[exemptions.defmt-parser]]
-version = "1.0.0"
-criteria = "safe-to-run"
-
 [[exemptions.digest]]
 version = "0.11.3"
 criteria = "safe-to-deploy"
@@ -235,7 +223,7 @@ version = "2.0.0"
 criteria = "safe-to-run"
 
 [[exemptions.env_logger]]
-version = "0.11.11"
+version = "0.11.12"
 criteria = "safe-to-run"
 
 [[exemptions.envy]]
@@ -247,7 +235,7 @@ version = "0.3.14"
 criteria = "safe-to-deploy"
 
 [[exemptions.euxis-commons]]
-version = "0.0.8"
+version = "0.0.9"
 criteria = "safe-to-deploy"
 
 [[exemptions.fastrand]]
@@ -343,20 +331,12 @@ version = "1.0.19"
 criteria = "safe-to-deploy"
 
 [[exemptions.jiff]]
-version = "0.2.31"
-criteria = "safe-to-run"
-
-[[exemptions.jiff]]
 version = "1.0.3"
 criteria = "safe-to-deploy"
 
 [[exemptions.jiff-core]]
 version = "1.0.2"
 criteria = "safe-to-deploy"
-
-[[exemptions.jiff-static]]
-version = "0.2.31"
-criteria = "safe-to-run"
 
 [[exemptions.jiff-static]]
 version = "1.0.3"

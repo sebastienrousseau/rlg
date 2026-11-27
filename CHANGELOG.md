@@ -5,7 +5,41 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.0.20] - 2026-11-27
+
+### Added
+
+- **W3C `traceparent` adoption.** A root span created with a valid
+  `traceparent` field joins that trace, with the remote span as its
+  parent, so traces continue across services. A malformed value
+  starts a new trace.
+- **`rlg::engine::set_sink`** chooses the engine's sink in code
+  (stdout, a file, journald, `os_log`) before the first record, in
+  place of `PlatformSink::native()`. No environment variable is
+  needed, so it is safe once an async runtime's threads are running.
+- **A default-on `config` feature.** File and environment loading
+  (`Config::load`, `load_async`, `save_to_file`, `set`, hot-reload,
+  `TryFrom<env::Vars>`) and the `ConfigError` variants wrapping the
+  `config` and `envy` errors are behind it. With
+  `default-features = false, features = ["tracing-layer"]`, rlg
+  builds on 33 crates instead of 47 (no config, toml, envy,
+  parking_lot or their dependencies). rlg-otlp, rlg-redact,
+  rlg-tower, rlg-test, rlg-wasm and rlg-ebpf depend on rlg without
+  default features, so they do not pull it back in.
+
+### Fixed
+
+- **`caller` names the event's call site.** Records from `RlgLayer`
+  carried the layer's own `layer.rs` line; they now carry the
+  event's file and line. Every `caller` path that is absolute (a
+  crate built from the registry) is cut to start at the crate
+  directory, so build machines' home directories no longer reach
+  log lines.
+
+### Changed
+
+- **Breaking for `default-features = false` users:** config loading
+  now needs the `config` feature. Default builds are unchanged.
 
 ### Security
 
@@ -13,6 +47,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `/messages/` body over 1 MiB is refused with 413 before it is
   deserialised; it was bounded only by axum's implicit 2 MiB default.
   Clears CodeQL alert #81 (`rust/unsafe-deserialization`).
+
+### Dependencies
+
+- The GitHub Actions group, the minor-and-patch group and
+  euxis-commons 0.0.9 (Dependabot #248, #249, #250).
 
 ## [0.0.19] - 2026-11-27
 

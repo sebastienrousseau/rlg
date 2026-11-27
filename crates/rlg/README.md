@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.19"
+rlg = "0.0.20"
 ```
 
 ### Build from source
@@ -74,12 +74,15 @@ basis via the stdout fallback sink.
 
 ### Cargo features
 
-All optional integrations are off by default. Enable only what
-the application needs.
+Only `config` is on by default; every other integration is off.
+Enable only what the application needs. A `tracing`-only user can
+turn default features off (`default-features = false`) to drop the
+config, toml and envy crates.
 
 | Feature | Pulls in | Adds | Documented in |
 | :--- | :--- | :--- | :--- |
-| `tokio` | `tokio` | `Config::load_async`, polling hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
+| `config` (default) | `config`, `toml`, `envy`, `parking_lot` | `Config::load`, `save_to_file`, `set`, environment overrides | [Configuration](#configuration) |
+| `tokio` | `tokio` | `Config::load_async`, polling hot-reload (with `config`) | [Configuration](#configuration), `examples/example_config.rs` |
 | `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
 | `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups, with span context and scrub and span-export hooks | [Bridging existing facades](#bridging-existing-facades) |
 | `debug_enabled` | — | Verbose internal engine diagnostics | — |
@@ -87,7 +90,7 @@ the application needs.
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.19", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.20", features = ["tokio", "tracing-layer"] }
 ```
 
 ---

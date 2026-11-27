@@ -17,6 +17,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 const OTEL_KIND: &str = "otel.kind";
 const OTEL_STATUS_CODE: &str = "otel.status_code";
 const OTEL_STATUS_MESSAGE: &str = "otel.status_message";
+/// A root span field carrying an incoming W3C `traceparent`.
+const TRACEPARENT: &str = "traceparent";
 
 /// Rewrites a record before it leaves the layer: redaction, field
 /// filtering, enrichment.
@@ -184,6 +186,22 @@ impl SpanData {
                 ),
                 _ => SpanStatus::Unset,
             };
+        }
+    }
+
+    /// For a root span: adopts the trace and remote parent of a valid
+    /// `traceparent` field, consuming the field. An invalid value
+    /// leaves the span a new trace root.
+    pub(super) fn adopt_traceparent(&mut self) {
+        if self.parent_span_id.is_some() {
+            return;
+        }
+        let header = self.take_str(TRACEPARENT);
+        if let Some((trace_id, parent)) =
+            header.as_deref().and_then(super::traceparent::parse)
+        {
+            self.trace_id = trace_id;
+            self.parent_span_id = Some(parent);
         }
     }
 

@@ -286,3 +286,65 @@ fn debug_shows_which_hooks_are_set() {
         format!("{:?}", RlgLayer::new().with_scrub(|l: Log| l));
     assert!(hooked.contains("scrub: true"));
 }
+
+#[test]
+#[cfg_attr(miri, ignore)]
+#[serial_test::serial(engine_filter)]
+fn caller_is_the_event_call_site_not_the_layer() {
+    let line = line!() + 1;
+    let c = Captured::run(|| tracing::info!("here"));
+    let expected = format!("{}:{line}", file!());
+    assert_eq!(attr(&c.log(0), "caller"), &json!(expected));
+}
+
+const REMOTE: &str =
+    "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+#[test]
+#[cfg_attr(miri, ignore)]
+#[serial_test::serial(engine_filter)]
+fn root_span_adopts_an_incoming_traceparent() {
+    let c = Captured::run(|| {
+        let request =
+            tracing::info_span!("request", traceparent = REMOTE);
+        let _r = request.enter();
+        let child = tracing::info_span!("allocate");
+        let _c = child.enter();
+        tracing::info!("inside");
+    });
+    let (request, child, log) =
+        (c.span("request"), c.span("allocate"), c.log(0));
+    assert_eq!(request.trace_id, "4bf92f3577b34da6a3ce929d0e0e4736");
+    assert_eq!(
+        request.parent_span_id.as_deref(),
+        Some("00f067aa0ba902b7")
+    );
+    assert!(!request.attributes.contains_key("traceparent"));
+    assert_eq!(child.trace_id, request.trace_id);
+    assert_eq!(attr(&log, "trace_id"), &json!(request.trace_id));
+}
+
+#[test]
+#[cfg_attr(miri, ignore)]
+#[serial_test::serial(engine_filter)]
+fn a_malformed_traceparent_starts_a_new_trace() {
+    let bad = [
+        "garbage",
+        "00-00000000000000000000000000000000-00f067aa0ba902b7-01",
+        "00-4bf92f3577b34da6a3ce929d0e0e4736-0000000000000000-01",
+        "ff-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+        "00-4BF92F3577B34DA6A3CE929D0E0E4736-00f067aa0ba902b7-01",
+        "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7",
+    ];
+    for header in bad {
+        let c = Captured::run(|| {
+            drop(tracing::info_span!("request", traceparent = header));
+        });
+        let span = c.span("request");
+        assert_ne!(
+            span.trace_id, "4bf92f3577b34da6a3ce929d0e0e4736",
+            "{header}"
+        );
+        assert_eq!(span.parent_span_id, None, "{header}");
+    }
+}

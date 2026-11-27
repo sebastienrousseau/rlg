@@ -1,6 +1,6 @@
 [package]
 name = "rlg"
-version = "0.0.19"
+version = "0.0.20"
 edition = "2024"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
@@ -68,14 +68,14 @@ name = "example_config"
 required-features = ["tokio"]
 
 [dependencies]
-config = { version = "0.15.22", default-features = false, features = ["toml"] }
+config = { version = "0.15.22", default-features = false, features = ["toml"], optional = true }
 crossbeam-queue = "0.3.12"
-envy = "0.4.2"
-euxis-commons = { version = "0.0.8", default-features = false, features = ["error", "config", "validation", "id", "counter"], package = "euxis-commons" }
+envy = { version = "0.4.2", optional = true }
+euxis-commons = { version = "0.0.9", default-features = false, features = ["error", "validation", "id", "counter"], package = "euxis-commons" }
 hostname = "0.4.2"
 itoa = "1.0.18"
 log = "0.4.30"
-parking_lot = "0.12.5"
+parking_lot = { version = "0.12.5", optional = true }
 regex = "1.12.3"
 ryu = "1.0.23"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -83,7 +83,7 @@ serde_json = "1.0.150"
 terminal_size = { version = "0.4", optional = true }
 thiserror = "2.0.18"
 tokio = { version = "1.54", default-features = false, features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"], optional = true }
-toml = "1.0.7"
+toml = { version = "1.0.7", optional = true }
 tracing-core = "0.1.36"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"], optional = true }
 
@@ -124,7 +124,11 @@ tracing-subscriber = { version = "0.3", features = ["fmt"] }
 loom = "0.7"
 
 [features]
-default = []
+# `config`: load, save and set a `Config` from TOML files and the
+# environment. On by default; a `tracing`-layer-only user can turn
+# default features off and drop config, toml and envy.
+default = ["config"]
+config = ["dep:config", "dep:toml", "dep:envy", "dep:parking_lot", "euxis-commons/config"]
 debug_enabled = []
 # Split the internal producer queue into 8 shards to reduce
 # cache-line contention under high-concurrency ingest. Off by

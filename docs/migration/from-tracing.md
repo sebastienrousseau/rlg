@@ -113,7 +113,7 @@ For automated timing, rlg ships the `rlg_time_it!` macro.
 Add `rlg` with the `tracing-layer` feature:
 
 ```toml
-rlg = { version = "0.0.19", features = ["tracing-layer"] }
+rlg = { version = "0.0.20", features = ["tracing-layer"] }
 ```
 
 Install both subscribers:
@@ -151,6 +151,12 @@ let _guard = request.enter();
 request.record("status", 200);
 tracing::info!("done"); // carries request_id, status, span, trace_id, span_id
 ```
+
+To continue a caller's trace, put the incoming W3C `traceparent`
+header on the root span when it is created
+(`tracing::info_span!("request", traceparent = %header)`): the span
+takes its trace id and the remote span as its parent. A malformed
+value starts a new trace.
 
 `RlgLayer::with_scrub` runs every record through a scrubber (such as
 `rlg_redact::Redactor` with its `tracing` feature), and

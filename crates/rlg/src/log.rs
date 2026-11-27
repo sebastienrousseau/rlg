@@ -12,6 +12,7 @@ use std::fmt;
 use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
 
+mod source;
 mod write;
 use write::Part::{Map, Num, Raw, Str, Value};
 use write::{write_logfmt_value, write_parts};
@@ -23,14 +24,14 @@ use write::{write_logfmt_value, write_parts};
 pub(crate) fn caller_string(
     caller: &std::panic::Location<'_>,
 ) -> String {
-    let mut line = itoa::Buffer::new();
-    let line = line.format(caller.line());
-    let file = caller.file();
-    let mut out = String::with_capacity(file.len() + 1 + line.len());
-    out.push_str(file);
-    out.push(':');
-    out.push_str(line);
-    out
+    source::source_location(caller.file(), caller.line())
+}
+
+/// `file:line` for a source location, with an absolute path cut to
+/// start at its crate (see `source::source_path`).
+#[cfg(feature = "tracing-layer")]
+pub(crate) fn source_location(file: &str, line: u32) -> String {
+    source::source_location(file, line)
 }
 
 /// Monotonic session ID counter. Incremented atomically per `build()` call.

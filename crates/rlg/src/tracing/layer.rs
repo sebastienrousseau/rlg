@@ -33,7 +33,9 @@ use tracing_subscriber::registry::{LookupSpan, Scope};
 /// | `span_id` | 16 hex characters, the innermost span's id |
 ///
 /// The ids are the ones a [`SpanSink`] receives, so logs and exported
-/// spans link up in a collector. `LogFormat::OTLP` renders them as
+/// spans link up in a collector. A root span created with a valid W3C
+/// `traceparent` field (`traceparent = %header`) joins that trace,
+/// with the remote span as its parent; the field is consumed. `LogFormat::OTLP` renders them as
 /// `traceId` and `spanId`.
 ///
 /// # Example
@@ -159,6 +161,17 @@ fn merge_scope<S>(
     }
 }
 
+/// Where the event was emitted: `file:line` with the path cut by
+/// `log::source::source_path`, else its module path.
+fn event_caller(metadata: &Metadata<'_>) -> Option<String> {
+    match (metadata.file(), metadata.line()) {
+        (Some(file), Some(line)) => {
+            Some(crate::log::source_location(file, line))
+        }
+        _ => metadata.module_path().map(str::to_string),
+    }
+}
+
 /// Marks the span an `ERROR` event fired in as failed, unless a
 /// status was already set.
 fn mark_error<S>(event: &Event<'_>, ctx: &Context<'_, S>, message: &str)
@@ -204,6 +217,7 @@ where
             |parent| SpanData::new(parent.extensions().get()),
         );
         data.absorb(collect(|v| attrs.record(v)));
+        data.adopt_traceparent();
         span.extensions_mut().insert(data);
     }
 
@@ -239,8 +253,15 @@ where
         if let Some(scope) = ctx.event_scope(event) {
             merge_scope(&mut log.attributes, scope);
         }
+        if let Some(caller) = event_caller(metadata) {
+            let _ =
+                log.attributes.insert("caller".into(), caller.into());
+        }
         log.attributes.extend(visitor.fields);
-        self.scrubbed(log).fire();
+        // Not `fire()`: its call site would be this line, and the
+        // flusher would overwrite the event's own `caller` with it.
+        crate::engine::ENGINE
+            .ingest(crate::engine::LogEvent::new(self.scrubbed(log)));
     }
 
     fn on_close(&self, id: Id, ctx: Context<'_, S>) {
