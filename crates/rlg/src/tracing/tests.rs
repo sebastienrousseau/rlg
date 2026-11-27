@@ -286,3 +286,13 @@ fn debug_shows_which_hooks_are_set() {
         format!("{:?}", RlgLayer::new().with_scrub(|l: Log| l));
     assert!(hooked.contains("scrub: true"));
 }
+
+#[test]
+#[cfg_attr(miri, ignore)]
+#[serial_test::serial(engine_filter)]
+fn caller_is_the_event_call_site_not_the_layer() {
+    let line = line!() + 1;
+    let c = Captured::run(|| tracing::info!("here"));
+    let expected = format!("{}:{line}", file!());
+    assert_eq!(attr(&c.log(0), "caller"), &json!(expected));
+}

@@ -4,6 +4,7 @@
 
 //! Unit tests for `log.rs`.
 
+use super::source::{source_location, source_path};
 use super::*;
 use crate::log_format::LogFormat;
 
@@ -84,4 +85,35 @@ fn fired_event_carries_the_call_site_unrendered() {
     assert_eq!(caller.line(), line);
     assert!(!event.log.attributes.contains_key("caller"));
     assert_eq!(event.level_num, LogLevel::INFO.to_numeric());
+}
+
+#[test]
+fn source_path_keeps_relative_paths() {
+    assert_eq!(source_path("src/main.rs"), "src/main.rs");
+    assert_eq!(
+        source_path("crates/api/src/lib.rs"),
+        "crates/api/src/lib.rs"
+    );
+}
+
+#[test]
+fn source_path_cuts_absolute_paths_to_the_crate() {
+    let registry = "/home/u/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/rlg-0.0.19/src/tracing/layer.rs";
+    assert_eq!(
+        source_path(registry),
+        "rlg-0.0.19/src/tracing/layer.rs"
+    );
+    let windows =
+        r"C:\Users\u\.cargo\registry\src\idx\rlg-0.0.19\src\lib.rs";
+    assert_eq!(source_path(windows), r"rlg-0.0.19\src\lib.rs");
+    assert_eq!(source_path("/opt/build/gen/out.rs"), "out.rs");
+    assert_eq!(source_path("/src/x.rs"), "x.rs");
+}
+
+#[test]
+fn source_location_is_cut_path_colon_line() {
+    assert_eq!(
+        source_location("/h/.cargo/registry/src/i/c-1.0.0/src/a.rs", 7),
+        "c-1.0.0/src/a.rs:7"
+    );
 }
