@@ -76,3 +76,22 @@ fn log_files_are_not_readable_by_others() {
         mode(&dir.path().join("a/b"))
     );
 }
+
+#[test]
+fn config_debug_and_diff_hide_env_var_values() {
+    let mut a = rlg::config::Config::default();
+    let _ = a
+        .env_vars
+        .insert("AWS_SECRET_ACCESS_KEY".into(), "s3cr3t-old".into());
+    let mut b = a.clone();
+    let _ = b
+        .env_vars
+        .insert("AWS_SECRET_ACCESS_KEY".into(), "s3cr3t-new".into());
+    let debug = format!("{a:?}");
+    assert!(debug.contains("AWS_SECRET_ACCESS_KEY"), "{debug}");
+    assert!(!debug.contains("s3cr3t"), "{debug}");
+    let diff = rlg::config::Config::diff(&a, &b);
+    let shown = format!("{diff:?}");
+    assert!(diff.contains_key("env_vars"), "{shown}");
+    assert!(!shown.contains("s3cr3t"), "{shown}");
+}

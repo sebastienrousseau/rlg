@@ -32,6 +32,7 @@ const CURRENT_CONFIG_VERSION: &str = "1.0";
 #[cfg(all(feature = "tokio", feature = "config"))]
 mod hot_reload;
 mod log_rotation;
+mod redact;
 #[cfg(feature = "config")]
 mod set;
 
@@ -104,7 +105,7 @@ pub enum LoggingDestination {
 }
 
 /// Configuration structure for the logging system.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 // Allowed because Config contains no unsafe invariants that Deserialize could violate.
 #[allow(clippy::unsafe_derive_deserialize)]
 pub struct Config {
@@ -416,9 +417,13 @@ impl Config {
             debug log_level;
             debug log_rotation;
             debug logging_destinations;
-            debug env_vars;
             path log_file_path;
         );
+        if let Some(changes) =
+            redact::env_vars_diff(&config1.env_vars, &config2.env_vars)
+        {
+            let _ = diffs.insert("env_vars".to_string(), changes);
+        }
         diffs
     }
 
