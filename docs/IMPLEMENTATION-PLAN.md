@@ -2,7 +2,8 @@
 
 # rlg implementation plan: 10/10 in every category
 
-> **Status:** Proposed, 2026-11-27. Supersedes
+> **Status:** Accepted with the maintainer's decisions of
+> 2026-11-27 (section 5); one decision is still open. Supersedes
 > [`IMPLEMENTATION-PLAN-v0.1.0.md`](IMPLEMENTATION-PLAN-v0.1.0.md),
 > which is kept because ADRs 0003 to 0014 cite its phase numbers.
 >
@@ -22,13 +23,13 @@
   that keeps it there. A category is 10/10 only when every condition
   holds and its gate is required on `main`.
 - Section 2 lists the ceilings that code cannot lift.
-- Section 3 is the work: 37 work packages (WP) grouped into ten
-  milestones, one release each. Every WP names the problem with its
+- Section 3 is the work: 37 work packages (WP) grouped into nine
+  milestones across twelve releases, two of them breaking. Every WP names the problem with its
   evidence, the change, the files, the public API (with code), the
   fail-first test, the gate, and the semver impact.
-- Section 4 maps milestones to releases; section 5 lists the
-  decisions only the maintainer can make; section 6 is the final
-  definition of done.
+- Section 4 maps milestones to releases; section 5 records the
+  maintainer's decisions and the one still open; section 6 is the
+  final definition of done.
 
 Every WP follows `AGENTS.md`: work lands on `feat/v<next>` and
 reaches `main` through one release PR; commits are signed with an
@@ -246,7 +247,7 @@ organisation change, not a pull request.
 | OpenSSF Best Practices Gold | Passing | Silver | Gold needs two unassociated significant contributors |
 
 Alerts #6 and #76 were dismissed as "won't fix" on 2026-11-27 for
-this reason. WP-S6 below moves the protection rules into a
+this reason, and decision 4 keeps it so until after 0.0.27. WP-S6 below moves the protection rules into a
 repository ruleset so the parts that are enforced become visible.
 
 ## 3. Work packages
@@ -255,155 +256,9 @@ Each WP lists: **Problem** (with evidence), **Change**, **Files**,
 **API**, **Test first**, **Gate**, **Semver**. "Verified" means
 reproduced on 2026-11-27.
 
-### Milestone M1 (0.0.21): correct output
+### Milestone M1 (0.0.21): security release, nothing breaks
 
-#### WP-C1. One newline per record (verified)
-
-- **Problem:** `engine.rs:248` formats with `writeln!`, then
-  `sink.rs:221-226` and `:246` write another `\n`; journald gets
-  `MESSAGE=...\n\n`. A JSON log file reads `}\n\n{`.
-- **Change:** `emit` formats with `write!`; each sink adds the
-  framing it needs. `PlatformSink::File` wraps a `BufWriter` flushed
-  when the queue drains and at shutdown.
-- **Files:** `crates/rlg/src/engine.rs`, `crates/rlg/src/sink.rs`.
-- **Test first:** `tests/test_set_sink.rs` reads the file back and
-  asserts `written.matches('\n').count() == records` and no `"\n\n"`.
-- **Gate:** the test; a fuzz target asserting framing for random
-  payloads.
-- **Semver:** none (output fix, noted in CHANGELOG).
-
-#### WP-C2. Spec-conformant OTLP log records (verified)
-
-- **Problem:** `log.rs:425-449` writes `timeUnixNano` as ISO-8601,
-  attributes as a JSON map, `severityNumber` on rlg's scale (INFO 6,
-  ERROR 8), and `""` ids; `rlg-otlp/src/lib.rs:363-388` hard-codes
-  `service.name = "rlg"`.
-- **Change:** a `crate::otlp` module shared by the renderer and
-  rlg-otlp; a resource builder in rlg-otlp.
-
-```rust
-/// OTLP SeverityNumber (logs data model, 1..=24).
-pub const fn otlp_severity(level: LogLevel) -> u8 {
-    match level {
-        LogLevel::TRACE => 1,
-        LogLevel::DEBUG | LogLevel::VERBOSE => 5,
-        LogLevel::INFO => 9,
-        LogLevel::WARN => 13,
-        LogLevel::ERROR => 17,
-        LogLevel::FATAL | LogLevel::CRITICAL => 21,
-        _ => 0, // SEVERITY_NUMBER_UNSPECIFIED
-    }
-}
-```
-
-  Records carry the time as nanoseconds (WP-P1); until then the
-  renderer parses `Log::time` back to nanoseconds once. Attributes go
-  through the same `AnyValue` encoder as `rlg-otlp/src/traces.rs`.
-
-- **Files:** `crates/rlg/src/log.rs`, new `crates/rlg/src/otlp.rs`,
-  `crates/rlg-otlp/src/lib.rs`, `crates/rlg-otlp/src/traces.rs`.
-- **API:** `rlg_otlp::Resource::builder().service_name(..)
-  .service_version(..).attribute(k, v)`; both exporters take it.
-- **Test first:** a snapshot test that decodes the JSON with the
-  `opentelemetry-proto` serde types (dev-dependency) and fails on
-  today's output.
-- **Gate:** the `conformance` CI job (section 1, C1).
-- **Semver:** output change; `serialise_batch` gains a `&Resource`
-  parameter (breaking, 0.0.x).
-
-#### WP-C3. Builder settings reach every path (verified)
-
-- **Problem:** `Log::build` hard-codes `LogFormat::MCP`
-  (`log.rs:158-167`); `RlgSubscriber::event` never sets a format;
-  after `builder().format(JSON).init()`, `Log::info().fire()` prints
-  an MCP envelope. `rlg_time_it!` and `rlg_span!` force their own
-  formats.
-- **Change:** an engine-wide default format (`AtomicU8` in the
-  engine, set by `init()`); `Log` carries `Option<LogFormat>`; the
-  flusher resolves `None` to the default. Macros stop forcing a
-  format.
-- **Files:** `crates/rlg/src/log.rs`, `engine.rs`, `init.rs`,
-  `tracing.rs`, `macros.rs`.
-- **API:** `Log.format` becomes `Option<LogFormat>` (field), with
-  `Log::format(fmt)` unchanged for builders.
-- **Test first:** the reproducer from the audit as an integration
-  test: `init(JSON)` then `Log::info().fire()` must produce JSON.
-- **Semver:** breaking for code reading `log.format` directly.
-
-#### WP-C4. `caller` correct on every path (verified for `log`)
-
-- **Problem:** `logger.rs:84`, `tracing.rs:92` and
-  `rlg-tower/src/lib.rs:268` call `fire()` from inside rlg, so
-  `caller` is rlg's own line (`rlg/src/logger.rs:84` observed).
-- **Change:** those paths ingest with `LogEvent::new` and set
-  `caller` from `log::Record::file()/line()`, tracing metadata, or
-  (tower) leave it out.
-- **Test first:** `log::info!` from a test file must give that file
-  and line.
-- **Semver:** none.
-
-#### WP-C5. Formats follow their specs or go
-
-- **Problem:** CEF header misassigned and unescaped
-  (`log.rs:258-268`); "ELF" and "W3C" invented (`:270-292`); Apache
-  puts the level in the status slot (`:294-304`); GELF `timestamp`
-  is a string and `level` uses rlg's scale; MCP uses
-  `notifications/log` instead of `notifications/message`; logfmt
-  escapes neither `\` nor newlines.
-- **Change:** an ADR deciding per format (keep and fix, rename, or
-  remove), then one renderer module per kept format under
-  `crates/rlg/src/log/format/`, each with its escaper. Proposed:
-  fix CEF, GELF, ECS, logfmt, MCP; remove ELF and W3C; rename CLF to
-  `KeyValue` or make it real NCSA CLF; keep Apache only as true
-  Combined Log Format for HTTP records (rlg-tower).
-- **Test first:** per-format conformance snapshots, starting with a
-  CEF record whose description contains `|` and `\n`.
-- **Semver:** breaking (`LogFormat` variants change); `LogFormat`
-  becomes `#[non_exhaustive]` in the same release.
-
-#### WP-C6. journald native protocol
-
-- **Problem:** `sink.rs:328-335` sends `PRIORITY` and `MESSAGE` as
-  text, so a newline in the payload forges fields; no
-  `SYSLOG_IDENTIFIER`; datagrams over `SO_SNDBUF` fail silently.
-- **Change:** binary framing for values containing `\n`,
-  `SYSLOG_IDENTIFIER` (default: program name), structured fields
-  (`RLG_COMPONENT`, `CODE_FILE`, `CODE_LINE`, `TRACE_ID`), and a
-  memfd fallback (`memfd_create` + `SCM_RIGHTS`) for large records,
-  counted in stats if it fails.
-
-```rust
-fn push_field(buf: &mut Vec<u8>, key: &[u8], value: &[u8]) {
-    buf.extend_from_slice(key);
-    if value.contains(&b'\n') {
-        buf.push(b'\n');
-        buf.extend_from_slice(&(value.len() as u64).to_le_bytes());
-        buf.extend_from_slice(value);
-    } else {
-        buf.push(b'=');
-        buf.extend_from_slice(value);
-    }
-    buf.push(b'\n');
-}
-```
-
-- **Test first:** encode `"x\nPRIORITY=0"` and assert the datagram
-  decodes to one `MESSAGE` field (a small decoder in the test).
-- **Semver:** none.
-
-#### WP-C7. Small correctness fixes
-
-- `SpanExporter::flush` uses blocking `send` and can wait past its
-  timeout (`rlg-otlp/src/spans.rs:111`): use `try_send` and fall back
-  to waiting with the remaining timeout. Test with a full queue.
-- Per-record `std::env::var` in the journald and os_log sinks
-  (`sink.rs:263`, `:312`): decide once at construction.
-- `LogLevel` ordering puts `NONE`/`DISABLED` below `TRACE`
-  (`log_level.rs:147-158`): reorder so `NONE` filters everything;
-  property test that `includes` matches the engine gate.
-- `parse_rust_log` ignores `off`: parse it.
-
-### Milestone M2 (0.0.21, private advisory first): security fixes
+A lean release: the fixes users need now, with no API change. WP-S1 goes through a private security advisory (open decision 6); WP-S2 to WP-S6 land publicly on `feat/v0.0.21`. Because the escapers from WP-S2 ship here, the renderer rework in WP-C5 builds on them one release later instead of on a parallel fork.
 
 #### WP-S1. rlg-mcp reads only under a root (verified)
 
@@ -412,7 +267,7 @@ fn push_field(buf: &mut Vec<u8>, key: &[u8], value: &[u8]) {
   reads whole files; no auth on HTTP transports. Classified as a
   vulnerability: handled through a GitHub private security advisory
   (`SECURITY.md`), fixed on the advisory's private fork, released,
-  then disclosed.
+  then disclosed. The merge process is open decision 6 (section 5).
 - **Change:**
 
 ```rust
@@ -440,9 +295,10 @@ impl Root {
 - **Test first:** `../`, absolute paths, symlinks out of the root,
   `/dev/zero`, a FIFO and a glob of `/**/*` each refused.
 - **Gate:** a fuzz target over `Root::resolve`.
-- **Semver:** `--root` becomes required (breaking CLI change,
-  documented; the default can be the current directory with a
-  warning for one release).
+- **Semver:** decided 2026-11-27: in 0.0.21 `--root` defaults to the
+  current directory and the server warns at start that it should be
+  set; it becomes required in 0.0.22 (the planned breaking release).
+  The path guard blocks escapes from the default root from day one.
 
 #### WP-S2. No injection in any renderer
 
@@ -509,7 +365,157 @@ impl Root {
   config files, environment, network collector, MCP clients, log
   files read by tools).
 
-### Milestone M3 (0.0.22): the sink trait and stats
+### Milestone M2 (0.0.22): correct output and the one API reset
+
+The first of two planned breaking releases. Every caller-facing change that can land together does: the output fixes, the `Sink` trait, the overflow policy, the API reset, the format cuts and the stdout default. Upgrade notes cover all of them in one place.
+
+#### WP-C1. One newline per record (verified)
+
+- **Problem:** `engine.rs:248` formats with `writeln!`, then
+  `sink.rs:221-226` and `:246` write another `\n`; journald gets
+  `MESSAGE=...\n\n`. A JSON log file reads `}\n\n{`.
+- **Change:** `emit` formats with `write!`; each sink adds the
+  framing it needs. `PlatformSink::File` wraps a `BufWriter` flushed
+  when the queue drains and at shutdown.
+- **Files:** `crates/rlg/src/engine.rs`, `crates/rlg/src/sink.rs`.
+- **Test first:** `tests/test_set_sink.rs` reads the file back and
+  asserts `written.matches('\n').count() == records` and no `"\n\n"`.
+- **Gate:** the test; a fuzz target asserting framing for random
+  payloads.
+- **Semver:** none (output fix, noted in CHANGELOG).
+
+#### WP-C2. Spec-conformant OTLP log records (verified)
+
+- **Problem:** `log.rs:425-449` writes `timeUnixNano` as ISO-8601,
+  attributes as a JSON map, `severityNumber` on rlg's scale (INFO 6,
+  ERROR 8), and `""` ids; `rlg-otlp/src/lib.rs:363-388` hard-codes
+  `service.name = "rlg"`.
+- **Change:** a `crate::otlp` module shared by the renderer and
+  rlg-otlp; a resource builder in rlg-otlp.
+
+```rust
+/// OTLP SeverityNumber (logs data model, 1..=24).
+pub const fn otlp_severity(level: LogLevel) -> u8 {
+    match level {
+        LogLevel::TRACE => 1,
+        LogLevel::DEBUG | LogLevel::VERBOSE => 5,
+        LogLevel::INFO => 9,
+        LogLevel::WARN => 13,
+        LogLevel::ERROR => 17,
+        LogLevel::FATAL | LogLevel::CRITICAL => 21,
+        _ => 0, // SEVERITY_NUMBER_UNSPECIFIED
+    }
+}
+```
+
+  Records carry the time as nanoseconds from WP-P1 (0.0.25); until
+  then the renderer parses `Log::time` back to nanoseconds once. Keep
+  that parser to one small function with its own tests, marked for
+  deletion in WP-P1, so removing it is painless. Attributes go
+  through the same `AnyValue` encoder as `rlg-otlp/src/traces.rs`.
+
+- **Files:** `crates/rlg/src/log.rs`, new `crates/rlg/src/otlp.rs`,
+  `crates/rlg-otlp/src/lib.rs`, `crates/rlg-otlp/src/traces.rs`.
+- **API:** `rlg_otlp::Resource::builder().service_name(..)
+  .service_version(..).attribute(k, v)`; both exporters take it.
+- **Test first:** a snapshot test that decodes the JSON with the
+  `opentelemetry-proto` serde types (dev-dependency) and fails on
+  today's output.
+- **Gate:** the `conformance` CI job (section 1, C1).
+- **Semver:** output change; `serialise_batch` gains a `&Resource`
+  parameter (breaking, 0.0.x).
+
+#### WP-C3. Builder settings reach every path (verified)
+
+- **Problem:** `Log::build` hard-codes `LogFormat::MCP`
+  (`log.rs:158-167`); `RlgSubscriber::event` never sets a format;
+  after `builder().format(JSON).init()`, `Log::info().fire()` prints
+  an MCP envelope. `rlg_time_it!` and `rlg_span!` force their own
+  formats.
+- **Change:** an engine-wide default format (`AtomicU8` in the
+  engine, set by `init()`); `Log` carries `Option<LogFormat>`; the
+  flusher resolves `None` to the default. Macros stop forcing a
+  format.
+- **Files:** `crates/rlg/src/log.rs`, `engine.rs`, `init.rs`,
+  `tracing.rs`, `macros.rs`.
+- **API:** `Log.format` becomes `Option<LogFormat>` (field), with
+  `Log::format(fmt)` unchanged for builders.
+- **Test first:** the reproducer from the audit as an integration
+  test: `init(JSON)` then `Log::info().fire()` must produce JSON.
+- **Semver:** breaking for code reading `log.format` directly.
+
+#### WP-C4. `caller` correct on every path (verified for `log`)
+
+- **Problem:** `logger.rs:84`, `tracing.rs:92` and
+  `rlg-tower/src/lib.rs:268` call `fire()` from inside rlg, so
+  `caller` is rlg's own line (`rlg/src/logger.rs:84` observed).
+- **Change:** those paths ingest with `LogEvent::new` and set
+  `caller` from `log::Record::file()/line()`, tracing metadata, or
+  (tower) leave it out.
+- **Test first:** `log::info!` from a test file must give that file
+  and line.
+- **Semver:** none.
+
+#### WP-C5. Formats follow their specs or go
+
+- **Problem:** CEF header misassigned and unescaped
+  (`log.rs:258-268`); "ELF" and "W3C" invented (`:270-292`); Apache
+  puts the level in the status slot (`:294-304`); GELF `timestamp`
+  is a string and `level` uses rlg's scale; MCP uses
+  `notifications/log` instead of `notifications/message`; logfmt
+  escapes neither `\` nor newlines.
+- **Change:** decided 2026-11-27: remove ELF and W3C; make CLF real
+  NCSA Common Log Format; keep Apache only as true Combined Log
+  Format for HTTP records (rlg-tower); fix CEF, GELF, ECS, logfmt and
+  MCP against their specs. An ADR records the decision, then one
+  renderer module per kept format under `crates/rlg/src/log/format/`,
+  built on the WP-S2 escapers that ship in 0.0.21.
+- **Test first:** per-format conformance snapshots, starting with a
+  CEF record whose description contains `|` and `\n`.
+- **Semver:** breaking (`LogFormat` variants change); `LogFormat`
+  becomes `#[non_exhaustive]` in the same release.
+
+#### WP-C6. journald native protocol
+
+- **Problem:** `sink.rs:328-335` sends `PRIORITY` and `MESSAGE` as
+  text, so a newline in the payload forges fields; no
+  `SYSLOG_IDENTIFIER`; datagrams over `SO_SNDBUF` fail silently.
+- **Change:** binary framing for values containing `\n`,
+  `SYSLOG_IDENTIFIER` (default: program name), structured fields
+  (`RLG_COMPONENT`, `CODE_FILE`, `CODE_LINE`, `TRACE_ID`), and a
+  memfd fallback (`memfd_create` + `SCM_RIGHTS`) for large records,
+  counted in stats if it fails.
+
+```rust
+fn push_field(buf: &mut Vec<u8>, key: &[u8], value: &[u8]) {
+    buf.extend_from_slice(key);
+    if value.contains(&b'\n') {
+        buf.push(b'\n');
+        buf.extend_from_slice(&(value.len() as u64).to_le_bytes());
+        buf.extend_from_slice(value);
+    } else {
+        buf.push(b'=');
+        buf.extend_from_slice(value);
+    }
+    buf.push(b'\n');
+}
+```
+
+- **Test first:** encode `"x\nPRIORITY=0"` and assert the datagram
+  decodes to one `MESSAGE` field (a small decoder in the test).
+- **Semver:** none.
+
+#### WP-C7. Small correctness fixes
+
+- `SpanExporter::flush` uses blocking `send` and can wait past its
+  timeout (`rlg-otlp/src/spans.rs:111`): use `try_send` and fall back
+  to waiting with the remaining timeout. Test with a full queue.
+- Per-record `std::env::var` in the journald and os_log sinks
+  (`sink.rs:263`, `:312`): decide once at construction.
+- `LogLevel` ordering puts `NONE`/`DISABLED` below `TRACE`
+  (`log_level.rs:147-158`): reorder so `NONE` filters everything;
+  property test that `includes` matches the engine gate.
+- `parse_rust_log` ignores `off`: parse it.
 
 #### WP-A1. `Sink` trait and fan-out
 
@@ -592,7 +598,37 @@ impl LockFreeEngine {
   policy; a sink returning errors raises `write_errors`.
 - **Semver:** additive, but the default policy changes (CHANGELOG).
 
-### Milestone M4 (0.0.23): lifecycle and config
+#### WP-Q3. One API reset (moved forward from WP-Q2)
+
+- **Problem:** `LogEvent`'s fields are public (`engine.rs:44-55`);
+  `LogFormat`, `LogLevel` and `PlatformSink` are exhaustive, and
+  `PlatformSink` has a feature-dependent variant; `FastSerializer`
+  and engine counter methods (`inc_format`, `inc_spans`) are public.
+  Fixing these later would add another breaking release.
+- **Change:** in the same release as the `Sink` trait and the format
+  cuts: `LogEvent` fields private behind a constructor and accessors;
+  `#[non_exhaustive]` on `LogFormat`, `LogLevel`, `OverflowPolicy`,
+  `EngineStats` and sink error types; `FastSerializer` and the
+  counter methods become `pub(crate)` or move to a `#[doc(hidden)]`
+  internal module; the feature-dependent `PlatformSink` variant goes
+  away with the sink trait.
+- **Test first:** a `cargo public-api` snapshot committed in this
+  release; CI fails on any later unplanned change to it.
+- **Semver:** breaking, planned for 0.0.22.
+
+#### WP-D1. Defaults that work on first run
+
+- Decided 2026-11-27: the default sink is stdout on every OS;
+  journald and os_log are chosen explicitly (`set_sink`, config, or
+  `RLG_SINK=journald`). An ADR records it, since it reverses the
+  native-first default. Lands in 0.0.22 with the other breaking
+  changes.
+- macOS: real `os_log` through `os_log_create` with a subsystem, or
+  document that the sink is syslog and rename it.
+- Fix `docs/tutorials/getting-started.md` (`journalctl -t rlg` once
+  `SYSLOG_IDENTIFIER` exists, the macOS predicate, the fallback).
+
+### Milestone M3 (0.0.23): lifecycle and config
 
 #### WP-R2. Flush, shutdown, panics, exit
 
@@ -630,7 +666,7 @@ impl LockFreeEngine {
 - **Semver:** behaviour change for configs that relied on being
   ignored (CHANGELOG, migration note).
 
-### Milestone M5 (0.0.24): filters, one tracing path, defaults
+### Milestone M4 (0.0.24): filters and one tracing path
 
 #### WP-A3. Per-target filtering
 
@@ -650,19 +686,12 @@ impl LockFreeEngine {
 - With the `tracing-layer` feature, `init()` installs
   `registry().with(RlgLayer)` so span context, scrub, span export and
   `traceparent` work without hand-built setup; `RlgSubscriber` is
-  deprecated for one release then removed.
+  deprecated in 0.0.24 and removed in 0.0.25, the second planned
+  breaking release.
 
-#### WP-D1. Defaults that work on first run
+### Milestone M5 (0.0.25): producer-path performance
 
-- The default sink is stdout on every OS; journald and os_log are
-  chosen explicitly (`set_sink`, config, or `RLG_SINK=journald`).
-  ADR required: it reverses the native-first default.
-- macOS: real `os_log` through `os_log_create` with a subsystem, or
-  document that the sink is syslog and rename it.
-- Fix `docs/tutorials/getting-started.md` (`journalctl -t rlg` once
-  `SYSLOG_IDENTIFIER` exists, the macOS predicate, the fallback).
-
-### Milestone M6 (0.0.25): producer-path performance
+The second and last planned breaking release: `Log` changes shape, and `RlgSubscriber` is removed.
 
 #### WP-P1. No formatting on the producer
 
@@ -689,7 +718,7 @@ impl LockFreeEngine {
 - `LogEvent` size tracked by a `const` assertion (target: 64 bytes
   after WP-P1).
 
-### Milestone M7 (0.0.26): flusher, layer and exporter performance
+### Milestone M6 (0.0.26): flusher, layer and exporter performance
 
 #### WP-P3. Batch writes
 
@@ -721,7 +750,7 @@ impl LockFreeEngine {
 - **Gate:** an exporter bench (spans per second to a local
   collector) in the suite.
 
-### Milestone M8 (0.0.27): measured and verified
+### Milestone M7 (0.0.27): measured and verified
 
 #### WP-B1. A reproducible benchmark suite
 
@@ -757,7 +786,7 @@ impl LockFreeEngine {
 - Replace `tests/test_coverage_*.rs` with behaviour tests; add
   `scripts/check-assertions.py` (fails on a test with no assertion).
 
-### Milestone M9 (0.0.28 to 0.0.29): observability that leads
+### Milestone M8 (0.0.28 to 0.0.29): observability that leads
 
 #### WP-O1. OTLP logs and metrics from the engine
 
@@ -791,7 +820,7 @@ impl LockFreeEngine {
   a `Log::fire` record with `password=hunter2` is scrubbed with the
   engine hook set.
 
-### Milestone M10 (0.0.30 to 0.0.32): differentiators and finish
+### Milestone M9 (0.0.30 to 0.0.32): differentiators and finish
 
 #### WP-X1. TLS behind a feature
 
@@ -802,23 +831,15 @@ impl LockFreeEngine {
 
 #### WP-X2. rlg-mcp for agents
 
-- Bearer or OAuth 2.1 resource-server auth for HTTP transports
-  (validate tokens, scopes `logs:read`); idle session reaping;
-  stdin line cap lowered to 1 MiB.
+- Bearer-token auth for HTTP transports (the token from a file,
+  constant-time comparison); loopback stays the default bind. OAuth
+  2.1 is out of scope (decision 1: no hosted MCP server is planned).
+  Idle session reaping; stdin line cap lowered to 1 MiB.
 - Emit the OpenTelemetry MCP semantic conventions (development
   status; pinned to a version through `OTEL_SEMCONV_STABILITY_OPT_IN`).
 - Read every rlg output format (MCP envelopes, logfmt, OTLP, ECS) in
   `rlg-cli::parse_record`.
 - Fix `glama.json` (volume mount, tool count).
-
-#### WP-X3. Audit mode (conditional: see decision 1)
-
-- `OverflowPolicy::Block` plus a write-ahead `AuditFileSink`: fsync
-  per batch, records chained by SHA-256 (`prev_hash` field) so
-  deletion or edits are detectable, retention settings, and a
-  verifier in `rlg-cli` (`rlg verify-chain`). Positioned for the EU
-  AI Act Article 12 logging duty (applies from 2027-12-02 for Annex
-  III systems).
 
 #### WP-X4. Finish or label every satellite
 
@@ -866,55 +887,83 @@ impl LockFreeEngine {
 
 - Break the `rlg` to `rlg-cli` dev-dependency cycle: move the
   round-trip tests into `rlg-cli`'s own tests.
-- Make `LogEvent` fields private, mark `LogFormat`, `LogLevel`,
-  `OverflowPolicy`, `EngineStats` and sink errors
-  `#[non_exhaustive]`; move `FastSerializer` and engine counters out
-  of the public API.
+- The API items that used to be here moved to WP-Q3 (0.0.22), so
+  callers adapt once.
 - `cargo hack check --each-feature --no-dev-deps` in CI.
 - A `public-api` snapshot (`cargo public-api`) committed and diffed
   in CI.
 
+### Deferred
+
+- **WP-X3, audit mode** (`OverflowPolicy::Block` with a write-ahead,
+  hash-chained `AuditFileSink`): dropped from this roadmap by
+  decision 1 (2026-11-27). The EU AI Act Article 12 logging duty
+  applies from 2027-12-02 for Annex III systems; revisit when a user
+  asks for it. `OverflowPolicy::Block` itself still ships in WP-R1.
+- **OAuth 2.1 for rlg-mcp**: dropped from WP-X2 by decision 1.
+
 ## 4. Release map
 
-| Release | Milestone | Work packages | Categories lifted |
-| --- | --- | --- | --- |
-| 0.0.21 | M1 and M2 | C1 to C7, S1 to S6 | C1, C5, C6 |
-| 0.0.22 | M3 | A1, R1 | C2, C3 |
-| 0.0.23 | M4 | R2, A2 | C3, C2, C10 |
-| 0.0.24 | M5 | A3, A4, D1 | C2, C8 |
-| 0.0.25 | M6 | P1, P2 | C4 |
-| 0.0.26 | M7 | P3, P4, P5 | C4 |
-| 0.0.27 | M8 | B1, V1 | C4, C9 |
-| 0.0.28 | M9 | O1 | C7 |
-| 0.0.29 | M9 | O2 | C5, C7 |
-| 0.0.30 | M10 | X1, X2 | C5, C7 |
-| 0.0.31 | M10 | X4, D2, K1, Q2 | C8, C10, C2 |
-| 0.0.32 | M10 | Q1, X3 (if decided) | C6 |
+| Release | Milestone | Work packages | Breaking | Categories lifted |
+| --- | --- | --- | --- | --- |
+| 0.0.21 | M1 | S1 to S6 | No | C5, C6 |
+| 0.0.22 | M2 | C1 to C7, A1, R1, Q3, D1 | Yes (planned) | C1, C2, C3, C8 |
+| 0.0.23 | M3 | R2, A2 | No (behaviour: config now applies) | C3, C2, C10 |
+| 0.0.24 | M4 | A3, A4 | No (`RlgSubscriber` deprecated) | C2, C8 |
+| 0.0.25 | M5 | P1, P2 | Yes (planned, last) | C4 |
+| 0.0.26 | M6 | P3, P4, P5 | No | C4 |
+| 0.0.27 | M7 | B1, V1 | No | C4, C9 |
+| 0.0.28 | M8 | O1 | No | C7 |
+| 0.0.29 | M8 | O2 | No | C5, C7 |
+| 0.0.30 | M9 | X1, X2 | No | C5, C7 |
+| 0.0.31 | M9 | X4, D2, K1, Q2 | No | C8, C10, C2 |
+| 0.0.32 | M9 | Q1 | No | C6 |
+
+Two breaking releases, announced in advance: 0.0.22 (output, sink
+trait, overflow policy, API reset, formats, stdout default, `--root`
+required) and 0.0.25 (`Log` shape, `RlgSubscriber` removed). A
+breaking change found later waits for the next planned break unless
+it fixes a vulnerability.
 
 Every release also clears the hygiene gate (Dependabot, alerts,
 audit) before its own work, ships a CHANGELOG section and release
-highlights, and keeps the satellites in lockstep.
+highlights, and keeps the satellites in lockstep. 0.0.22 is large;
+it reaches `main` through its one release PR, built as a series of
+reviewed commits on `feat/v0.0.22`.
 
-Dependencies between packages: WP-C2 before WP-O1; WP-A1 before
-WP-R1, WP-A2, WP-O1, WP-K1 (rotation reopen) and WP-X4 (rlg-test);
-WP-P1 before WP-P4 and the final WP-B1 numbers; WP-S2 before WP-C5
-lands its renderers.
+Dependencies between packages: WP-S2 (0.0.21) before WP-C5 and
+WP-C6 (0.0.22); WP-C2 before WP-O1; WP-A1 before WP-R1, WP-A2,
+WP-O1, WP-K1 (rotation reopen) and WP-X4 (rlg-test); WP-P1 before
+WP-P4 and the final WP-B1 numbers.
 
-## 5. Decisions for the maintainer
+## 5. Decisions
 
-1. **Business model.** Open-core with paid features, paid support,
-   or purely open source. It decides whether WP-X3 (audit mode) and
-   the OAuth part of WP-X2 are built, and how hard WP-B1 is marketed.
-2. **Default sink.** WP-D1 proposes stdout everywhere instead of
-   journald and os_log first. Breaking for users who rely on the
-   journal.
-3. **Formats to cut.** WP-C5 proposes removing "ELF" and "W3C" and
-   reworking CLF and Apache.
-4. **A second maintainer.** The only route past the section 2
-   ceilings (Code-Review, Branch-Protection, Contributors, Best
-   Practices Gold).
-5. **`--root` default for rlg-mcp.** Required immediately, or the
-   current directory with a warning for one release.
+### Made on 2026-11-27
+
+1. **Business model: purely open source, for now.** WP-X3 (audit
+   mode) and the OAuth half of WP-X2 are dropped (see "Deferred").
+   WP-B1 and rlg-mcp stay, for adoption.
+2. **Default sink: stdout everywhere** (WP-D1, in 0.0.22). journald
+   and os_log become explicit choices.
+3. **Formats: remove ELF and W3C; rework CLF and Apache** to their
+   real specs (WP-C5, in 0.0.22).
+4. **Second maintainer: not now.** The section 2 ceilings stay
+   recorded; revisit once the library is stable and in production
+   use, after 0.0.27.
+5. **rlg-mcp `--root`: the current directory with a warning in
+   0.0.21, required from 0.0.22** (WP-S1).
+
+### Open
+
+- **Decision 6: how the private advisory fix reaches `main`.** GitHub does not
+  run Actions on a security advisory's temporary private fork, and
+  merging the advisory's pull request adds a second pull request
+  into `main`, outside the one-release-PR rule. Proposed: merge the
+  public `feat/v0.0.21` release PR (WP-S2 to WP-S6) first with full
+  CI; verify WP-S1 on the private fork with `make verify` locally;
+  merge the advisory pull request as the one documented exception;
+  tag 0.0.21 from the result once CI on `main` is green; publish the
+  advisory and a CVE request with the release.
 
 ## 6. Definition of done for 10/10
 
