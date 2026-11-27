@@ -168,111 +168,15 @@ impl Visit for RlgVisitor {
     impl_record_field!(stringify record_i128, i128);
 }
 
-// ---------------------------------------------------------------------------
-// Composable tracing Layer (behind `tracing-layer` feature)
-// ---------------------------------------------------------------------------
-
-/// A composable [`tracing_subscriber::Layer`] that routes events into the RLG engine.
-///
-/// This allows RLG to be used alongside other tracing layers in a
-/// `tracing_subscriber::Registry` stack.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// use tracing_subscriber::prelude::*;
-/// use rlg::tracing::RlgLayer;
-///
-/// tracing_subscriber::registry()
-///     .with(RlgLayer::new())
-///     .init();
-/// ```
 #[cfg(feature = "tracing-layer")]
-#[derive(Debug, Clone, Copy)]
-pub struct RlgLayer {
-    format: crate::log_format::LogFormat,
-}
+mod layer;
+#[cfg(feature = "tracing-layer")]
+mod span;
 
 #[cfg(feature = "tracing-layer")]
-impl Default for RlgLayer {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
+pub use layer::RlgLayer;
 #[cfg(feature = "tracing-layer")]
-impl RlgLayer {
-    /// Creates a new `RlgLayer` with the default MCP format.
-    #[must_use]
-    pub const fn new() -> Self {
-        Self {
-            format: crate::log_format::LogFormat::MCP,
-        }
-    }
+pub use span::{Scrub, SpanKind, SpanRecord, SpanSink, SpanStatus};
 
-    /// Sets the log output format for this layer.
-    #[must_use]
-    pub const fn with_format(
-        mut self,
-        format: crate::log_format::LogFormat,
-    ) -> Self {
-        self.format = format;
-        self
-    }
-}
-
-#[cfg(feature = "tracing-layer")]
-impl<S> tracing_subscriber::Layer<S> for RlgLayer
-where
-    S: Subscriber
-        + for<'lookup> tracing_subscriber::registry::LookupSpan<'lookup>,
-{
-    fn enabled(
-        &self,
-        metadata: &Metadata<'_>,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) -> bool {
-        map_tracing_level(*metadata.level()).to_numeric()
-            >= crate::engine::ENGINE.filter_level()
-    }
-
-    fn on_event(
-        &self,
-        event: &Event<'_>,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
-        let metadata = event.metadata();
-        let level = map_tracing_level(*metadata.level());
-
-        let mut visitor = RlgVisitor::default();
-        event.record(&mut visitor);
-
-        let mut log = Log::build(level, &visitor.message);
-        log.component =
-            std::borrow::Cow::Owned(metadata.target().to_string());
-        log.format = self.format;
-
-        for (key, value) in visitor.fields {
-            log = log.with(&key, value);
-        }
-
-        log.fire();
-    }
-
-    fn on_new_span(
-        &self,
-        _attrs: &tracing_core::span::Attributes<'_>,
-        _id: &tracing_core::span::Id,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
-        crate::engine::ENGINE.inc_spans();
-    }
-
-    fn on_close(
-        &self,
-        _id: tracing_core::span::Id,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
-        crate::engine::ENGINE.dec_spans();
-    }
-}
+#[cfg(all(test, feature = "tracing-layer"))]
+mod tests;
