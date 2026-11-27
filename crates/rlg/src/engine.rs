@@ -16,7 +16,6 @@
 
 use crate::log_level::LogLevel;
 use crate::sharded_queue::ShardedQueue;
-#[cfg(not(miri))]
 use crate::sink::PlatformSink;
 use crate::tui::TuiMetrics;
 #[cfg(not(miri))]
@@ -182,7 +181,8 @@ fn run_flusher(
     idle: &AtomicBool,
     metrics: &TuiMetrics,
 ) {
-    let mut sink = PlatformSink::native();
+    let mut sink = sink_slot::with_slot(sink_slot::SinkSlot::take)
+        .unwrap_or_else(PlatformSink::native);
     let mut fmt_buf = Vec::with_capacity(512);
     loop {
         let mut batch: [Option<LogEvent>; MAX_DRAIN_BATCH_SIZE] =
@@ -388,6 +388,32 @@ impl LockFreeEngine {
             let _ = handle.join();
         }
     }
+}
+
+mod sink_slot;
+
+/// Chooses the sink the engine writes to, in place of
+/// [`PlatformSink::native`](crate::sink::PlatformSink::native) (which prefers `journald` on Linux and
+/// `os_log` on macOS, and stdout only when `RLG_FALLBACK_STDOUT` or
+/// `GITHUB_ACTIONS` is set).
+///
+/// The background flusher picks its sink once, when the first record
+/// (or any other use of [`ENGINE`]) starts it, so call this first,
+/// for example at the top of `main`. No environment variable is
+/// involved, so it is safe once threads are running.
+///
+/// ```
+/// use rlg::engine::set_sink;
+/// use rlg::sink::PlatformSink;
+///
+/// set_sink(PlatformSink::Stdout).expect("set before the first record");
+/// ```
+///
+/// # Errors
+///
+/// Hands `sink` back when the flusher has already chosen its sink.
+pub fn set_sink(sink: PlatformSink) -> Result<(), PlatformSink> {
+    sink_slot::with_slot(|slot| slot.set(sink))
 }
 
 /// Zero-Allocation Serializer Helper
