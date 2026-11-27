@@ -26,7 +26,7 @@
 
 ```toml
 [dependencies]
-rlg-redact = "0.0.19"
+rlg-redact = "0.0.20"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).
@@ -57,7 +57,7 @@ so `RlgLayer` scrubs every record it emits and every closed span's
 attributes before a span exporter sees them:
 
 ```toml
-rlg-redact = { version = "0.0.19", features = ["tracing"] }
+rlg-redact = { version = "0.0.20", features = ["tracing"] }
 ```
 
 ```rust

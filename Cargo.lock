@@ -1424,7 +1424,7 @@ checksum = "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
 
 [[package]]
 name = "rlg"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "config",
  "criterion",
@@ -1460,7 +1460,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1477,7 +1477,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-ebpf"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "libc",
@@ -1487,7 +1487,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "axum",
  "criterion",
@@ -1507,7 +1507,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-otlp"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "rlg",
@@ -1522,7 +1522,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-redact"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "regex",
@@ -1534,7 +1534,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-report"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1552,7 +1552,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-test"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "parking_lot",
@@ -1562,7 +1562,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-tower"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "http",
@@ -1577,7 +1577,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-wasm"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "criterion",
  "rlg",
