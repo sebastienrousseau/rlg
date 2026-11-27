@@ -36,10 +36,11 @@
 //!
 //! ## Features
 //!
-//! No features are enabled by default.
+//! Only `config` is enabled by default.
 //!
 //! | Feature | Effect |
 //! |---------|--------|
+//! | `config` (default) | Load, save and `set` a `Config` from TOML and the environment. |
 //! | `tokio` | Async config loading and polling hot-reload. |
 //! | `tui` | Live terminal dashboard via `terminal_size`. |
 //! | `tracing-layer` | Composable `tracing_subscriber::Layer`. |

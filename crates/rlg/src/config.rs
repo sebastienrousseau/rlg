@@ -14,11 +14,12 @@
 //! Enable the `tokio` feature for async loading and file-watcher hot-reload.
 
 use crate::LogLevel;
+#[cfg(feature = "config")]
 use config::{
     Config as ConfigSource, ConfigError as SourceConfigError,
     File as ConfigFile,
 };
-use envy;
+#[cfg(feature = "config")]
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -26,31 +27,36 @@ use std::{
     env,
     fs::{self, OpenOptions},
     num::NonZeroU64,
-    path::{Path, PathBuf},
-    sync::Arc,
+    path::PathBuf,
 };
+#[cfg(feature = "config")]
+use std::{path::Path, sync::Arc};
 use thiserror::Error;
 
 const CURRENT_CONFIG_VERSION: &str = "1.0";
 
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio", feature = "config"))]
 mod hot_reload;
 mod log_rotation;
+#[cfg(feature = "config")]
 mod set;
 
-#[cfg(feature = "tokio")]
+#[cfg(all(feature = "tokio", feature = "config"))]
 pub use hot_reload::HOT_RELOAD_POLL_INTERVAL;
 pub use log_rotation::LogRotation;
+#[cfg(feature = "config")]
 use set::SETTERS;
 
 /// Configuration error variants.
 #[derive(Debug, Error)]
 pub enum ConfigError {
     /// Failed to parse an environment variable.
+    #[cfg(feature = "config")]
     #[error("Environment variable parse error: {0}")]
     EnvVarParseError(#[from] envy::Error),
 
     /// Failed to parse the configuration file.
+    #[cfg(feature = "config")]
     #[error("Configuration parsing error: {0}")]
     ConfigParseError(#[from] SourceConfigError),
 
@@ -84,6 +90,7 @@ pub enum ConfigError {
     WatcherError(std::io::Error),
 }
 
+#[cfg(feature = "config")]
 impl From<euxis_commons::config::ConfigError> for ConfigError {
     fn from(err: euxis_commons::config::ConfigError) -> Self {
         Self::ValidationError(err.to_string())
@@ -174,6 +181,7 @@ impl Config {
     ///
     /// Returns an error if the configuration file cannot be read,
     /// parsed, or if the version is unsupported.
+    #[cfg(feature = "config")]
     pub fn load<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Self>>, ConfigError> {
@@ -195,7 +203,7 @@ impl Config {
     ///
     /// This function returns an error if the configuration file cannot be read,
     /// parsed, or if the version is unsupported.
-    #[cfg(feature = "tokio")]
+    #[cfg(all(feature = "tokio", feature = "config"))]
     pub async fn load_async<P: AsRef<Path>>(
         config_path: Option<P>,
     ) -> Result<Arc<RwLock<Self>>, ConfigError> {
@@ -214,6 +222,7 @@ impl Config {
     }
 
     /// Parse a TOML configuration and check its version.
+    #[cfg(feature = "config")]
     fn from_toml(contents: &str) -> Result<Self, ConfigError> {
         let source = ConfigSource::builder()
             .add_source(ConfigFile::from_str(
@@ -231,6 +240,7 @@ impl Config {
     }
 
     /// Validate, create the log paths, and share the result.
+    #[cfg(feature = "config")]
     fn activate(self) -> Result<Arc<RwLock<Self>>, ConfigError> {
         self.validate()?;
         self.ensure_paths()?;
@@ -245,6 +255,7 @@ impl Config {
     ///
     /// This function returns an error if the file cannot be written or
     /// if serialization fails.
+    #[cfg(feature = "config")]
     pub fn save_to_file<P: AsRef<Path>>(
         &self,
         path: P,
@@ -268,6 +279,7 @@ impl Config {
     /// # Errors
     ///
     /// This function returns an error if the value cannot be serialized or if the key is unknown.
+    #[cfg(feature = "config")]
     pub fn set<T: Serialize>(
         &mut self,
         key: &str,
@@ -438,6 +450,7 @@ impl Config {
     }
 }
 
+#[cfg(feature = "config")]
 impl TryFrom<env::Vars> for Config {
     type Error = ConfigError;
     fn try_from(vars: env::Vars) -> Result<Self, Self::Error> {
@@ -454,9 +467,10 @@ fn not_empty(
 }
 
 /// A config file that could not be read.
+#[cfg(feature = "config")]
 fn read_error(e: &std::io::Error) -> ConfigError {
     ConfigError::FileReadError(e.to_string())
 }
 
-#[cfg(all(test, not(miri)))]
+#[cfg(all(test, not(miri), feature = "config"))]
 mod tests;

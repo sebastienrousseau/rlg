@@ -29,6 +29,7 @@ pub(crate) fn caller_string(
 
 /// `file:line` for a source location, with an absolute path cut to
 /// start at its crate (see `source::source_path`).
+#[cfg(feature = "tracing-layer")]
 pub(crate) fn source_location(file: &str, line: u32) -> String {
     source::source_location(file, line)
 }

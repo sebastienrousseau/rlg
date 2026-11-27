@@ -13,6 +13,9 @@ verify: ## Run the full local pre-PR verification pipeline.
 	@cargo fmt --check
 	@echo "▶ cargo clippy --workspace --all-features --tests --benches -- -D warnings"
 	@cargo clippy --workspace --all-features --tests --benches -- -D warnings
+	@echo "▶ cargo check -p rlg (lean feature sets)"
+	@cargo check -p rlg --no-default-features --lib
+	@cargo check -p rlg --no-default-features --features tracing-layer --lib
 	@echo "▶ cargo test --workspace --all-features"
 	@cargo test --workspace --all-features
 	@echo "▶ cargo semver-checks --workspace --exclude rlg-ebpf"

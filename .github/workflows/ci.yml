@@ -126,6 +126,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: rustup toolchain install 1.89.0 --profile minimal
       - run: cargo +1.89.0 check --locked --workspace --all-features --lib --bins
+      # rlg's lean builds: no default features (no file config), and
+      # a tracing-layer-only build, as a layer-only user compiles it.
+      - run: cargo +1.89.0 check --locked -p rlg --no-default-features --lib
+      - run: cargo +1.89.0 check --locked -p rlg --no-default-features --features tracing-layer --lib
 
   # The GNUmakefile install contract on a clean runner: binaries,
   # generated manpages and completions land in an FHS tree under

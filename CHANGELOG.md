@@ -7,6 +7,36 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **`rlg::engine::set_sink`** chooses the engine's sink in code
+  (stdout, a file, journald, `os_log`) before the first record, in
+  place of `PlatformSink::native()`. No environment variable is
+  needed, so it is safe once an async runtime's threads are running.
+- **A default-on `config` feature.** File and environment loading
+  (`Config::load`, `load_async`, `save_to_file`, `set`, hot-reload,
+  `TryFrom<env::Vars>`) and the `ConfigError` variants wrapping the
+  `config` and `envy` errors are behind it. With
+  `default-features = false, features = ["tracing-layer"]`, rlg
+  builds on 33 crates instead of 47 (no config, toml, envy,
+  parking_lot or their dependencies). rlg-otlp, rlg-redact,
+  rlg-tower, rlg-test, rlg-wasm and rlg-ebpf depend on rlg without
+  default features, so they do not pull it back in.
+
+### Fixed
+
+- **`caller` names the event's call site.** Records from `RlgLayer`
+  carried the layer's own `layer.rs` line; they now carry the
+  event's file and line. Every `caller` path that is absolute (a
+  crate built from the registry) is cut to start at the crate
+  directory, so build machines' home directories no longer reach
+  log lines.
+
+### Changed
+
+- **Breaking for `default-features = false` users:** config loading
+  now needs the `config` feature. Default builds are unchanged.
+
 ### Security
 
 - **rlg-mcp's SSE transport caps a posted message at 1 MiB.** A
