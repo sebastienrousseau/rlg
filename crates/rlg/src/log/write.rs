@@ -2,7 +2,7 @@
 // Copyright © 2024-2026 RustLogs (RLG). All rights reserved.
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-//! The hand-written JSON and logfmt writers behind `Log`'s `Display`.
+//! The hand-written JSON writers behind `Log`'s `Display`.
 //! They write straight to the formatter, with no intermediate
 //! `serde_json::Value`, because formatting runs on the flusher thread
 //! for every record.
@@ -76,7 +76,7 @@ impl Part<'_> {
             Self::Str(s) => write_json_str(f, s),
             Self::Map(m) => write_json_map(f, m),
             Self::Num(n) => write!(f, "{n}"),
-            Self::Value(v) => write!(f, "{v}"),
+            Self::Value(v) => write_json_value(f, v),
         }
     }
 }
@@ -87,23 +87,6 @@ pub(super) fn write_parts(
     parts: &[Part<'_>],
 ) -> fmt::Result {
     parts.iter().try_for_each(|part| part.write(f))
-}
-
-/// A logfmt attribute value: strings with a space or quote, and empty
-/// strings, are quoted; everything else is written bare.
-pub(super) fn write_logfmt_value(
-    f: &mut fmt::Formatter<'_>,
-    value: &serde_json::Value,
-) -> fmt::Result {
-    match value {
-        serde_json::Value::String(s)
-            if s.is_empty() || s.contains([' ', '"']) =>
-        {
-            write!(f, "\"{}\"", s.replace('"', "\\\""))
-        }
-        serde_json::Value::String(s) => f.write_str(s),
-        other => write!(f, "{other}"),
-    }
 }
 
 /// Writes a `BTreeMap<String, serde_json::Value>` as a JSON object.
@@ -119,8 +102,54 @@ fn write_json_map(
         }
         first = false;
         write_json_str(f, key)?;
-        // serde_json::Value Display already produces valid JSON
-        write!(f, ":{value}")?;
+        f.write_str(":")?;
+        write_json_value(f, value)?;
+    }
+    f.write_str("}")
+}
+
+/// Writes a JSON value. Strings go through [`write_json_str`], which
+/// escapes every control character, DEL and C1 included; `serde_json`'s
+/// own `Display` leaves those two raw.
+fn write_json_value(
+    f: &mut fmt::Formatter<'_>,
+    value: &serde_json::Value,
+) -> fmt::Result {
+    use serde_json::Value;
+    match value {
+        Value::String(s) => write_json_str(f, s),
+        Value::Array(items) => write_json_array(f, items),
+        Value::Object(map) => write_json_object(f, map),
+        other => write!(f, "{other}"),
+    }
+}
+
+fn write_json_array(
+    f: &mut fmt::Formatter<'_>,
+    items: &[serde_json::Value],
+) -> fmt::Result {
+    f.write_str("[")?;
+    for (i, item) in items.iter().enumerate() {
+        if i > 0 {
+            f.write_str(",")?;
+        }
+        write_json_value(f, item)?;
+    }
+    f.write_str("]")
+}
+
+fn write_json_object(
+    f: &mut fmt::Formatter<'_>,
+    map: &serde_json::Map<String, serde_json::Value>,
+) -> fmt::Result {
+    f.write_str("{")?;
+    for (i, (key, value)) in map.iter().enumerate() {
+        if i > 0 {
+            f.write_str(",")?;
+        }
+        write_json_str(f, key)?;
+        f.write_str(":")?;
+        write_json_value(f, value)?;
     }
     f.write_str("}")
 }

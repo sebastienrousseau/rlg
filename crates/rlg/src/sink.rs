@@ -9,6 +9,8 @@
 //! output: `os_log` on macOS, `journald` on Linux, or stdout/file as fallback.
 //! Construct via [`PlatformSink::native()`] or [`PlatformSink::from_config()`].
 
+#[cfg(target_os = "linux")]
+mod journal;
 use std::io::Write;
 
 #[cfg(unix)]
@@ -295,9 +297,9 @@ impl PlatformSink {
 
     /// Emit one record to the `journald` Unix-datagram socket.
     ///
-    /// Falls back to stdout when the socket is unavailable, when the host
-    /// is not Linux, or when `RLG_FALLBACK_STDOUT` / `GITHUB_ACTIONS` is
-    /// set.
+    /// Falls back to stdout when the socket is unavailable. The
+    /// `RLG_FALLBACK_STDOUT` / `GITHUB_ACTIONS` switch is read once, by
+    /// [`PlatformSink::native`], when the sink is chosen.
     fn emit_journald(
         level: &str,
         payload: &[u8],
@@ -309,30 +311,9 @@ impl PlatformSink {
             return;
         };
 
-        if std::env::var("RLG_FALLBACK_STDOUT").is_ok()
-            || std::env::var("GITHUB_ACTIONS").is_ok()
-        {
-            let _ = socket;
-            return;
-        }
-
         #[cfg(target_os = "linux")]
         {
-            let priority = match level {
-                "ERROR" | "FATAL" | "CRITICAL" => "3",
-                "WARN" => "4",
-                "INFO" => "6",
-                "DEBUG" | "TRACE" | "VERBOSE" => "7",
-                _ => "5",
-            };
-            let mut journal_payload =
-                Vec::with_capacity(payload.len() + 32);
-            journal_payload.extend_from_slice(b"PRIORITY=");
-            journal_payload.extend_from_slice(priority.as_bytes());
-            journal_payload.extend_from_slice(b"\nMESSAGE=");
-            journal_payload.extend_from_slice(payload);
-            journal_payload.extend_from_slice(b"\n");
-            let _ = socket.send(&journal_payload);
+            let _ = socket.send(&journal::datagram(level, payload));
         }
         #[cfg(not(target_os = "linux"))]
         {

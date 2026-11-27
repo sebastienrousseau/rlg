@@ -37,6 +37,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "render_one_line"
+path = "fuzz_targets/render_one_line.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "redact_scrub"
 path = "fuzz_targets/redact_scrub.rs"
 test = false
