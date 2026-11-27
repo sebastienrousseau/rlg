@@ -31,8 +31,8 @@ The wire format is OTLP/HTTP with JSON encoding.
 
 ```toml
 [dependencies]
-rlg       = "0.0.18"
-rlg-otlp  = "0.0.18"
+rlg       = "0.0.19"
+rlg-otlp  = "0.0.19"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).
@@ -56,6 +56,51 @@ exporter.export_one(&record).unwrap();
 ```
 
 The `async` feature adds `AsyncOtlpExporter`, the same API on Tokio.
+
+## Spans from `tracing`
+
+The `tracing` feature adds `SpanExporter`, which sends spans closed
+under `rlg::tracing::RlgLayer` to the Collector's `/v1/traces` as
+OTLP traces (ids, parent, name, start and end, attributes, kind,
+status), with no `opentelemetry` crates. Log records from the same
+layer carry matching `trace_id` and `span_id`, so the Collector links
+them.
+
+```toml
+rlg      = { version = "0.0.19", features = ["tracing-layer"] }
+rlg-otlp = { version = "0.0.19", features = ["tracing"] }
+```
+
+```rust
+use rlg::log_format::LogFormat;
+use rlg::tracing::RlgLayer;
+use rlg_otlp::SpanExporter;
+use std::time::Duration;
+use tracing_subscriber::prelude::*;
+
+// Some(..) when OTEL_EXPORTER_OTLP_ENDPOINT (or the _TRACES_ variant) is set.
+let spans = SpanExporter::from_env()?;
+let mut layer = RlgLayer::new().with_format(LogFormat::JSON);
+if let Some(exporter) = &spans {
+    layer = layer.with_span_sink(exporter.clone());
+}
+tracing_subscriber::registry().with(layer).init();
+
+// At shutdown, post what is still queued:
+if let Some(exporter) = &spans {
+    let _ = exporter.flush(Duration::from_secs(5));
+}
+```
+
+`from_env` reads `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (or
+`OTEL_EXPORTER_OTLP_ENDPOINT` plus `/v1/traces`), `OTEL_SERVICE_NAME`,
+`OTEL_EXPORTER_OTLP_[TRACES_]HEADERS` and `OTEL_SDK_DISABLED`.
+Closing a span only queues it: a background thread posts batches
+(512 spans, or every 5 s), and a full queue drops spans and counts
+them in `stats()`. Set `otel.kind = "server"` (or `client`, …) and
+`otel.status_code` on a span to set its kind and status; an `ERROR`
+event inside a span marks it failed. Add a `traces` pipeline to the
+Collector configuration below to forward them.
 
 ## Deployment: send to a local Collector
 
@@ -87,6 +132,9 @@ exporters:
 service:
   pipelines:
     logs:
+      receivers: [otlp]
+      exporters: [otlphttp]
+    traces:
       receivers: [otlp]
       exporters: [otlphttp]
 ```

@@ -11,6 +11,11 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # parking_lot 0.13 needs rustc 1.95, above the 1.89 MSRV. Lift
+    # this when the MSRV moves to 1.95 or later.
+    ignore:
+      - dependency-name: "parking_lot"
+        versions: [">=0.13"]
     labels: ["dependencies", "rust"]
     commit-message:
       prefix: "chore(deps)"

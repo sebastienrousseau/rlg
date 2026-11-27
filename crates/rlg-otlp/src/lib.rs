@@ -73,6 +73,24 @@ pub use crate::async_http::{
     AsyncOtlpExporter, AsyncOtlpExporterBuilder,
 };
 
+/// OTLP/HTTP JSON encoding of closed spans. Enable with the
+/// `tracing` feature.
+#[cfg(feature = "tracing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing")))]
+pub mod traces;
+
+/// Span export from `rlg::tracing::RlgLayer`. Enable with the
+/// `tracing` feature.
+#[cfg(feature = "tracing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing")))]
+mod spans;
+
+#[cfg(feature = "tracing")]
+#[cfg_attr(docsrs, doc(cfg(feature = "tracing")))]
+pub use crate::spans::{
+    SpanExportStats, SpanExporter, SpanExporterBuilder,
+};
+
 /// The endpoint a builder uses when given none: the OTLP/HTTP logs
 /// route of a Collector on the same host.
 pub const DEFAULT_ENDPOINT: &str = "http://localhost:4318/v1/logs";

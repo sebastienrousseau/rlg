@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.18"
+rlg = "0.0.19"
 ```
 
 ### Build from source
@@ -81,13 +81,13 @@ the application needs.
 | :--- | :--- | :--- | :--- |
 | `tokio` | `tokio` | `Config::load_async`, polling hot-reload | [Configuration](#configuration), `examples/example_config.rs` |
 | `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
-| `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups | [Bridging existing facades](#bridging-existing-facades) |
+| `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups, with span context and scrub and span-export hooks | [Bridging existing facades](#bridging-existing-facades) |
 | `debug_enabled` | — | Verbose internal engine diagnostics | — |
 
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.18", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.19", features = ["tokio", "tracing-layer"] }
 ```
 
 ---

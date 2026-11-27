@@ -365,9 +365,9 @@ mod tests {
         }
 
         #[test]
-        fn test_rlg_layer_clone_copy() {
+        fn test_rlg_layer_clone() {
             let layer = RlgLayer::new();
-            let cloned = layer;
+            let cloned = layer.clone();
             let _ = format!("{layer:?}");
             let _ = format!("{cloned:?}");
         }

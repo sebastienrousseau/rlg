@@ -59,18 +59,12 @@ deny = [
     { name = "openssl-sys" },
     { name = "native-tls" },
 
-    # `chrono` has a history of breakage and a large-attack-surface
-    # C locale path. rlg uses `jiff` or in-house datetime helpers
-    # (`crates/rlg/src/datetime.rs`). Any transitive chrono
-    # introduction is worth pausing over.
-    #
-    # The wrappers allowed are `rmcp`, the official MCP SDK behind
-    # `rlg-mcp`, which depends on chrono unconditionally for protocol
-    # timestamps — with `default-features = false`, so the C locale
-    # path is not compiled — and `schemars`, whose `chrono04` feature
-    # rmcp turns on for the schemas it derives. Nothing else may pull
-    # it in.
-    { name = "chrono", wrappers = ["rmcp", "schemars"] },
+    # `chrono` is unmaintained (RUSTSEC-2026-0543) and has a
+    # large-attack-surface C locale path. rlg uses `jiff` or in-house
+    # datetime helpers (`crates/rlg/src/datetime.rs`). rmcp made it an
+    # optional default feature in 3.12; `rlg-mcp` turns defaults off,
+    # so nothing in the tree may pull it in.
+    { name = "chrono" },
 ]
 
 [sources]

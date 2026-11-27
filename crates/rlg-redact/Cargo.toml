@@ -1,6 +1,6 @@
 [package]
 name = "rlg-redact"
-version = "0.0.18"
+version = "0.0.19"
 edition = "2024"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
@@ -44,12 +44,26 @@ harness = false
 path = "benches/scrub.rs"
 
 [dependencies]
-rlg = { version = "0.0.18", path = "../rlg" }
+rlg = { version = "0.0.19", path = "../rlg" }
 regex = "1.12"
 serde_json = "1.0"
 
+[features]
+default = []
+# Implement `rlg::tracing::Scrub` for `Redactor`, so
+# `RlgLayer::with_scrub(Redactor::with_defaults())` redacts every
+# record and closed span on the `tracing` path.
+tracing = ["rlg/tracing-layer"]
+
 [dev-dependencies]
 criterion = "0.8"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["registry"] }
+
+[[test]]
+name = "tracing_layer"
+path = "tests/tracing_layer.rs"
+required-features = ["tracing"]
 
 [lints.rust]
 missing_copy_implementations = "warn"

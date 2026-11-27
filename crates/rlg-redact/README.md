@@ -26,7 +26,7 @@
 
 ```toml
 [dependencies]
-rlg-redact = "0.0.18"
+rlg-redact = "0.0.19"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).
@@ -48,6 +48,23 @@ let safe = redactor.scrub(log);
 //   email:       "[REDACTED]"
 //   client_ip:   "[REDACTED]"
 safe.fire();
+```
+
+## On the `tracing` path
+
+With the `tracing` feature, `Redactor` implements `rlg::tracing::Scrub`,
+so `RlgLayer` scrubs every record it emits and every closed span's
+attributes before a span exporter sees them:
+
+```toml
+rlg-redact = { version = "0.0.19", features = ["tracing"] }
+```
+
+```rust
+use rlg::tracing::RlgLayer;
+use rlg_redact::Redactor;
+
+let layer = RlgLayer::new().with_scrub(Redactor::with_defaults());
 ```
 
 ## Built-in patterns

@@ -5,6 +5,59 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.19] - 2026-11-27
+
+### Added
+
+- **`RlgLayer` carries span context.** Every record emitted inside
+  `tracing` spans carries the fields of each span in scope (root
+  first; an inner span wins a clash and the event's own fields win
+  over all), fields filled in later with `Span::record`, the
+  innermost span's name (`span`), the path from the root
+  (`span_path`), and a `trace_id` and `span_id`.
+- **`RlgLayer::with_scrub`** runs every record, and every closed
+  span's attributes, through an `rlg::tracing::Scrub` before it
+  leaves the layer.
+- **`RlgLayer::with_span_sink`** hands every closed span to an
+  `rlg::tracing::SpanSink` as a `SpanRecord` (ids, parent, name,
+  times, attributes, kind, status). `otel.kind`, `otel.status_code`
+  and `otel.status_message` fields set kind and status; an `ERROR`
+  event marks its span as failed.
+- **rlg-otlp exports spans** (`tracing` feature): `SpanExporter`
+  posts closed spans to a Collector's `/v1/traces` as OTLP/HTTP JSON
+  in batches from a background thread, without the `opentelemetry`
+  crates. `SpanExporter::from_env()` reads the standard
+  `OTEL_EXPORTER_OTLP_*` variables and `OTEL_SERVICE_NAME`.
+- **rlg-redact scrubs the `tracing` path** (`tracing` feature):
+  `Redactor` implements `Scrub`, so
+  `RlgLayer::with_scrub(Redactor::with_defaults())` redacts records
+  and span attributes.
+
+### Changed
+
+- **Breaking: `RlgLayer` is no longer `Copy`** (it holds the scrub
+  and span-sink hooks). It is still `Clone`.
+
+### Security
+
+- **rmcp 3.12 is required** (was 3.4), clearing RUSTSEC-2026-0462
+  (unbounded response bodies in rmcp's Streamable HTTP client).
+  rmcp 3.12 answers a malformed Streamable HTTP body with 400
+  instead of 415.
+- **chrono is gone from the tree** (RUSTSEC-2026-0543, unmaintained).
+  rlg-mcp turns off rmcp's default features, which pulled it in, and
+  `deny.toml` now bans it.
+- **rustix 1.1.6** (RUSTSEC-2026-0486). The `tui` feature requires
+  it directly as a version floor, since `terminal_size` pulls rustix
+  into users' trees.
+
+### Dependencies
+
+- The GitHub Actions group, the Docker base images and the
+  minor-and-patch group (Dependabot #244, #245, #246).
+- parking_lot stays at 0.12 (Dependabot #239 is not taken): 0.13
+  needs rustc 1.95, above the 1.89 MSRV. Dependabot now skips it.
+
 ## [0.0.18] - 2026-11-06
 
 ### Changed
