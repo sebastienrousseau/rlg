@@ -95,7 +95,10 @@ if let Some(exporter) = &spans {
 `from_env` reads `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (or
 `OTEL_EXPORTER_OTLP_ENDPOINT` plus `/v1/traces`), `OTEL_SERVICE_NAME`,
 `OTEL_EXPORTER_OTLP_[TRACES_]HEADERS` and `OTEL_SDK_DISABLED`.
-Closing a span only queues it: a background thread posts batches
+A span is exported when it closes, which is when its last handle
+drops. tower-http's `TraceLayer` keeps the request span until the
+response body is dropped, so a test drops the response before calling
+`flush()`. Closing a span only queues it: a background thread posts batches
 (512 spans, or every 5 s), and a full queue drops spans and counts
 them in `stats()`. Set `otel.kind = "server"` (or `client`, …) and
 `otel.status_code` on a span to set its kind and status; an `ERROR`
