@@ -5,6 +5,15 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **rlg-mcp's SSE transport caps a posted message at 1 MiB.** A
+  `/messages/` body over 1 MiB is refused with 413 before it is
+  deserialised; it was bounded only by axum's implicit 2 MiB default.
+  Clears CodeQL alert #81 (`rust/unsafe-deserialization`).
+
 ## [0.0.19] - 2026-11-27
 
 ### Added

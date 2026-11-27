@@ -106,6 +106,22 @@ impl Guard {
     }
 }
 
+/// The largest JSON-RPC message the SSE transport parses, 1 MiB.
+pub(super) const MAX_MESSAGE_BYTES: usize = 1 << 20;
+
+/// Refuse a posted message over [`MAX_MESSAGE_BYTES`] before it is
+/// deserialised.
+pub(super) const fn require_size(body: &[u8]) -> Result<(), Refusal> {
+    if body.len() <= MAX_MESSAGE_BYTES {
+        Ok(())
+    } else {
+        Err((
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "a message may be at most 1 MiB",
+        ))
+    }
+}
+
 /// Refuse a posted message that is not `application/json`.
 pub(super) fn require_json(headers: &HeaderMap) -> Result<(), Refusal> {
     let media = headers
