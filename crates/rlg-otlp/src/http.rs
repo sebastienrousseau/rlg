@@ -51,6 +51,12 @@ impl Endpoint {
     /// missing or unsupported scheme, user info, an empty host, or a
     /// bad port.
     pub(crate) fn parse(url: &str) -> Result<Self, String> {
+        if let Some(b) = url.bytes().find(|&b| !is_url_byte(b)) {
+            return Err(format!(
+                "{url:?}: byte 0x{b:02x} is not allowed in an endpoint; \
+                 percent-encode it"
+            ));
+        }
         let rest = strip_http_scheme(url)?;
         let (authority, path) = rest
             .find(['/', '?'])
@@ -74,6 +80,13 @@ impl Endpoint {
             path,
         })
     }
+}
+
+/// A byte that may appear in an endpoint URL: printable ASCII other
+/// than space. Anything else could split the request line or the
+/// `Host` header, so it must be percent-encoded.
+const fn is_url_byte(b: u8) -> bool {
+    b.is_ascii_graphic()
 }
 
 fn strip_http_scheme(url: &str) -> Result<&str, String> {
@@ -317,6 +330,24 @@ mod tests {
         ] {
             assert!(Endpoint::parse(url).is_err(), "{url}");
         }
+    }
+
+    #[test]
+    fn rejects_bytes_that_could_split_the_request_line() {
+        for url in [
+            "http://c:4318/v1/logs HTTP/1.1\r\nX-Evil: y",
+            "http://c:4318/v1/logs\nX: y",
+            "http://c:4318/v1 logs",
+            "http://c:4318/v1/logs\u{7f}",
+            "http://c\t:4318/v1/logs",
+            "http://\u{e9}.example/v1/logs",
+            "http://c:4318/v1/l\u{f6}gs",
+        ] {
+            assert!(Endpoint::parse(url).is_err(), "{url:?}");
+        }
+        assert!(
+            Endpoint::parse("http://c:4318/v1/logs?a=%20b").is_ok()
+        );
     }
 
     #[test]

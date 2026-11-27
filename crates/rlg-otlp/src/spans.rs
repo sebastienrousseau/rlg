@@ -6,6 +6,9 @@
 //! to a collector as OTLP traces in batches from a background thread.
 
 use crate::traces::{DEFAULT_TRACES_ENDPOINT, serialise_spans};
+use env::Env;
+
+mod env;
 use crate::{OtlpError, OtlpExporter, OtlpExporterBuilder, OtlpResult};
 use rlg::tracing::{SpanRecord, SpanSink};
 use std::sync::Arc;
@@ -150,6 +153,8 @@ pub struct SpanExporterBuilder {
     max_batch: usize,
     queue_capacity: usize,
     flush_interval: Duration,
+    /// A problem found in the environment, reported by `build`.
+    env_error: Option<String>,
 }
 
 impl Default for SpanExporterBuilder {
@@ -161,6 +166,7 @@ impl Default for SpanExporterBuilder {
             max_batch: 512,
             queue_capacity: 2048,
             flush_interval: Duration::from_secs(5),
+            env_error: None,
         }
     }
 }
@@ -175,7 +181,8 @@ impl SpanExporterBuilder {
     /// - `OTEL_SERVICE_NAME`: the resource's `service.name`;
     /// - `OTEL_EXPORTER_OTLP_TRACES_HEADERS`, or else
     ///   `OTEL_EXPORTER_OTLP_HEADERS`: `key=value` pairs separated
-    ///   by commas (not percent-decoded).
+    ///   by commas, values percent-decoded; a malformed pair makes
+    ///   [`build`](Self::build) fail with `InvalidHeader`.
     #[must_use]
     pub fn from_lookup(
         lookup: impl Fn(&str) -> Option<String>,
@@ -191,11 +198,17 @@ impl SpanExporterBuilder {
         if let Some(name) = env.get("OTEL_SERVICE_NAME") {
             builder = builder.service_name(name);
         }
-        Some(
-            env.headers()
-                .into_iter()
-                .fold(builder, |b, (k, v)| b.header(k, v)),
-        )
+        match env.headers() {
+            Ok(headers) => Some(
+                headers
+                    .into_iter()
+                    .fold(builder, |b, (k, v)| b.header(k, v)),
+            ),
+            Err(e) => {
+                builder.env_error = Some(e);
+                Some(builder)
+            }
+        }
     }
 
     /// The collector's traces URL; default [`DEFAULT_TRACES_ENDPOINT`].
@@ -266,6 +279,9 @@ impl SpanExporterBuilder {
     /// `http://` URL, [`OtlpError::InvalidHeader`] for an unsafe
     /// header, [`OtlpError::Transport`] if the thread cannot start.
     pub fn build(self) -> OtlpResult<SpanExporter> {
+        if let Some(e) = self.env_error {
+            return Err(OtlpError::InvalidHeader(e));
+        }
         let _ = crate::http::Endpoint::parse(&self.endpoint)
             .map_err(OtlpError::InvalidEndpoint)?;
         let http = self.http.endpoint(self.endpoint.clone()).build();
@@ -289,35 +305,6 @@ impl SpanExporterBuilder {
             counters,
             endpoint: self.endpoint.into(),
         })
-    }
-}
-
-/// Environment lookups for [`SpanExporterBuilder::from_lookup`],
-/// with empty values treated as unset.
-struct Env<'a, F: Fn(&str) -> Option<String>>(&'a F);
-
-impl<F: Fn(&str) -> Option<String>> Env<'_, F> {
-    fn get(&self, key: &str) -> Option<String> {
-        (self.0)(key).filter(|v| !v.trim().is_empty())
-    }
-
-    fn endpoint(&self) -> Option<String> {
-        self.get("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT").or_else(|| {
-            self.get("OTEL_EXPORTER_OTLP_ENDPOINT").map(|base| {
-                format!("{}/v1/traces", base.trim_end_matches('/'))
-            })
-        })
-    }
-
-    fn headers(&self) -> Vec<(String, String)> {
-        let raw = self
-            .get("OTEL_EXPORTER_OTLP_TRACES_HEADERS")
-            .or_else(|| self.get("OTEL_EXPORTER_OTLP_HEADERS"))
-            .unwrap_or_default();
-        raw.split(',')
-            .filter_map(|kv| kv.split_once('='))
-            .map(|(k, v)| (k.trim().to_string(), v.trim().to_string()))
-            .collect()
     }
 }
 
@@ -403,7 +390,7 @@ mod tests {
         let b = SpanExporterBuilder::from_lookup(lookup(&[
             ("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4318/"),
             ("OTEL_SERVICE_NAME", "nalufx"),
-            ("OTEL_EXPORTER_OTLP_HEADERS", "x-a=1, x-b = two,junk"),
+            ("OTEL_EXPORTER_OTLP_HEADERS", "x-a=1, x-b = two"),
         ]))
         .unwrap();
         assert_eq!(b.endpoint, "http://collector:4318/v1/traces");
@@ -412,6 +399,42 @@ mod tests {
         assert_eq!(http.headers["x-a"], "1");
         assert_eq!(http.headers["x-b"], "two");
         assert_eq!(http.headers.len(), 2);
+    }
+
+    #[test]
+    fn env_header_values_are_percent_decoded() {
+        let b = SpanExporterBuilder::from_lookup(lookup(&[
+            ("OTEL_EXPORTER_OTLP_ENDPOINT", "http://c:4318"),
+            (
+                "OTEL_EXPORTER_OTLP_HEADERS",
+                "Authorization=Bearer%20abc%3D%3D,x-team=r%26d",
+            ),
+        ]))
+        .unwrap();
+        let http = b.http.build();
+        assert_eq!(http.headers["Authorization"], "Bearer abc==");
+        assert_eq!(http.headers["x-team"], "r&d");
+    }
+
+    #[test]
+    fn malformed_env_headers_fail_the_build() {
+        for raw in [
+            "junk",
+            "x-a=1,junk",
+            "x=%zz",
+            "x=%e9",
+            "x=%0D%0AHost:%20evil",
+        ] {
+            let b = SpanExporterBuilder::from_lookup(lookup(&[
+                ("OTEL_EXPORTER_OTLP_ENDPOINT", "http://c:4318"),
+                ("OTEL_EXPORTER_OTLP_HEADERS", raw),
+            ]))
+            .unwrap();
+            assert!(
+                matches!(b.build(), Err(OtlpError::InvalidHeader(_))),
+                "{raw}"
+            );
+        }
     }
 
     #[test]
