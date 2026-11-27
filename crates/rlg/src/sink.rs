@@ -154,10 +154,8 @@ impl PlatformSink {
         for dest in &config.logging_destinations {
             match dest {
                 crate::config::LoggingDestination::File(path) => {
-                    if let Ok(file) = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(path)
+                    if let Ok(file) =
+                        crate::rotation::open_log_file(path)
                     {
                         return Self::File(file);
                     }

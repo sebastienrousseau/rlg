@@ -22,15 +22,9 @@ use config::{
 #[cfg(feature = "config")]
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    env,
-    fs::{self, OpenOptions},
-    num::NonZeroU64,
-    path::PathBuf,
-};
+use std::{collections::HashMap, env, num::NonZeroU64, path::PathBuf};
 #[cfg(feature = "config")]
-use std::{path::Path, sync::Arc};
+use std::{fs, path::Path, sync::Arc};
 use thiserror::Error;
 
 const CURRENT_CONFIG_VERSION: &str = "1.0";
@@ -349,21 +343,17 @@ impl Config {
             self.logging_destinations.first()
         {
             if let Some(parent_dir) = path.parent() {
-                fs::create_dir_all(parent_dir).map_err(|e| {
+                crate::rotation::create_log_dir(parent_dir).map_err(|e| {
                     ConfigError::ValidationError(format!(
                         "Failed to create directory for log file: {e}"
                     ))
                 })?;
             }
-            OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)
-                .map_err(|e| {
-                    ConfigError::ValidationError(format!(
-                        "Log file is not writable: {e}"
-                    ))
-                })?;
+            crate::rotation::open_log_file(path).map_err(|e| {
+                ConfigError::ValidationError(format!(
+                    "Log file is not writable: {e}"
+                ))
+            })?;
         }
         Ok(())
     }
