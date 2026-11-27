@@ -654,9 +654,9 @@ dependencies = [
 
 [[package]]
 name = "euxis-commons"
-version = "0.0.8"
+version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2e0be83a0d0c0c4d7d4549389085f79f0ff0037b1c2f47f1cfd13e01eae92cb"
+checksum = "5fc280f4abcbbb3b453818482c3689639cab5e2a29e827ad8d2d712cf133f3ee"
 dependencies = [
  "getrandom",
  "serde",
