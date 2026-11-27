@@ -3,6 +3,8 @@ name: Publish to MCP Registry
 on:
   push:
     tags: ["v*.*.*"]
+  # A manual run must be started from a release tag (the job checks
+  # it): it publishes `latest` and the registry entry.
   workflow_dispatch:
 
 # Read-only by default; the publish job grants itself the rest.
@@ -12,6 +14,9 @@ permissions:
 jobs:
   publish-mcp:
     name: Publish rlg-mcp to MCP Registry
+    # Only a release tag publishes, whether pushed or dispatched; a
+    # dispatch from a branch would otherwise push `latest` from it.
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -19,6 +24,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -32,20 +39,18 @@ jobs:
 
       - name: Extract version from tag
         id: version
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
-          else
-            VERSION=$(jq -r '.version' server.json)
-            echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
-          fi
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push OCI image
+        id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
           file: pkg/docker/Dockerfile.mcp
           push: true
+          # Build provenance and an SBOM, attached to the image.
+          provenance: mode=max
+          sbom: true
           tags: |
             ghcr.io/sebastienrousseau/rlg-mcp:${{ steps.version.outputs.VERSION }}
             ghcr.io/sebastienrousseau/rlg-mcp:latest
@@ -54,9 +59,23 @@ jobs:
             org.opencontainers.image.source=https://github.com/sebastienrousseau/rlg
             org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@881c63bd87e38389154debd8331404ce7ca8a3ab # v4.1.4
+
+      # Keyless signature (GitHub OIDC) on the pushed digest, so both
+      # tags are covered. Verify with:
+      #   cosign verify ghcr.io/sebastienrousseau/rlg-mcp:<version> \
+      #     --certificate-identity-regexp '^https://github.com/sebastienrousseau/rlg/' \
+      #     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+      - name: Sign the image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "ghcr.io/sebastienrousseau/rlg-mcp@${DIGEST}"
+
       - name: Sync version in server.json
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
           # Only set the top-level `.version` (server metadata) and
           # the OCI tag inside `.packages[0].identifier`. The
           # registry's 2025-12-11 schema forbids `packages[*].version`
@@ -68,10 +87,17 @@ jobs:
             | del(.packages[0].version)
           ' server.json > server.tmp && mv server.tmp server.json
 
+      # Pinned by version and SHA-256 (the release asset's digest).
+      # Bump both together; pick a release at least two weeks old.
       - name: Install mcp-publisher
+        env:
+          MCP_PUBLISHER_VERSION: v1.8.9
+          MCP_PUBLISHER_SHA256: 4d527ca8f1ced0394c962dc925c2a4a4addef441cbefd62501c875e9481823a8
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
-            | tar xz mcp-publisher
+          curl -fsSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
 
       - name: Authenticate to MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc

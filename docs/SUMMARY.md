@@ -44,6 +44,7 @@
 - [Comparison](COMPARISON.md)
 - [Benchmarks](BENCHMARKS.md)
 - [Policies](POLICIES.md)
+- [Threat model](THREAT-MODEL.md)
 - [Packaging](packaging.md)
 - [Release 0.0.14 highlights](releases/v0.0.14.md)
 - [Release 0.0.13 highlights](releases/v0.0.13.md)

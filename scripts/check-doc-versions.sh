@@ -36,6 +36,15 @@ if [ "$pkgver" != "$want" ]; then
   status=1
 fi
 
+# SECURITY.md names the supported release, which must be the one the
+# workspace ships.
+supported=$(grep -oE '^\| .[0-9]+\.[0-9]+\.[0-9]+. \| yes \|' SECURITY.md |
+  grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+if [ "$supported" != "$want" ]; then
+  echo "STALE SECURITY.md: supports ${supported:-nothing} (workspace is $want)"
+  status=1
+fi
+
 # The MSRV. crates/rlg/Cargo.toml's rust-version is the floor; every
 # crate manifest and every other statement of it must agree, or a raise
 # leaves a stale promise behind. Each pattern must still match, so a
