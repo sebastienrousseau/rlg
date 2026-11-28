@@ -35,7 +35,7 @@ codegen is wired (WP-X4 in
 
 ```toml
 [dependencies]
-rlg-wasm = "0.0.21"
+rlg-wasm = "0.0.22"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.

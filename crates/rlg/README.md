@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.21"
+rlg = "0.0.22"
 ```
 
 ### Build from source
@@ -92,7 +92,7 @@ config, toml and envy crates.
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.21", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.22", features = ["tokio", "tracing-layer"] }
 ```
 
 ---
