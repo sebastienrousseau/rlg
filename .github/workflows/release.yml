@@ -158,11 +158,31 @@ jobs:
           # Returns 0 if the crate@VERSION is already on crates.io
           # (we log and skip) or if `cargo publish` succeeds.
           # Propagates failure on a real publish error.
+          #
+          # The check reads the sparse index, the static file cargo
+          # itself resolves against. The API endpoint it replaced
+          # answered from a laptop but not from the runner, so v0.0.23's
+          # run republished a crate already up and failed.
+          index_path() {
+            local n="$1"
+            case ${#n} in
+              1) echo "1/${n}" ;;
+              2) echo "2/${n}" ;;
+              3) echo "3/${n:0:1}/${n}" ;;
+              *) echo "${n:0:2}/${n:2:2}/${n}" ;;
+            esac
+          }
+          already_published() {
+            local body
+            body=$(curl -sfL --retry 3 \
+              -A "rlg-release (https://github.com/sebastienrousseau/rlg)" \
+              "https://index.crates.io/$(index_path "$1")") || return 1
+            grep -q "\"vers\":\"${VERSION}\"" <<<"${body}"
+          }
           publish_or_skip() {
             local crate="$1"
             local sleep_after="${2:-0}"
-            local url="https://crates.io/api/v1/crates/${crate}/${VERSION}"
-            if curl -sf -o /dev/null "${url}"; then
+            if already_published "${crate}"; then
               echo "::notice::${crate} ${VERSION} already on crates.io — skipping"
               return 0
             fi
