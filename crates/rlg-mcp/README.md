@@ -31,31 +31,76 @@ Requires Rust **1.89.0** or newer (edition 2024).
 
 ## Tools
 
-- `tail_log` — Inputs: `path`, optional `n` (default 100). Returns the last `n` parseable records, rendered in Logfmt.
-- `filter_log` — Inputs: `path`, optional `min_level`, `component`, `format`. Returns records matching every supplied filter, in the chosen `LogFormat`.
-- `summarize_errors` — Inputs: `path`. Returns a JSON map of `component → error_count` for ERROR-and-above records.
+Every tool is read-only and idempotent, and returns its answer twice:
+as text for the model and as structured content.
 
-## Wire format
+- `tail_log`: inputs `path`, optional `n` (default 100). Returns the
+  last `n` parseable records, rendered in Logfmt.
+- `filter_log`: inputs `path`, optional `min_level`, `component`,
+  `format`. Returns records matching every supplied filter, in the
+  chosen `LogFormat` (default Logfmt).
+- `summarize_errors`: input `path`. Returns a JSON map of
+  `component → error_count` for ERROR-and-above records.
+- `tail_logs_glob`: inputs `glob_pattern`, optional `lines` (default
+  100), `level`. Returns the last `lines` parseable records across
+  every file the glob matches, newest last.
 
-`rlg-mcp` speaks the MCP **stdio transport** — JSON-RPC 2.0,
-one request per line on stdin, one response per line on stdout.
-The protocol revision is **2025-06-18**.
+## Prompt and resources
+
+- Prompt `triage_error_spike`: a guided workflow for investigating a
+  spike of errors with the tools above.
+- Resource `rlg://log-levels`: the ordered rlg levels, as JSON.
+- Resource template `rlg://tail/{path}`: the last 100 parseable
+  records of a log file, as text.
+
+## Transports
+
+```bash
+rlg-mcp --root /var/log/app                                  # stdio (default)
+rlg-mcp --root /var/log/app --transport streamable-http      # http://127.0.0.1:8000/mcp
+rlg-mcp --root /var/log/app --transport sse --port 8001      # GET /sse, POST /messages/
+```
+
+- **stdio**: JSON-RPC 2.0, one message per line; a line may not pass
+  16 MiB.
+- **Streamable HTTP** (`/mcp`): MCP revisions 2025-11-25 and
+  2026-07-28 on one endpoint.
+- **HTTP+SSE** (`/sse` and `/messages/`): the 2024-11-05 transport,
+  for clients that still expect it.
+
+The protocol is handled by [`rmcp`](https://crates.io/crates/rmcp),
+the official MCP SDK, which negotiates the revision with the client.
+`--host` (default `127.0.0.1`), `--port` (default 8000) and
+`--max-sessions` (default 64) apply to the HTTP transports. Both HTTP
+transports refuse a `Host` the server does not answer to and a
+non-local `Origin`; the SSE transport refuses a posted message over
+1 MiB. `rlg-mcp --help` lists every option.
 
 ### Quick smoke test
 
+Over stdio a client initialises the session first, then lists the
+tools:
+
 ```bash
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | rlg-mcp
+printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' \
+  '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' |
+  rlg-mcp --root .
 ```
 
 ## Where the tools may read
 
 The tools read only regular files under one directory, the **log
 root**: `--root <dir>`, else the `RLG_MCP_ROOT` environment variable,
-else the current directory (with a warning; `--root` becomes
-required in 0.0.22). A path or glob that resolves outside the root,
-through `..`, an absolute path or a symlink, is refused. A file is
-read up to 64 MiB, lines over 1 MiB are skipped, an answer holds at
-most 10,000 records, and a glob may match at most 1,000 files.
+else the current directory, with a warning. Running without a root
+was deprecated in 0.0.21 and keeps working until `--root` becomes
+required in the first release on or after 2027-02-26; see
+[`DEPRECATIONS.md`](../../DEPRECATIONS.md). A path or glob that
+resolves outside the root, through `..`, an absolute path or a
+symlink, is refused. A file is read up to 64 MiB, lines over 1 MiB
+are skipped, an answer holds at most 10,000 records, and a glob may
+match at most 1,000 files.
 
 ```bash
 rlg-mcp --root /var/log/app
@@ -107,14 +152,13 @@ the executable and `--root <your log directory>` as its arguments.
 
 ## Limitations
 
-- v0.0.11 only parses the canonical `LogFormat::JSON` input
-  shape. MCP / OTLP / ECS / GELF transport-envelope parsing
-  is tracked under
-  [`crates/rlg-cli/doc/INPUT-FORMATS.md`](../rlg-cli/doc/INPUT-FORMATS.md)
-  and lands incrementally — when it does, `rlg-mcp` picks
-  the new input formats up automatically through `rlg-cli`'s
-  shared parser.
-- No SSE / HTTP transport yet — stdio only.
+- Input is the canonical `LogFormat::JSON` record shape, one record
+  per line, through `rlg-cli`'s shared parser; other lines are
+  skipped. Reading the other rlg formats (MCP, OTLP, ECS envelopes)
+  back is planned under
+  [WP-X2 in the implementation plan](../../docs/IMPLEMENTATION-PLAN.md#wp-x2-rlg-mcp-for-agents),
+  and `rlg-mcp` picks each one up through that parser when it lands.
+- The HTTP transports have no authentication; see above.
 
 ## Related MCP Servers
 
