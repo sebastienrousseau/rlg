@@ -1,11 +1,9 @@
 <!--
-Keep the sections and their order (the portfolio PR template). After the
-greeting, two lines: the first begins "This PR " and says what it does,
-the second says why it matters. No em dashes; commit attribution goes in
-the commit trailer, not here.
+Keep the sections and their order (the portfolio PR template). Start
+with the two-line BLUF, no greeting: the first line begins "This PR "
+and says what it does, the second says why it matters. No em dashes;
+commit attribution goes in the commit trailer, not here.
 -->
-
-Hi Sebastien,
 
 This PR ...
 
