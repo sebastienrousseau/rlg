@@ -31,8 +31,8 @@ The wire format is OTLP/HTTP with JSON encoding.
 
 ```toml
 [dependencies]
-rlg       = "0.0.20"
-rlg-otlp  = "0.0.20"
+rlg       = "0.0.21"
+rlg-otlp  = "0.0.21"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).
@@ -67,8 +67,8 @@ layer carry matching `trace_id` and `span_id`, so the Collector links
 them.
 
 ```toml
-rlg      = { version = "0.0.20", features = ["tracing-layer"] }
-rlg-otlp = { version = "0.0.20", features = ["tracing"] }
+rlg      = { version = "0.0.21", features = ["tracing-layer"] }
+rlg-otlp = { version = "0.0.21", features = ["tracing"] }
 ```
 
 ```rust

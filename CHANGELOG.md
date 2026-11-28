@@ -5,6 +5,67 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21] - 2026-11-28
+
+A security release. Nothing in the public API changes; the behaviour
+changes are listed under Security.
+
+### Security
+
+- **rlg-mcp reads log files only under a root.** The tools and the
+  `rlg://tail/{path}` resource opened any path or glob the client
+  sent, so a client, or a model steered by text it was shown, could
+  read any file the server could, and tell from the error whether a
+  file existed. Paths now resolve under `--root <dir>` (or
+  `RLG_MCP_ROOT`; the current directory with a warning when neither
+  is set): anything outside, through `..`, an absolute path or a
+  symlink, or not a regular file, gets one refusal message. Reads are
+  bounded (64 MiB per file, lines over 1 MiB skipped, 10,000 records
+  per answer, 1,000 glob matches), and `/**/*` is refused before any
+  walk. A non-loopback `--host` prints a warning. **Behaviour
+  change:** an absolute path outside the current directory is refused
+  unless `--root` covers it. `--root` becomes required in 0.0.22.
+- **No field can forge a record.** The text formats (CLF, CEF, ELF,
+  W3C, Apache, Log4j XML, logfmt) wrote the message, component and
+  time verbatim, so a line break started a forged record and `|`,
+  `<` or `"` broke the format. Every text format now escapes control
+  characters and its own delimiters; logfmt keys are percent-encoded
+  and values quoted when needed. JSON attribute values escape DEL and
+  C1 controls, which `serde_json` left raw. Output that held such
+  characters reads differently.
+- **No payload can forge a journal field.** journald datagrams use
+  the binary field form for values with line breaks, no longer carry
+  a trailing empty line in `MESSAGE`, and set `SYSLOG_IDENTIFIER` to
+  the program name. The journald sink no longer drops records when
+  `RLG_FALLBACK_STDOUT` or `GITHUB_ACTIONS` is set after start-up.
+- **OTLP endpoints are validated.** Control characters, spaces and
+  non-ASCII in an endpoint URL are refused instead of reaching the
+  request line. DNS resolution runs within the request deadline.
+  `OTEL_EXPORTER_OTLP_[TRACES_]HEADERS` values are percent-decoded as
+  the spec requires; a malformed pair now fails
+  `SpanExporterBuilder::build` instead of being dropped silently.
+- **Log files are private.** Files are created `0640` and directories
+  `0750` (before the umask) on Unix. Rotation no longer overwrites an
+  archive when two rotations fall in the same second.
+- **Secrets stay out of logs.** `Config`'s `Debug` and `Config::diff`
+  no longer print `env_vars` values. rlg-tower logs a trace header
+  only when it is a `traceparent` or a plain id of up to 128 safe
+  characters.
+
+### Changed
+
+- **The rlg-mcp image is signed.** It is built with provenance and an
+  SBOM and signed keyless with cosign; `SECURITY.md` has the verify
+  command. The publish job runs only for a release tag, and
+  `mcp-publisher` is pinned by version and checksum.
+- **Build inputs.** A `.dockerignore` keeps `.git`, build output and
+  local secrets out of the image build context. `cargo deny` fails on
+  yanked versions and on unmaintained crates anywhere in the tree.
+- **Docs.** `docs/THREAT-MODEL.md` names every trust boundary;
+  `SECURITY.md` lists every `unsafe` site and names the supported
+  version, which `scripts/check-doc-versions.sh` now checks. The new
+  `render_one_line` fuzz target runs in CI.
+
 ## [0.0.20] - 2026-11-27
 
 ### Added

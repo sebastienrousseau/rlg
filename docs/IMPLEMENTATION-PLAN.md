@@ -3,7 +3,7 @@
 # rlg implementation plan: 10/10 in every category
 
 > **Status:** Accepted with the maintainer's decisions of
-> 2026-11-27 (section 5); one decision is still open. Supersedes
+> 2026-11-27 and 2026-11-28 (section 5). Supersedes
 > [`IMPLEMENTATION-PLAN-v0.1.0.md`](IMPLEMENTATION-PLAN-v0.1.0.md),
 > which is kept because ADRs 0003 to 0014 cite its phase numbers.
 >
@@ -28,7 +28,7 @@
   evidence, the change, the files, the public API (with code), the
   fail-first test, the gate, and the semver impact.
 - Section 4 maps milestones to releases; section 5 records the
-  maintainer's decisions and the one still open; section 6 is the
+  maintainer's decisions and what 0.0.21 shipped; section 6 is the
   final definition of done.
 
 Every WP follows `AGENTS.md`: work lands on `feat/v<next>` and
@@ -953,17 +953,39 @@ WP-P4 and the final WP-B1 numbers.
 5. **rlg-mcp `--root`: the current directory with a warning in
    0.0.21, required from 0.0.22** (WP-S1).
 
-### Open
+6. **The rlg-mcp fix ships publicly (2026-11-28).** The plan had
+   already described the issue on a public branch, so WP-S1 is fixed
+   on `feat/v0.0.21` with full CI instead of through a private
+   advisory fork; an advisory and CVE request can point to the fix
+   afterwards.
 
-- **Decision 6: how the private advisory fix reaches `main`.** GitHub does not
-  run Actions on a security advisory's temporary private fork, and
-  merging the advisory's pull request adds a second pull request
-  into `main`, outside the one-release-PR rule. Proposed: merge the
-  public `feat/v0.0.21` release PR (WP-S2 to WP-S6) first with full
-  CI; verify WP-S1 on the private fork with `make verify` locally;
-  merge the advisory pull request as the one documented exception;
-  tag 0.0.21 from the result once CI on `main` is green; publish the
-  advisory and a CVE request with the release.
+### What 0.0.21 shipped, and what moved
+
+0.0.21 kept its promise of no breaking change, so parts of the
+security work moved to the 0.0.22 breaking release:
+
+- **WP-S1:** the root, the read limits, one refusal message and the
+  non-loopback warning shipped. Moved: `--root` required, and a bearer
+  token required for a non-loopback bind (0.0.22, with WP-X2's token
+  support). Dropped: running tool I/O on a blocking thread with a
+  timeout; refusing non-regular files and capping every read removes
+  the ways a tool could block.
+- **WP-S2:** shipped, with the journald binary framing from WP-C6 and
+  a JSON fix the new fuzz target found (DEL and C1 left raw in
+  attribute values).
+- **WP-S3:** endpoint validation, DNS within the deadline and header
+  decoding shipped. Dropped: refusing credentials over plaintext to
+  non-local hosts, which cannot tell a Compose service or a DaemonSet
+  address from a remote one before DNS; WP-X1 (TLS) is the fix.
+- **WP-S4:** `0640`/`0750` modes and rotation without overwriting
+  shipped. Moved to 0.0.22: `O_NOFOLLOW` (breaks deliberate symlinked
+  log paths) and retention limits (with WP-A2).
+- **WP-S5:** `env_vars` values hidden from `Debug` and `diff`, and
+  rlg-tower trace-header validation, shipped. Moved to 0.0.22: not
+  writing expanded values in `save_to_file` (needs a private field on
+  `Config`) and the `RLG_` prefix for environment config.
+- **WP-S6:** shipped except the repository ruleset, which is a
+  settings change made separately.
 
 ## 6. Definition of done for 10/10
 
