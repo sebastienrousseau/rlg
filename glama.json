@@ -31,6 +31,6 @@
   },
   "installation": {
     "cargo": "cargo install rlg-mcp",
-    "docker": "docker run --rm -i ghcr.io/sebastienrousseau/rlg-mcp:0.0.20"
+    "docker": "docker run --rm -i -v /var/log/app:/logs:ro ghcr.io/sebastienrousseau/rlg-mcp:0.0.20 --root /logs"
   }
 }
