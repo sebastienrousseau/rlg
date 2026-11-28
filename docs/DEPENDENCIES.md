@@ -8,14 +8,15 @@ having written it, so each must earn its place, and the set may only
 shrink.
 
 `scripts/dependency-gate.py` enforces this in `make verify` and CI. It
-counts four kinds against `scripts/dependency-baseline.json`:
+counts four kinds against `scripts/dependency-baseline.json` and
+prints how many of each there are:
 
-| Kind | Counted from | At 0.0.22 |
-| --- | --- | --- |
-| Crates | third-party packages in `Cargo.lock`, transitive included | 240 |
-| Actions | `uses:` in `.github/` | 28 |
-| Container images | `FROM` lines and the dev container | 3 |
-| Tools | install-action `tool:`, `cargo install`, `npx`, pre-commit repos | 12 |
+| Kind | Counted from |
+| --- | --- |
+| Crates | third-party packages in `Cargo.lock`, transitive included |
+| Actions | `uses:` in `.github/` |
+| Container images | `FROM` lines and the dev container |
+| Tools | install-action `tool:`, `cargo install`, `npx`, pre-commit repos |
 
 The gate fails on any name not in the baseline, and on any direct crate
 below that has no row here. Removing a dependency always passes; run

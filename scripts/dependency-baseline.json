@@ -22,7 +22,6 @@
     "model-checking/kani-github-action",
     "ossf/scorecard-action",
     "rust-lang/crates-io-auth-action",
-    "sebastienrousseau/pipelines/.github/workflows/docs.yml",
     "sebastienrousseau/pipelines/.github/workflows/rust-ci.yml",
     "sebastienrousseau/pipelines/.github/workflows/security.yml",
     "sigstore/cosign-installer",
