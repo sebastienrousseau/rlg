@@ -36,6 +36,18 @@ if [ "$pkgver" != "$want" ]; then
   status=1
 fi
 
+# The WIT package and the citation move with the crates.
+wit=$(sed -n 's/^package rlg:core@\([0-9.]*\);/\1/p' crates/rlg-wasm/wit/rlg.wit)
+if [ "$wit" != "$want" ]; then
+  echo "STALE crates/rlg-wasm/wit/rlg.wit: package rlg:core@${wit:-?} (workspace is $want)"
+  status=1
+fi
+cff=$(sed -n 's/^version: //p' CITATION.cff)
+if [ "$cff" != "$want" ]; then
+  echo "STALE CITATION.cff: version ${cff:-?} (workspace is $want)"
+  status=1
+fi
+
 # SECURITY.md names the supported release, which must be the one the
 # workspace ships.
 supported=$(grep -oE '^\| .[0-9]+\.[0-9]+\.[0-9]+. \| yes \|' SECURITY.md |
