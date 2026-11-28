@@ -39,7 +39,8 @@ env:
 # `xtask` is excluded (publish = false).
 #
 # Order matters for the publish step:
-#   1. `rlg` first  — every other crate depends on it.
+#   0. `rlg-core` first — `rlg` depends on it.
+#   1. `rlg` next  — every other crate depends on it.
 #   2. `rlg-cli` second — `rlg-mcp` and `rlg-report` depend on it.
 #   3. The rest can publish independently of one another.
 
@@ -62,6 +63,7 @@ jobs:
         run: |
           TAG="${RELEASE_TAG#v}"
           for crate in \
+              rlg-core \
               rlg \
               rlg-cli \
               rlg-ebpf \
@@ -119,10 +121,11 @@ jobs:
       # (e.g. token rotation mid-release): re-running won't error on
       # the crates that already landed.
       #
-      # Dependency-order, with sparse-index sleeps after the two
+      # Dependency-order, with sparse-index sleeps after the three
       # crates other workspace members depend on:
       #
-      #   rlg
+      #   rlg-core
+      #   └── rlg
       #   ├── rlg-cli ─── rlg-mcp
       #   │             └─ rlg-report
       #   ├── rlg-otlp
@@ -133,8 +136,12 @@ jobs:
       # Trusted publishing: swaps this job's GitHub OIDC identity for a
       # temporary crates.io token, revoked by the action's post step when
       # the job ends. The config is per crate, so every crate this step
-      # walks needs its own trusted publisher on crates.io -- all ten of
-      # them, each pointing at this repository and release.yml.
+      # walks needs its own trusted publisher on crates.io -- all eleven
+      # of them, each pointing at this repository and release.yml. A
+      # trusted publisher can only be added to a crate that exists, so
+      # a brand-new crate (rlg-core in 0.0.23) needs its first version
+      # published by hand with a scoped token before this step can
+      # take over; after that, `publish_or_skip` skips it here.
       - name: Authenticate with crates.io
         id: auth
         uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1
@@ -168,7 +175,9 @@ jobs:
             fi
           }
 
-          # 1. rlg first — every other workspace crate depends on it.
+          # 0. rlg-core first — rlg depends on it.
+          publish_or_skip rlg-core 30
+          # 1. rlg next — every other workspace crate depends on it.
           publish_or_skip rlg 30
           # 2. rlg-cli second — rlg-mcp and rlg-report depend on it.
           publish_or_skip rlg-cli 30

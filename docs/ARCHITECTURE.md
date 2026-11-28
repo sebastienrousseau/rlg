@@ -8,11 +8,12 @@ individual decisions, read the [ADRs](adr/).
 
 ## The workspace
 
-Ten publishable crates share one version and are released together.
+Eleven publishable crates share one version and are released together.
 
 | Crate | Role | Depends on |
 | :--- | :--- | :--- |
-| `rlg` | The logging engine: records, formats, sinks, config | — |
+| `rlg-core` | `no_std` + `alloc`: `LogLevel`, the borrowed `Record` and the 14 formatters over `core::fmt::Write` | — |
+| `rlg` | The logging engine: `Log`, `LogFormat`, sinks, config; re-exports `rlg-core`'s levels and renders through it | `rlg-core` |
 | `rlg-cli` | `rlg` binary: parse, filter and render log files | `rlg` |
 | `rlg-report` | `rlg-report` binary: summaries of a log file | `rlg`, `rlg-cli` |
 | `rlg-mcp` | MCP server exposing log files as tools | `rlg`, `rlg-cli` |

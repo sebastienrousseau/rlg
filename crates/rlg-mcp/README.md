@@ -110,7 +110,7 @@ In a container, mount the logs read-only and point the root at them:
 
 ```bash
 docker run --rm -i -v /var/log/app:/logs:ro \
-  ghcr.io/sebastienrousseau/rlg-mcp:0.0.22 --root /logs
+  ghcr.io/sebastienrousseau/rlg-mcp:0.0.23 --root /logs
 ```
 
 The HTTP transports have no authentication: keep `--host` on

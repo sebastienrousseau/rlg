@@ -36,7 +36,7 @@
 
 **The rlg ecosystem**
 
-- [The rlg ecosystem](#the-rlg-ecosystem): `rlg`, `rlg-cli`, `rlg-report`, `rlg-mcp`, `rlg-otlp`, `rlg-redact`, `rlg-tower`, `rlg-test`, `rlg-wasm`, `rlg-ebpf`, and the `rustlogs.github.io` website
+- [The rlg ecosystem](#the-rlg-ecosystem): `rlg`, `rlg-core`, `rlg-cli`, `rlg-report`, `rlg-mcp`, `rlg-otlp`, `rlg-redact`, `rlg-tower`, `rlg-test`, `rlg-wasm`, `rlg-ebpf`, and the `rustlogs.github.io` website
 
 **Library reference**
 
@@ -64,19 +64,19 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.22"
+rlg = "0.0.23"
 ```
 
 Satellites install the same way, all at the same version:
 
 ```toml
 [dependencies]
-rlg-otlp   = "0.0.22"  # ship records to an OpenTelemetry Collector
-rlg-tower  = "0.0.22"  # per-request access logs for tower services
-rlg-redact = "0.0.22"  # scrub secrets and PII before they are written
+rlg-otlp   = "0.0.23"  # ship records to an OpenTelemetry Collector
+rlg-tower  = "0.0.23"  # per-request access logs for tower services
+rlg-redact = "0.0.23"  # scrub secrets and PII before they are written
 
 [dev-dependencies]
-rlg-test   = "0.0.22"  # assert on captured records in tests
+rlg-test   = "0.0.23"  # assert on captured records in tests
 ```
 
 ### Command-line tools
@@ -134,11 +134,12 @@ platform sink. This block is compiled and run by `cargo test`.
 
 ## The rlg ecosystem
 
-Ten crates and the website, released together at lockstep version `0.0.22`.
+Eleven crates and the website, released together at lockstep version `0.0.23`.
 
 | Component | Purpose | Use case |
 | :--- | :--- | :--- |
 | [`rlg`](crates/rlg/README.md) | The engine: 65,536-slot ring buffer, background flusher, 14 formats, native sinks | Structured logging in any Rust program |
+| [`rlg-core`](crates/rlg-core/README.md) | The `no_std` + `alloc` core: `LogLevel`, a borrowed `Record` and the 14 formats over `core::fmt::Write`; rlg re-exports it | Logging on bare-metal and embedded targets |
 | [`rlg-cli`](crates/rlg-cli/README.md) | The `rlg` binary: filter by level, component or attribute, convert between formats | `my-service \| rlg --min-level error --format ecs` |
 | [`rlg-report`](crates/rlg-report/README.md) | The `rlg-report` binary and library: counts by level and component, top messages, latency percentiles | On-call triage, daily error digests |
 | [`rlg-mcp`](crates/rlg-mcp/README.md) | MCP server: four tools, one prompt, two resources over stdio, streamable HTTP or HTTP+SSE | AI agents reading production logs |
@@ -158,6 +159,7 @@ Ten crates and the website, released together at lockstep version `0.0.22`.
 | :--- | :--- | :--- |
 | Ingestion | Atomic level filter, ring-buffer push, no lock on the caller's thread | Stable |
 | Formats | JSON, NDJSON, ECS, GELF, Logstash, OTLP, MCP, logfmt, CLF, CEF, ELF, W3C, Apache, Log4j XML | Stable |
+| `no_std` | Levels, a borrowed record and all 14 formats in `#![no_std]` + `alloc` (`rlg-core`) | New |
 | Sinks | `os_log` (macOS), `journald` (Linux), file, stdout | Stable |
 | Sinks | `io_uring` file sink (Linux, `uring` feature) | Scaffold |
 | Configuration | TOML load, validation, polling hot-reload (`tokio` feature) | Stable |

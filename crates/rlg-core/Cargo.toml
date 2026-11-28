@@ -1,0 +1,55 @@
+[package]
+name = "rlg-core"
+version = "0.0.23"
+edition = "2024"
+rust-version = "1.89.0"
+license = "MIT OR Apache-2.0"
+description = """
+The no_std core of rlg: log levels, a borrowed record view, and the 14
+output formats (JSON, ECS, GELF, OTLP, CEF, MCP, logfmt and more)
+written through `core::fmt::Write`. Needs only `alloc`: no engine, no
+threads, no I/O.
+"""
+repository = "https://github.com/sebastienrousseau/rlg"
+homepage = "https://rustlogs.com/"
+documentation = "https://docs.rs/rlg-core"
+readme = "README.md"
+keywords = ["rlg", "logging", "no-std", "structured-logging", "embedded"]
+categories = ["no-std", "development-tools::debugging", "embedded"]
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+include = [
+    "/Cargo.toml",
+    "/LICENSE-APACHE",
+    "/LICENSE-MIT",
+    "/README.md",
+    "/src/**",
+    "/tests/**",
+]
+
+[lib]
+name = "rlg_core"
+path = "src/lib.rs"
+
+# Both are already in the workspace lock (rlg uses them with `std`);
+# here they are `alloc`-only so the crate builds for bare-metal targets.
+[dependencies]
+serde = { version = "1.0.228", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.150", default-features = false, features = ["alloc"] }
+
+[package.metadata.docs.rs]
+all-features = true
+
+[lints.rust]
+missing_copy_implementations = "warn"
+missing_docs = "deny"
+unsafe_code = "forbid"
+unused_extern_crates = "warn"
+missing_debug_implementations = "forbid"
+non_ascii_idents = "forbid"
+unreachable_pub = "forbid"
+dead_code = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+single_use_lifetimes = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unused_qualifications = "deny"

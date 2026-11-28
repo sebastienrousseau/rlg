@@ -12,7 +12,7 @@
 // the `wit-bindgen` integration that turns this WIT into a runnable
 // component. The package version moves with the crate's.
 
-package rlg:core@0.0.22;
+package rlg:core@0.0.23;
 
 /// Structured logging surface exposed by rlg-wasm to a WASI 0.2
 /// host. Mirrors the JavaScript surface (`RlgWasm::info`,

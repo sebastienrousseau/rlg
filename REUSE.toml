@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Licensing for every file in the repository (https://reuse.software).
+# Everything here is the project's own work under the dual grant; a
+# file's own SPDX header, where it has one, takes precedence.
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2022-2026 Sebastien Rousseau"
+SPDX-License-Identifier = "Apache-2.0 OR MIT"

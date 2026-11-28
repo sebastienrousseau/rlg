@@ -20,12 +20,6 @@
       "halstead": 7.2,
       "sloc": 34.0
     },
-    "crates/rlg/src/log.rs::Log::fmt": {
-      "cognitive": 1.0,
-      "cyclomatic": 15.0,
-      "halstead": 19.9,
-      "sloc": 18.0
-    },
     "crates/rlg/src/log_format.rs::LogFormat::validate": {
       "cognitive": 4.0,
       "cyclomatic": 11.0,
@@ -42,7 +36,6 @@
   "notes": {
     "crates/rlg-cli/src/main.rs::LogFormat::from": "An exhaustive match over every CLI format flag: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
     "crates/rlg/src/error.rs::RlgError::diagnostic": "An exhaustive match over every RlgError variant, so a new variant cannot compile without a code and help line; cognitive 1.",
-    "crates/rlg/src/log.rs::Log::fmt": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
     "crates/rlg/src/log_format.rs::LogFormat::validate": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled.",
     "crates/rlg/src/tui.rs::TuiMetrics::inc_format": "An exhaustive match over every LogFormat variant: cyclomatic counts the arms, cognitive is 1. A table would lose the compiler's check that a new variant is handled."
   }

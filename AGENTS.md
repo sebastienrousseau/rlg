@@ -26,7 +26,7 @@ it is a regression, whatever else it improves.
    one `0.0.1` above the current version, and reaches `main` only through
    that branch's single release pull request. Dependabot and topic work
    land on it as commits, never as pull requests into it.
-2. **Versions move in lockstep.** All ten publishable crates and the
+2. **Versions move in lockstep.** All eleven publishable crates and the
    website ([rustlogs.github.io](https://github.com/sebastienrousseau/rustlogs.github.io),
    since 0.0.22) share one version; `xtask` stays at `0.0.0`. A release
    is a release of every member: open `feat/v<next-version>` in each,

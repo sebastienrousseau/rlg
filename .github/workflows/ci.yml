@@ -114,6 +114,12 @@ jobs:
         with:
           args: --offline --no-progress --exclude-path target/book/404.html target/book README.md crates/*/README.md
           fail: true
+      # Spelling (config in .codespellrc) and machine-readable licensing
+      # for every file (REUSE.toml), both pinned; pipx ships on the runner.
+      - name: Spelling
+        run: pipx run codespell==2.4.3
+      - name: REUSE compliance
+        run: pipx run reuse==6.3.0 lint
 
   # The declared minimum supported Rust version (rust-version) builds
   # every library and binary. Tests may need newer toolchains through

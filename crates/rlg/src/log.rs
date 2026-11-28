@@ -12,12 +12,8 @@ use std::fmt;
 use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
 
-mod escape;
 mod source;
-mod text;
-mod write;
-use write::Part::{Map, Num, Raw, Str, Value};
-use write::write_parts;
+use rlg_core::{Format, Record};
 
 /// `file:line` for a call site, built without the `format!` machinery.
 /// The flusher calls it once per record `fire()` sent; under Miri,
@@ -227,180 +223,34 @@ impl Log {
     }
 }
 
-// --- Per-format serialization methods ---
+// --- Rendering, delegated to `rlg-core` ---
 impl Log {
-    fn fmt_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw("{\"Attributes\":"),
-                Map(&self.attributes),
-                Raw(",\"Component\":"),
-                Str(&self.component),
-                Raw(",\"Description\":"),
-                Str(&self.description),
-                Raw(",\"Format\":\"JSON\",\"Level\":"),
-                Str(self.level.as_str()),
-                Raw(",\"SessionID\":"),
-                Num(self.session_id),
-                Raw(",\"Timestamp\":"),
-                Str(&self.time),
-                Raw("}"),
-            ],
-        )
-    }
-
-    fn fmt_gelf(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw("{\"_attributes\":"),
-                Map(&self.attributes),
-                Raw(",\"_session_id\":"),
-                Num(self.session_id),
-                Raw(",\"full_message\":"),
-                Str(&self.description),
-                Raw(",\"host\":"),
-                Str(&self.component),
-                Raw(",\"level\":"),
-                Num(u64::from(self.level.to_numeric())),
-                Raw(",\"short_message\":"),
-                Str(&self.description),
-                Raw(",\"timestamp\":"),
-                Str(&self.time),
-                Raw(",\"version\":\"1.1\"}"),
-            ],
-        )
-    }
-
-    fn fmt_logstash(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw("{\"@timestamp\":"),
-                Str(&self.time),
-                Raw(",\"attributes\":"),
-                Map(&self.attributes),
-                Raw(",\"component\":"),
-                Str(&self.component),
-                Raw(",\"level\":"),
-                Str(self.level.as_str()),
-                Raw(",\"message\":"),
-                Str(&self.description),
-                Raw(",\"session_id\":"),
-                Num(self.session_id),
-                Raw("}"),
-            ],
-        )
-    }
-
-    fn fmt_ndjson(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw("{\"attributes\":"),
-                Map(&self.attributes),
-                Raw(",\"component\":"),
-                Str(&self.component),
-                Raw(",\"level\":"),
-                Str(self.level.as_str()),
-                Raw(",\"message\":"),
-                Str(&self.description),
-                Raw(",\"timestamp\":"),
-                Str(&self.time),
-                Raw("}"),
-            ],
-        )
-    }
-
-    fn fmt_mcp(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw(
-                    "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/log\",\"params\":{\"data\":{\"attributes\":",
-                ),
-                Map(&self.attributes),
-                Raw(",\"component\":"),
-                Str(&self.component),
-                Raw(",\"description\":"),
-                Str(&self.description),
-                Raw(",\"session_id\":"),
-                Num(self.session_id),
-                Raw(",\"time\":"),
-                Str(&self.time),
-                Raw("},\"level\":"),
-                Str(self.level.as_str_lowercase()),
-                Raw("}}"),
-            ],
-        )
-    }
-
-    fn fmt_otlp(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let empty = serde_json::Value::String(String::new());
-        let trace_id =
-            self.attributes.get("trace_id").unwrap_or(&empty);
-        let span_id = self.attributes.get("span_id").unwrap_or(&empty);
-        write_parts(
-            f,
-            &[
-                Raw("{\"attributes\":"),
-                Map(&self.attributes),
-                Raw(",\"body\":{\"stringValue\":"),
-                Str(&self.description),
-                Raw("},\"severityNumber\":"),
-                Num(u64::from(self.level.to_numeric())),
-                Raw(",\"severityText\":"),
-                Str(self.level.as_str()),
-                Raw(",\"spanId\":"),
-                Value(span_id),
-                Raw(",\"timeUnixNano\":"),
-                Str(&self.time),
-                Raw(",\"traceId\":"),
-                Value(trace_id),
-                Raw("}"),
-            ],
-        )
-    }
-
-    fn fmt_ecs(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write_parts(
-            f,
-            &[
-                Raw("{\"@timestamp\":"),
-                Str(&self.time),
-                Raw(",\"labels\":"),
-                Map(&self.attributes),
-                Raw(",\"log.level\":"),
-                Str(self.level.as_str_lowercase()),
-                Raw(",\"log.logger\":\"rlg\",\"message\":"),
-                Str(&self.description),
-                Raw(",\"process.name\":"),
-                Str(&self.component),
-                Raw("}"),
-            ],
-        )
+    /// This entry as an `rlg-core` record in `format`. The host name
+    /// is resolved only for the Apache format, the one that prints it.
+    fn record(&self, format: Format) -> Record<'_> {
+        let host = if format == Format::ApacheAccessLog {
+            CACHED_HOSTNAME.as_str()
+        } else {
+            ""
+        };
+        Record {
+            session_id: self.session_id,
+            time: &self.time,
+            level: self.level,
+            component: &self.component,
+            description: &self.description,
+            format,
+            attributes: &self.attributes,
+            host,
+        }
     }
 }
 
 impl fmt::Display for Log {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.format {
-            LogFormat::CLF => self.fmt_clf(f),
-            LogFormat::CEF => self.fmt_cef(f),
-            LogFormat::ELF => self.fmt_elf(f),
-            LogFormat::W3C => self.fmt_w3c(f),
-            LogFormat::ApacheAccessLog => self.fmt_apache(f),
-            LogFormat::Log4jXML => self.fmt_log4j_xml(f),
-            LogFormat::JSON => self.fmt_json(f),
-            LogFormat::GELF => self.fmt_gelf(f),
-            LogFormat::Logstash => self.fmt_logstash(f),
-            LogFormat::NDJSON => self.fmt_ndjson(f),
-            LogFormat::MCP => self.fmt_mcp(f),
-            LogFormat::OTLP => self.fmt_otlp(f),
-            LogFormat::Logfmt => self.write_logfmt(f),
-            LogFormat::ECS => self.fmt_ecs(f),
-        }
+        // `Format` declares the same variants as `LogFormat`, in the
+        // same order; `log/tests.rs` checks every pair exhaustively.
+        self.record(Format::ALL[self.format as usize]).write_to(f)
     }
 }
 

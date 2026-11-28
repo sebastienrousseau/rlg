@@ -37,7 +37,7 @@ version checks. Run it before opening a pull request.
 | Coverage (95% floor) | `cargo tarpaulin` (reads `tarpaulin.toml`) | `ci.yml` |
 | Dependency policy | `cargo deny --all-features check` | `ci.yml` |
 | Dependency audit trail | `cargo vet --locked` | `cargo-vet.yml` |
-| API breakage | `cargo semver-checks check-release --workspace` | `semver-checks.yml` |
+| API breakage | `cargo semver-checks check-release --workspace --exclude rlg-core` (until its first release) | `semver-checks.yml` |
 | Complexity ceilings | `scripts/complexity-gate.py` | `ci.yml` |
 | Install snippets | `scripts/check-doc-versions.sh` | `ci.yml` |
 | MCP manifests | `scripts/check-mcp-manifests.sh` | `ci.yml` |
@@ -78,7 +78,7 @@ Thread-spawning tests carry `#[cfg_attr(miri, ignore)]`.
 
 1. Work for the next version happens on `feat/v<next-version>` and
    reaches `main` through that branch's single release pull request.
-2. All ten publishable crates share one version; the release pull
+2. All eleven publishable crates share one version; the release pull
    request bumps every manifest, install snippet and MCP manifest
    together and moves the CHANGELOG entries under the new heading.
 3. The maintainer merges, then pushes a signed annotated tag

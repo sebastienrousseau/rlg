@@ -324,9 +324,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.6.9"
+version = "4.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "844c5c0b65be192cb68d570cca1b21a6444431d24e39c084dc0336177015337c"
+checksum = "50066ca966813ca8957ee15361752f19424a8ff620dbe9c8993d9f99d99b04b3"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -334,9 +334,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.6.7"
+version = "4.6.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec0797fb7aeb1406c84efac526901f7ec3ead2124f946b494e72879d4b54704d"
+checksum = "a0ed97c96ef4efb3cc84e09fa388df4463e7cc3224ec38d7b1d9e45749333590"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1424,7 +1424,7 @@ checksum = "d902046e6a28a1e4c3cab97258a0ce11e994903f01c2d97a9447a0b3df85f4f6"
 
 [[package]]
 name = "rlg"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "config",
  "criterion",
@@ -1441,6 +1441,7 @@ dependencies = [
  "proptest",
  "regex",
  "rlg-cli",
+ "rlg-core",
  "rustix",
  "ryu",
  "serde",
@@ -1460,7 +1461,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-cli"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1476,8 +1477,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlg-core"
+version = "0.0.23"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rlg-ebpf"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "libc",
@@ -1487,7 +1496,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-mcp"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "axum",
  "criterion",
@@ -1507,7 +1516,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-otlp"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "rlg",
@@ -1522,7 +1531,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-redact"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "regex",
@@ -1534,7 +1543,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-report"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1552,7 +1561,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-test"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "parking_lot",
@@ -1562,7 +1571,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-tower"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "http",
@@ -1577,7 +1586,7 @@ dependencies = [
 
 [[package]]
 name = "rlg-wasm"
-version = "0.0.22"
+version = "0.0.23"
 dependencies = [
  "criterion",
  "rlg",

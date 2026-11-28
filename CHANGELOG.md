@@ -5,6 +5,38 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.23] - 2026-11-28
+
+rlg's record formatting now builds without `std`. Nothing in the public
+API or in any format's output changes.
+
+### Added
+
+- **`rlg-core`**, a new `#![no_std]` + `alloc` crate and the eleventh
+  lockstep member: `LogLevel` and `ParseLogLevelError`, a borrowed
+  `Record` view with a const builder, and `Format`, which renders a
+  record into each of the 14 formats through `core::fmt::Write`. It
+  depends only on `serde` and `serde_json` with default features off,
+  and CI builds it for `thumbv7em-none-eabihf` on stable and 1.89.0
+  (`no-std.yml`). The engine, sinks, config and `LogFormat` stay in
+  rlg, because they need `std`.
+- CI checks spelling (codespell 2.4.3) and REUSE compliance (reuse
+  6.3.0; `REUSE.toml` makes every file's licence machine-readable), and
+  `features.yml` builds each feature alone on every push and every
+  feature combination weekly (cargo-hack 0.6.46). The maintainer
+  approved the three tools by name; `docs/DEPENDENCIES.md` records it.
+
+### Changed
+
+- rlg re-exports `LogLevel` and `ParseLogLevelError` from `rlg-core` at
+  their old paths (the same types), and `Log`'s `Display` renders
+  through `rlg_core::Record`; the format tests pass unchanged.
+- The breaking milestone moves to 0.0.24, and each later milestone one
+  release on (`docs/IMPLEMENTATION-PLAN.md`).
+- Dependencies (Dependabot #256, #257): clap 4.6.10; new digests for the
+  `rust:1.100-bookworm` build images and the dev container base, now
+  tag 2.1.
+
 ## [0.0.22] - 2026-11-28
 
 A documentation and standards release, in lockstep with the website.
