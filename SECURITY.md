@@ -57,9 +57,9 @@ git verify-tag v<version>
 git log --show-signature -1 main
 
 # 3. Verify the release SBOMs (see pkg/VERIFY.md for full runbook).
+#    Releases since v0.0.15 ship a Sigstore bundle per SBOM.
 cosign verify-blob \
-  --certificate sbom.spdx.json.crt \
-  --signature sbom.spdx.json.sig \
+  --bundle sbom.spdx.json.sigstore.json \
   --certificate-identity-regexp \
       'https://github.com/sebastienrousseau/rlg/.github/workflows/release.yml@refs/tags/v[0-9]+.*' \
   --certificate-oidc-issuer \
