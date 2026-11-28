@@ -6,8 +6,8 @@ Only the latest published `0.0.x` series receives security patches.
 
 | Version | Supported |
 | ------- | --------- |
-| `0.0.22` | yes |
-| `< 0.0.22` | no |
+| `0.0.23` | yes |
+| `< 0.0.23` | no |
 
 ## Reporting a Vulnerability
 

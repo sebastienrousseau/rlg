@@ -25,7 +25,7 @@
 
 ```toml
 [dev-dependencies]
-rlg-test = "0.0.22"
+rlg-test = "0.0.23"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024).

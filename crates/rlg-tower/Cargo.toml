@@ -1,6 +1,6 @@
 [package]
 name = "rlg-tower"
-version = "0.0.22"
+version = "0.0.23"
 edition = "2024"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
@@ -40,7 +40,7 @@ harness = false
 path = "benches/layer.rs"
 
 [dependencies]
-rlg = { version = "0.0.22", path = "../rlg", default-features = false }
+rlg = { version = "0.0.23", path = "../rlg", default-features = false }
 tower-layer = "0.3"
 tower-service = "0.3"
 http = "1"

@@ -6,11 +6,11 @@
     "url": "https://github.com/sebastienrousseau/rlg",
     "source": "github"
   },
-  "version": "0.0.22",
+  "version": "0.0.23",
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/sebastienrousseau/rlg-mcp:0.0.22",
+      "identifier": "ghcr.io/sebastienrousseau/rlg-mcp:0.0.23",
       "transport": {
         "type": "stdio"
       }

@@ -26,7 +26,7 @@
 
 ```toml
 [dependencies]
-rlg-core = "0.0.22"
+rlg-core = "0.0.23"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024). The crate is
