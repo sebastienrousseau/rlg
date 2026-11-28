@@ -4,7 +4,7 @@
 
 What rlg trusts, what it does not, and what protects each boundary.
 Written for 0.0.21; update it with every change to a boundary.
-Report a weakness privately, as [`SECURITY.md`](../SECURITY.md)
+Report a weakness privately, as [`SECURITY.md`](https://github.com/sebastienrousseau/rlg/blob/main/SECURITY.md)
 describes.
 
 ## Assets
