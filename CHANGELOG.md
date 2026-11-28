@@ -5,6 +5,14 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The release workflow's "already published" check now reads the
+  crates.io sparse index. The API call it used failed on the runner, so
+  the v0.0.23 run tried to republish `rlg-core` and stopped.
+
 ## [0.0.23] - 2026-11-28
 
 rlg's record formatting now builds without `std`. Nothing in the public
