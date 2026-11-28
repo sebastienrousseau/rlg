@@ -83,6 +83,9 @@ jobs:
           workspaces: fuzz -> target
           cache-on-failure: true
 
+      # `--target` is explicit: cargo-fuzz defaults to the target it was
+      # itself built for, and install-action's prebuilt binary is musl,
+      # which the nightly toolchain here has no `core` for.
       # `--sanitizer none` disables the ASan runtime for the CI smoke
       # gate. The smoke gate's job is to catch panics and hangs in a
       # bounded window, which it does without ASan, and it avoids the
@@ -98,7 +101,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           if [ -d "corpus/${TARGET}" ]; then
-            cargo +nightly fuzz run --sanitizer none "${TARGET}" "corpus/${TARGET}" -- -runs=0
+            cargo +nightly fuzz run --sanitizer none --target x86_64-unknown-linux-gnu "${TARGET}" "corpus/${TARGET}" -- -runs=0
           else
             echo "no committed corpus for ${TARGET}; nothing to replay"
           fi
@@ -113,7 +116,7 @@ jobs:
           case "${DURATION}" in
             ''|*[!0-9]*) echo "duration must be a whole number of seconds"; exit 1 ;;
           esac
-          cargo +nightly fuzz run --sanitizer none "${TARGET}" \
+          cargo +nightly fuzz run --sanitizer none --target x86_64-unknown-linux-gnu "${TARGET}" \
             -- -max_total_time="${DURATION}" -print_final_stats=1
 
       - name: Upload crash artefacts
