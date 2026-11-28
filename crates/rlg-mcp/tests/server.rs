@@ -321,6 +321,11 @@ fn a_missing_root_is_refused_and_no_root_warns() {
         .expect("runs");
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("no --root given"), "{stderr}");
+    // The deprecation names its removal date, not a release number.
+    assert!(
+        stderr.contains("first release on or after 2027-02-26"),
+        "{stderr}"
+    );
 }
 
 #[test]

@@ -24,17 +24,18 @@
 ## WASI 0.2 component (scaffold)
 
 A component-model interface definition ships at
-[`wit/rlg.wit`](wit/rlg.wit) — package `rlg:core@0.0.11`, world
-`rlg-logger`. Consumable by any WASI 0.2 host (`wasmtime run
---component`, `jco`, Fermyon Spin, …) once Phase 22.1 wires the
-`wit-bindgen` codegen. See
+[`wit/rlg.wit`](wit/rlg.wit): package `rlg:core`, versioned with the
+crate, world `rlg-logger`. Consumable by any WASI 0.2 host (`wasmtime
+run --component`, `jco`, Fermyon Spin, …) once the `wit-bindgen`
+codegen is wired (WP-X4 in
+[`docs/IMPLEMENTATION-PLAN.md`](../../docs/IMPLEMENTATION-PLAN.md)). See
 [`docs/adr/0013-wasi-0.2-component.md`](../../docs/adr/0013-wasi-0.2-component.md).
 
 ## Install
 
 ```toml
 [dependencies]
-rlg-wasm = "0.0.21"
+rlg-wasm = "0.0.22"
 ```
 
 Requires Rust **1.89.0** or newer (edition 2024). For the wasm32 target, install `wasm-pack` as shown below.

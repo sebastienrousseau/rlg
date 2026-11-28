@@ -11,17 +11,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sebastienrousseau/rlg/actions"><img src="https://github.com/sebastienrousseau/rlg/workflows/CI/badge.svg?style=for-the-badge&logo=github" alt="Build" /></a>
-  <a href="https://crates.io/crates/rlg"><img src="https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Registry" /></a>
-  <a href="https://docs.rs/rlg"><img src="https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs" /></a>
-  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" /></a>
-  <a href="https://www.bestpractices.dev/projects/15160"><img src="https://img.shields.io/cii/level/15160?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" /></a>
-  <a href="#license"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" /></a>
-  <a href="https://github.com/sebastienrousseau/rlg/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.89.0-93450a.svg?style=for-the-badge&logo=rust" alt="Minimum supported Rust version 1.89.0" /></a>
+  <a href="https://github.com/sebastienrousseau/rlg/actions"><img src="https://img.shields.io/github/actions/workflow/status/sebastienrousseau/rlg/ci.yml?style=for-the-badge&logo=github" alt="Build" height="28" /></a>
+  <a href="https://crates.io/crates/rlg"><img src="https://img.shields.io/crates/v/rlg.svg?style=for-the-badge&color=fc8d62&logo=rust" alt="Registry" height="28" /></a>
+  <a href="https://docs.rs/rlg"><img src="https://img.shields.io/badge/docs.rs-rlg-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" alt="Docs" height="28" /></a>
+  <a href="https://scorecard.dev/viewer/?uri=github.com/sebastienrousseau/rlg"><img src="https://img.shields.io/ossf-scorecard/github.com/sebastienrousseau/rlg?style=for-the-badge&label=OpenSSF%20Scorecard&logo=openssf" alt="OpenSSF Scorecard" height="28" /></a>
+  <a href="https://www.bestpractices.dev/projects/15160"><img src="https://img.shields.io/cii/level/15160?style=for-the-badge&label=OpenSSF%20Best%20Practices&logo=openssf" alt="OpenSSF Best Practices" height="28" /></a>
+  <a href="#license"><img src="https://img.shields.io/badge/license-Apache--2.0%20OR%20MIT-blue.svg?style=for-the-badge" alt="License: Apache-2.0 OR MIT" height="28" /></a>
+  <a href="https://github.com/sebastienrousseau/rlg/blob/main/docs/POLICIES.md"><img src="https://img.shields.io/badge/MSRV-1.89.0-93450a.svg?style=for-the-badge&logo=rust" alt="Minimum supported Rust version 1.89.0" height="28" /></a>
 </p>
 
 <p align="center">
-  <img src=".github/demo.gif" alt="The rlg CLI filtering a service log to errors in Elastic Common Schema, then rlg-report summarising the same file by level, component and message" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/rlg/main/.github/demo.gif" alt="The rlg CLI filtering a service log to errors in Elastic Common Schema, then rlg-report summarising the same file by level, component and message" width="100%" />
 </p>
 
 ---
@@ -30,30 +30,30 @@
 
 **Getting started**
 
-- [Install](#install) — Cargo for the libraries, `cargo install` for the CLIs and the MCP server
-- [Requirements](#requirements) — toolchain floor, platforms
-- [Quick Start](#quick-start) — one structured record, fired and flushed
+- [Install](#install): Cargo for the libraries, `cargo install` for the CLIs and the MCP server
+- [Requirements](#requirements): toolchain floor, platforms
+- [Quick Start](#quick-start): one structured record, fired and flushed
 
 **The rlg ecosystem**
 
-- [The rlg ecosystem](#the-rlg-ecosystem) — `rlg`, `rlg-cli`, `rlg-report`, `rlg-mcp`, `rlg-otlp`, `rlg-redact`, `rlg-tower`, `rlg-test`, `rlg-wasm`, `rlg-ebpf`
+- [The rlg ecosystem](#the-rlg-ecosystem): `rlg`, `rlg-cli`, `rlg-report`, `rlg-mcp`, `rlg-otlp`, `rlg-redact`, `rlg-tower`, `rlg-test`, `rlg-wasm`, `rlg-ebpf`, and the `rustlogs.github.io` website
 
 **Library reference**
 
-- [Capabilities at a glance](#capabilities-at-a-glance) — the current surface by theme
-- [Ecosystem comparison](#ecosystem-comparison) — short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
-- [Benchmarks](#benchmarks) — headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
-- [Features](#features) — module-level capability list
-- [Configuration](#configuration) — core options
-- [Examples](#examples) — runnable example index
+- [Capabilities at a glance](#capabilities-at-a-glance): the current surface by theme
+- [Ecosystem comparison](#ecosystem-comparison): short matrix; full table at [`docs/COMPARISON.md`](docs/COMPARISON.md)
+- [Benchmarks](#benchmarks): headline numbers; full table at [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md)
+- [Features](#features): module-level capability list
+- [Configuration](#configuration): core options
+- [Examples](#examples): runnable example index
 
 **Operational**
 
-- [When not to use rlg](#when-not-to-use-rlg) — limitations
-- [Development](#development) — make targets, fuzzing, CI
-- [Security](#security) — guarantees and compliance
-- [Documentation](#documentation) — all reference docs
-- [Stability guarantees](#stability-guarantees) — SemVer axis, output stability, minimum toolchain discipline
+- [When not to use rlg](#when-not-to-use-rlg): limitations
+- [Development](#development): make targets, fuzzing, CI
+- [Security](#security): guarantees and compliance
+- [Documentation](#documentation): all reference docs
+- [Stability guarantees](#stability-guarantees): SemVer axis, output stability, minimum toolchain discipline
 - [License](#license)
 
 ---
@@ -64,19 +64,19 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.21"
+rlg = "0.0.22"
 ```
 
 Satellites install the same way, all at the same version:
 
 ```toml
 [dependencies]
-rlg-otlp   = "0.0.21"  # ship records to an OpenTelemetry Collector
-rlg-tower  = "0.0.21"  # per-request access logs for tower services
-rlg-redact = "0.0.21"  # scrub secrets and PII before they are written
+rlg-otlp   = "0.0.22"  # ship records to an OpenTelemetry Collector
+rlg-tower  = "0.0.22"  # per-request access logs for tower services
+rlg-redact = "0.0.22"  # scrub secrets and PII before they are written
 
 [dev-dependencies]
-rlg-test   = "0.0.21"  # assert on captured records in tests
+rlg-test   = "0.0.22"  # assert on captured records in tests
 ```
 
 ### Command-line tools
@@ -134,7 +134,7 @@ platform sink. This block is compiled and run by `cargo test`.
 
 ## The rlg ecosystem
 
-Ten crates at lockstep version `0.0.21`, released together.
+Ten crates and the website, released together at lockstep version `0.0.22`.
 
 | Component | Purpose | Use case |
 | :--- | :--- | :--- |
@@ -148,6 +148,7 @@ Ten crates at lockstep version `0.0.21`, released together.
 | [`rlg-test`](crates/rlg-test/README.md) | Capture records in a test and assert on them | Libraries testing their own log output |
 | [`rlg-wasm`](crates/rlg-wasm/README.md) | `wasm-bindgen` bindings and a WASI 0.2 component interface | Browsers, Deno, Workers, wasmtime hosts |
 | [`rlg-ebpf`](crates/rlg-ebpf/README.md) | Process enrichment, portable; an eBPF enricher scaffold on Linux | Host context on every record |
+| [`rustlogs.github.io`](https://github.com/sebastienrousseau/rustlogs.github.io) | The project website, [rustlogs.com](https://rustlogs.com/), in lockstep since 0.0.22 | Finding rlg, its guides and its releases |
 
 ---
 
@@ -208,16 +209,25 @@ See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for methodology and full results.
 
 ## Features
 
-Everything optional is off by default.
+Every Cargo feature of every crate, with its default. Two are on by
+default: `config` in `rlg` and `blocking` in `rlg-otlp`. The crates
+not listed (`rlg-cli`, `rlg-report`, `rlg-mcp`, `rlg-tower`,
+`rlg-test`, `rlg-wasm`) have no features.
 
-| Feature | Crate | Adds |
-| :--- | :--- | :--- |
-| `tokio` | `rlg` | `Config::load_async` and polling hot-reload |
-| `tui` | `rlg` | A live terminal dashboard, started with `RLG_TUI=1` |
-| `tracing-layer` | `rlg` | `RlgLayer`, a `tracing_subscriber::Layer` |
-| `fast-queue` | `rlg` | An eight-shard ring buffer for many concurrent producers |
-| `uring` | `rlg` | The `io_uring` file sink on Linux |
-| `async` | `rlg-otlp` | `AsyncOtlpExporter` on Tokio |
+| Feature | Crate | Default | Adds |
+| :--- | :--- | :--- | :--- |
+| `config` | `rlg` | on | `Config` load, save and `set` from TOML and the environment |
+| `tokio` | `rlg` | off | `Config::load_async` and polling hot-reload |
+| `tui` | `rlg` | off | A live terminal dashboard, started with `RLG_TUI=1` |
+| `tracing-layer` | `rlg` | off | `RlgLayer`, a `tracing_subscriber::Layer` |
+| `fast-queue` | `rlg` | off | An eight-shard ring buffer for many concurrent producers |
+| `uring` | `rlg` | off | The `io_uring` file sink on Linux |
+| `debug_enabled` | `rlg` | off | Nothing yet: declared, but no code reads it |
+| `blocking` | `rlg-otlp` | on | Nothing extra: the synchronous exporter over `std::net` is always built |
+| `async` | `rlg-otlp` | off | `AsyncOtlpExporter` on Tokio |
+| `tracing` | `rlg-otlp` | off | `SpanExporter` for closed `RlgLayer` spans |
+| `tracing` | `rlg-redact` | off | `Scrub` for `Redactor`, so `RlgLayer` redacts records and spans |
+| `ebpf` | `rlg-ebpf` | off | The `EbpfEnricher` scaffold, which delegates to process enrichment today |
 
 ---
 
@@ -305,9 +315,12 @@ and [`AGENTS.md`](AGENTS.md).
 - **Resource limits**: the ring buffer is bounded at 65,536 records and
   evicts the oldest when full; `rlg-otlp` caps a collector's response
   headers at 16 KiB and times out every request.
-- **Fuzzing**: four cargo-fuzz targets (record parsing, format names,
-  config loading, redaction) run on every pull request; see
-  [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md) for OSS-Fuzz status.
+- **Fuzzing**: five cargo-fuzz targets (record parsing, format names,
+  config loading, redaction, single-line rendering). On every pull
+  request and every push to `main`, each target replays its committed
+  corpus where one exists (today `render_one_line`), then fuzzes for
+  30 seconds; a manual run can pick one target and a longer budget.
+  See [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md) for OSS-Fuzz status.
 - **Supply chain**: every dependency passes cargo-deny and cargo-vet;
   releases publish through crates.io Trusted Publishing with
   sigstore-signed SBOMs ([`pkg/VERIFY.md`](pkg/VERIFY.md)).
@@ -323,6 +336,7 @@ Report vulnerabilities according to [`SECURITY.md`](SECURITY.md).
 | [User manual](https://doc.rustlogs.com/manual/) | Tutorials, how-to guides, architecture, ADRs ([source](docs/)) |
 | [API reference](https://docs.rs/rlg) | Every public item, per crate on docs.rs |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Toolchain, local gates, test layout, release model |
+| [Ecosystem map](#the-rlg-ecosystem) | Every crate and the [rustlogs.com](https://rustlogs.com/) website, released in lockstep |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | How the engine and satellites fit together |
 | [`CHANGELOG.md`](CHANGELOG.md) | What changed in each release |
 | [Migration guides](docs/migration/) | Coming from `log`, `slog` or `tracing` |
@@ -335,6 +349,11 @@ Report vulnerabilities according to [`SECURITY.md`](SECURITY.md).
   may be breaking. Breaking changes are marked **Breaking** in the
   CHANGELOG, and cargo-semver-checks runs on every pull request so none
   slips through unannounced.
+- **Deprecation window**: a removal or contract change is deprecated
+  first and keeps working, with a warning, for at least 90 days and one
+  release; open deprecations and their dates are in
+  [DEPRECATIONS.md](DEPRECATIONS.md), the policy in
+  [docs/POLICIES.md](docs/POLICIES.md#deprecation).
 - **Output stability**: the bytes a format produces are an interface. A
   change to them for the same record is breaking even when no signature
   moves, and is recorded the same way.

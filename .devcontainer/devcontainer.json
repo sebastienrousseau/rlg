@@ -2,7 +2,7 @@
 // needs. CI builds it and runs `make` inside (ci.yml, devcontainer).
 {
   "name": "rlg",
-  "image": "mcr.microsoft.com/devcontainers/rust:1-1-bookworm",
+  "build": { "dockerfile": "Dockerfile" },
   "features": {
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },

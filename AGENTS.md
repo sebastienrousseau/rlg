@@ -26,10 +26,13 @@ it is a regression, whatever else it improves.
    one `0.0.1` above the current version, and reaches `main` only through
    that branch's single release pull request. Dependabot and topic work
    land on it as commits, never as pull requests into it.
-2. **Versions move in lockstep.** All ten publishable crates share one
-   version; `xtask` stays at `0.0.0`. Install snippets in the docs must
-   name it (`scripts/check-doc-versions.sh`), and so must the MCP
-   manifests (`scripts/check-mcp-manifests.sh`).
+2. **Versions move in lockstep.** All ten publishable crates and the
+   website ([rustlogs.github.io](https://github.com/sebastienrousseau/rustlogs.github.io),
+   since 0.0.22) share one version; `xtask` stays at `0.0.0`. A release
+   is a release of every member: open `feat/v<next-version>` in each,
+   and it is not done until each is tagged, released and live. Install
+   snippets in the docs must name it (`scripts/check-doc-versions.sh`),
+   and so must the MCP manifests (`scripts/check-mcp-manifests.sh`).
 3. **Commits** are signed, `<type>: <subject>` in at most 50 characters,
    with an `Assisted-by:` trailer when an agent helped.
 4. **No new suppressions.** `clippy::pedantic` and `clippy::nursery` are
@@ -39,14 +42,25 @@ it is a regression, whatever else it improves.
    write or touch. `scripts/complexity-baseline.json` lists existing
    offenders; it only ever shrinks, via `scripts/complexity-gate.py
    --update` after an improvement.
-6. **Dependencies** must pass `cargo deny --all-features check` and
-   `cargo vet --locked`. Never widen `deny.toml` or add a vet exemption
-   to make a check pass without saying why in the commit.
+6. **Dependencies: the strict minimum** (standards `AGENTS.md` §11).
+   No new third-party dependency of any kind (crate, action, container
+   image, tool) without the maintainer's explicit approval of that
+   named dependency; build the capability here instead. The set is held
+   by `scripts/dependency-gate.py` against
+   `scripts/dependency-baseline.json`, which only shrinks, and every
+   direct crate has its reason in `docs/DEPENDENCIES.md`. Existing ones
+   must pass `cargo deny --all-features check` and `cargo vet --locked`;
+   never widen `deny.toml` or add a vet exemption to make a check pass.
 7. **`unsafe` is denied** except for the documented platform FFI in
    `crates/rlg/src/sink.rs`. Thread-spawning tests carry
    `#[cfg_attr(miri, ignore)]`.
 8. **Decisions that will be questioned later** get an ADR in
    `docs/adr/`; reversing one means a new ADR that supersedes it.
+9. **The four principles** (standards `AGENTS.md` §12): data first,
+   simplicity first, surgical changes, show me the code. State the data
+   layout before the logic, write the least code that is obviously
+   correct, touch only what the task needs, and back every claim about
+   correctness or speed with a test or a rerunnable benchmark.
 
 ## The one command
 
@@ -55,8 +69,9 @@ make verify
 ```
 
 It runs formatting, clippy with warnings denied, the full test suite,
-cargo-semver-checks, cargo-deny, cargo-vet, the complexity gate and the
-version checks: what CI runs on every pull request.
+cargo-semver-checks, cargo-deny, cargo-vet, the complexity and
+dependency gates and the version checks: what CI runs on every pull
+request.
 
 ## Leave alone
 

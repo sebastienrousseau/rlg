@@ -5,6 +5,65 @@ All notable changes to this project are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.22] - 2026-11-28
+
+A documentation and standards release, in lockstep with the website.
+Nothing in the public API or in any format's output changes.
+
+### Added
+
+- The website, [rustlogs.github.io](https://github.com/sebastienrousseau/rustlogs.github.io)
+  (<https://rustlogs.com/>), joins the lockstep family: it ships at
+  0.0.22 with the crates, and the README's ecosystem table lists it.
+  `scripts/check-readme.py` now fails when that table does not list
+  exactly the publishable crates and the website.
+- A dependency baseline (standards 0.0.16, `AGENTS.md` section 11):
+  `scripts/dependency-gate.py`, run by `make verify` and CI, holds the
+  third-party crates in `Cargo.lock`, the actions, the container images
+  and the installed tools to `scripts/dependency-baseline.json`, which
+  may only shrink, and requires a reason for every direct crate in
+  `docs/DEPENDENCIES.md`.
+- `DEPRECATIONS.md` and a deprecation policy in `docs/POLICIES.md`: a
+  removal or contract change is deprecated first and keeps working,
+  with a warning, for at least 90 days and one release.
+- Fuzz smoke runs on every pull request and push to `main` for all five
+  targets (`render_one_line` was missing), replaying the committed
+  corpus before fuzzing. In 0.0.21 the workflow ran only by hand,
+  although the CHANGELOG said `render_one_line` ran in CI.
+
+### Changed
+
+- **Deprecated:** running `rlg-mcp` with neither `--root` nor
+  `RLG_MCP_ROOT`. It keeps working with a warning until the first
+  release on or after 2027-02-26, not 0.0.22 as 0.0.21 announced; the
+  warning names the date.
+- The planned breaking milestone moves to 0.0.23 and every later
+  milestone one release on (`docs/IMPLEMENTATION-PLAN.md`).
+- `docs/POLICIES.md` no longer says there is no deprecation window
+  before 0.1.0. `AGENTS.md` adds the no-new-dependency rule and the
+  four principles.
+- The dev container's base image is pinned by digest and kept current
+  by Dependabot; Pages deploys once per push instead of twice;
+  `cargo semver-checks` covers `rlg-ebpf`; the link check covers the
+  crate READMEs; `check-doc-versions.sh` covers the WIT package and
+  `CITATION.cff`.
+- crates.io keywords: `logging`, `structured-logging`, `tracing`,
+  `opentelemetry`, `observability`.
+
+### Fixed
+
+- Documentation that contradicted the code: the rlg-mcp README (four
+  tools with `tail_logs_glob`, the prompt, two resources, stdio,
+  streamable HTTP and HTTP+SSE), "everything optional is off by
+  default" (`config` and rlg-otlp's `blocking` are on), the four-target
+  fuzz claim, the list of formats in the manual, versions stuck at
+  0.0.11 in crate READMEs and the WIT package, links to a missing
+  `doc/INPUT-FORMATS.md`, the README demo GIF on crates.io (now an
+  absolute URL), and `SECURITY.md`'s SBOM check, which used the
+  `.sig`/`.crt` form releases stopped shipping after 0.0.14.
+- rlg-tower no longer lists `tower` as a normal dependency; its library
+  uses only `tower-layer` and `tower-service` (`tower` stays for tests).
+
 ## [0.0.21] - 2026-11-28
 
 A security release. Nothing in the public API changes; the behaviour

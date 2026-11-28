@@ -37,7 +37,7 @@ updates:
   # Base images are pinned by digest (OpenSSF Scorecard
   # Pinned-Dependencies); these keep the digests current.
   - package-ecosystem: docker
-    directories: ["/", "/pkg/docker"]
+    directories: ["/", "/pkg/docker", "/.devcontainer"]
     schedule:
       interval: weekly
       day: monday

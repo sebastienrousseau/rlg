@@ -1,6 +1,6 @@
 [package]
 name = "rlg"
-version = "0.0.21"
+version = "0.0.22"
 edition = "2024"
 rust-version = "1.89.0"
 license = "MIT OR Apache-2.0"
@@ -15,7 +15,7 @@ repository = "https://github.com/sebastienrousseau/rlg"
 homepage = "https://rustlogs.com/"
 documentation = "https://docs.rs/rlg"
 readme = "README.md"
-keywords = ["debugging", "log", "rlg", "logging", "tracing"]
+keywords = ["logging", "structured-logging", "tracing", "opentelemetry", "observability"]
 categories = [
     "asynchronous",
     "development-tools",

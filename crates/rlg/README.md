@@ -31,7 +31,7 @@
 **Library reference**
 
 - [Why this approach?](#why-this-approach) — design rationale
-- [Capabilities in 0.0.11](#capabilities-in-0011) — release inventory
+- [Capabilities](#capabilities) — what the crate does today
 - [The fluent API](#the-fluent-api) — `Log::info(...).with(...).fire()`
 - [Output formats](#output-formats) — every `LogFormat` variant
 - [Sinks](#sinks) — `os_log`, `journald`, file, stdout
@@ -56,7 +56,7 @@
 
 ```toml
 [dependencies]
-rlg = "0.0.21"
+rlg = "0.0.22"
 ```
 
 ### Build from source
@@ -83,14 +83,16 @@ config, toml and envy crates.
 | :--- | :--- | :--- | :--- |
 | `config` (default) | `config`, `toml`, `envy`, `parking_lot` | `Config::load`, `save_to_file`, `set`, environment overrides | [Configuration](#configuration) |
 | `tokio` | `tokio` | `Config::load_async`, polling hot-reload (with `config`) | [Configuration](#configuration), `examples/example_config.rs` |
-| `tui` | `terminal_size` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities-in-0011) |
+| `tui` | `terminal_size`, `rustix` | Live terminal dashboard at `RLG_TUI=1` | [Capabilities](#capabilities) |
 | `tracing-layer` | `tracing-subscriber` | `RlgLayer` for composable `tracing` setups, with span context and scrub and span-export hooks | [Bridging existing facades](#bridging-existing-facades) |
-| `debug_enabled` | — | Verbose internal engine diagnostics | — |
+| `fast-queue` | — | An eight-shard ring buffer for many concurrent producers | [ADR 0009](../../docs/adr/0009-sharded-producer-queue.md) |
+| `uring` | `io-uring` | The `io_uring` file sink (`PlatformSink::UringFile`) on Linux; a no-op elsewhere | [ADR 0011](../../docs/adr/0011-io-uring-file-sink.md) |
+| `debug_enabled` | — | Nothing yet: declared, but no code reads it | — |
 
 ```toml
 # Example: async config loading + tracing bridge
 [dependencies]
-rlg = { version = "0.0.21", features = ["tokio", "tracing-layer"] }
+rlg = { version = "0.0.22", features = ["tokio", "tracing-layer"] }
 ```
 
 ---
@@ -193,7 +195,7 @@ Diagnostic codes and help text (`RlgError::code`, `help`,
 
 ---
 
-## Capabilities in 0.0.11
+## Capabilities
 
 - **14 output formats.** CLF, CEF, ELF, W3C, Apache Access,
   Log4j XML, JSON, GELF, Logstash, NDJSON, MCP, OTLP, Logfmt,
@@ -219,7 +221,7 @@ Diagnostic codes and help text (`RlgError::code`, `help`,
   records without an adapter.
 - **TOML configuration with hot-reload.** `Config::load_async`
   and `Config::hot_reload_async` (behind the `tokio` feature)
-  polls `/etc/rlg.toml` and picks up edits, including
+  poll the config file and pick up edits, including
   editor-style atomic replaces, without a restart.
 - **Bridges for `log` and `tracing`.** `rlg::init()`
   installs a `log::Log` implementation; the `tracing-layer`

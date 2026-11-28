@@ -43,8 +43,10 @@
 //! | `config` (default) | Load, save and `set` a `Config` from TOML and the environment. |
 //! | `tokio` | Async config loading and polling hot-reload. |
 //! | `tui` | Live terminal dashboard via `terminal_size`. |
+//! | `fast-queue` | An eight-shard producer queue for many concurrent producers. |
+//! | `uring` | The `io_uring` file sink on Linux; a no-op elsewhere. |
 //! | `tracing-layer` | Composable `tracing_subscriber::Layer`. |
-//! | `debug_enabled` | Verbose internal engine diagnostics. |
+//! | `debug_enabled` | Nothing yet: declared, but no code reads it. |
 //!
 //! ## Architecture
 //!

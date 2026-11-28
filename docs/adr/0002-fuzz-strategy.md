@@ -58,6 +58,13 @@ responsibility:
   inputs). Used to verify a target after touching its driver or
   the underlying API.
 
+**Update (0.0.22).** With `--sanitizer none` the five targets
+(`render_one_line` was added in 0.0.21) build and run on nightly, so
+`fuzz-smoke.yml` runs on every pull request and push to `main` again:
+each target replays its committed corpus (`fuzz/corpus/<target>/`)
+with `-runs=0`, then fuzzes for 30 seconds. The manual trigger stays
+for longer runs. OSS-Fuzz and Miri keep the roles above.
+
 This split ships full fuzz-target coverage of every untrusted-input
 entry point without paying the cost of debugging GHA-specific
 build-std issues that add nothing unique on top of Miri + OSS-Fuzz.

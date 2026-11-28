@@ -62,14 +62,14 @@ rlg /var/log/app.ndjson \
 
 ### Input
 
-For `0.0.11`, the CLI accepts the **canonical `LogFormat::JSON`
-shape** — one record per line. Unparseable lines pass through
+The CLI accepts the **canonical `LogFormat::JSON` shape**, one
+record per line. Unparseable lines pass through
 verbatim so you can pipe non-rlg log noise through `rlg`
 without losing entries.
 
 Parsers for the other input formats (MCP transport envelope,
-OTLP, ECS, GELF, Logstash) are tracked under
-[`crates/rlg-cli/doc/INPUT-FORMATS.md`](doc/INPUT-FORMATS.md)
+OTLP, ECS, GELF, Logstash) are planned under
+[WP-X2 in the implementation plan](../../docs/IMPLEMENTATION-PLAN.md#wp-x2-rlg-mcp-for-agents)
 and land incrementally.
 
 ## License

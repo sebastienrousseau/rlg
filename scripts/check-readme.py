@@ -4,14 +4,21 @@
 Checks the headings the template requires, in its order; that no
 {{TEMPLATE_TOKEN}} is left unresolved outside code; and the header
 structure: SPDX comment, centred logo and h1, the OpenSSF Scorecard
-badge, and the demo GIF.
+badge, and the demo GIF. The ecosystem table must list exactly the
+family: every publishable workspace crate plus the repositories in
+EXTERNAL, each once (REPO-STANDARD section 8).
 
 Usage: scripts/check-readme.py [README.md]
 """
 
 import re
 import sys
+import tomllib
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+# Lockstep members that live in their own repository.
+EXTERNAL = ["rustlogs.github.io"]
 
 HEADINGS = [
     "Contents",
@@ -60,9 +67,39 @@ def problems(text: str) -> list[str]:
     return found
 
 
+def family() -> list[str]:
+    """Publishable workspace crates plus the external members, sorted."""
+    workspace = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    names = list(EXTERNAL)
+    for member in workspace["workspace"]["members"]:
+        package = tomllib.loads((ROOT / member / "Cargo.toml").read_text())["package"]
+        if package.get("publish", True) is not False:
+            names.append(package["name"])
+    return sorted(names)
+
+
+def table_rows(text: str, project: str) -> list[str]:
+    """First-cell names of the table under "## The {project} ecosystem"."""
+    section = re.search(rf"(?ms)^## The {re.escape(project)} ecosystem$(.*?)^## ", text)
+    if not section:
+        return []
+    return re.findall(r"(?m)^\| \[?`([^`]+)`", section.group(1))
+
+
+def family_problems(text: str) -> list[str]:
+    h1 = re.search(r'<h1 align="center">([^<]+)</h1>', text)
+    rows = table_rows(text, h1.group(1).strip()) if h1 else []
+    want = family()
+    found = [f"ecosystem table lacks {n}" for n in want if n not in rows]
+    found += [f"ecosystem table lists {n}, not a family member" for n in rows if n not in want]
+    found += [f"ecosystem table lists {n} twice" for n in sorted(set(rows)) if rows.count(n) > 1]
+    return found
+
+
 def main() -> int:
     path = Path(sys.argv[1] if len(sys.argv) > 1 else "README.md")
-    issues = problems(path.read_text())
+    text = path.read_text()
+    issues = problems(text) + family_problems(text)
     for issue in issues:
         print(f"FAIL {path}: {issue}")
     if not issues:

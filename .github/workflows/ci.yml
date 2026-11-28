@@ -32,17 +32,6 @@ jobs:
     with:
       language: rust
 
-  docs:
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@3f9978aba68e59da1bd5a58d12fbaf142679fe5f # main 2026-10-13
-    with:
-      type: rust
-      redirect-crate: rlg
-
   # The shared security workflow runs `cargo deny check` with
   # `continue-on-error: true`, so a policy violation there never
   # fails the build. This job is the enforcing gate for deny.toml.
@@ -72,6 +61,18 @@ jobs:
         with:
           tool: rust-code-analysis-cli@0.0.25
       - run: scripts/complexity-gate.py
+
+  # Third-party dependencies (crates, actions, images, tools) held to
+  # scripts/dependency-baseline.json, which may only shrink; every
+  # direct crate needs its reason in docs/DEPENDENCIES.md.
+  dependencies:
+    name: Dependency baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/dependency-gate.py
 
   mcp-manifests:
     name: MCP manifests name the shipped version
@@ -111,7 +112,7 @@ jobs:
         run: mdbook build
       - uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
-          args: --offline --no-progress --exclude-path target/book/404.html target/book README.md
+          args: --offline --no-progress --exclude-path target/book/404.html target/book README.md crates/*/README.md
           fail: true
 
   # The declared minimum supported Rust version (rust-version) builds
