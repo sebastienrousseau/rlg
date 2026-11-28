@@ -53,7 +53,7 @@ See [`docs/adr/0001-loom-verified-ring-buffer.md`](docs/adr/0001-loom-verified-r
 
 ### Fuzzing (untrusted input)
 
-Four `cargo-fuzz` targets cover the deserialisation and scan entry points that accept untrusted input:
+Five `cargo-fuzz` targets cover the deserialisation, scan and rendering entry points that accept untrusted input:
 
 | Target | Exercises |
 | --- | --- |
@@ -61,8 +61,9 @@ Four `cargo-fuzz` targets cover the deserialisation and scan entry points that a
 | `log_format_from_str` | `<LogFormat as FromStr>::from_str` |
 | `config_load` | `toml::from_str::<Config>` |
 | `redact_scrub` | `Redactor::with_defaults().scrub` |
+| `render_one_line` | Every `LogFormat` rendering one record as a single line |
 
-CI runs each for 30 s per PR ([`.github/workflows/fuzz-smoke.yml`](.github/workflows/fuzz-smoke.yml)); OSS-Fuzz runs them continuously post-onboarding (see [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md)). To run locally:
+On every pull request and push to `main`, [`.github/workflows/fuzz-smoke.yml`](.github/workflows/fuzz-smoke.yml) replays each target's committed corpus (`fuzz/corpus/<target>/`, today `render_one_line`) and then fuzzes it for 30 s; a manual run can pick one target and a longer budget. OSS-Fuzz runs them continuously post-onboarding (see [`docs/OSS-FUZZ.md`](docs/OSS-FUZZ.md)). To run locally:
 
 ```bash
 cargo install cargo-fuzz --locked
