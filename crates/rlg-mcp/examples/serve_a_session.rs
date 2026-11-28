@@ -46,7 +46,14 @@ async fn main() -> std::io::Result<()> {
     let (client_io, server_io) = tokio::io::duplex(1 << 16);
     drop(tokio::spawn(async move {
         if let Ok(server) =
-            rlg_mcp::LogServer::new().serve(server_io).await
+            // The tools read only under a root; the example's log file
+            // lives in the temp directory.
+            rlg_mcp::LogServer::with_root(
+                rlg_mcp::Root::new(std::env::temp_dir())
+                    .expect("temp dir"),
+            )
+            .serve(server_io)
+            .await
         {
             let _ = server.waiting().await;
         }

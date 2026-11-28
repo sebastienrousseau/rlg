@@ -38,8 +38,11 @@ async fn session() -> RunningService<RoleClient, ()> {
     // `serve` returns once the handshake is done, so the server must
     // already be waiting when the client starts talking.
     drop(tokio::spawn(async move {
-        if let Ok(server) =
-            rlg_mcp::LogServer::new().serve(server_io).await
+        if let Ok(server) = rlg_mcp::LogServer::with_root(
+            rlg_mcp::Root::new(std::env::temp_dir()).expect("temp dir"),
+        )
+        .serve(server_io)
+        .await
         {
             let _ = server.waiting().await;
         }

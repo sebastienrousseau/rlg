@@ -68,6 +68,8 @@ const ERROR: &str = r#"{"session_id":2,"time":"t","level":"ERROR","component":"d
 /// Send `lines` to the server and collect the replies.
 fn converse(lines: &[&str]) -> Vec<String> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+        .arg("--root")
+        .arg(std::env::temp_dir())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -300,4 +302,34 @@ fn a_bad_argument_is_a_usage_error() {
     let text = String::from_utf8_lossy(&out.stderr);
     assert!(text.contains("telepathy"), "{text}");
     assert!(text.contains("Usage:"), "{text}");
+}
+
+#[test]
+fn a_missing_root_is_refused_and_no_root_warns() {
+    let out = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+        .args(["--root", "/definitely/not/a/dir"])
+        .stdin(Stdio::null())
+        .output()
+        .expect("runs");
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("--root"));
+
+    let out = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+        .env_remove("RLG_MCP_ROOT")
+        .stdin(Stdio::null())
+        .output()
+        .expect("runs");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("no --root given"), "{stderr}");
+}
+
+#[test]
+fn help_documents_root() {
+    let out = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
+        .arg("--help")
+        .output()
+        .expect("runs");
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("--root <dir>")
+    );
 }

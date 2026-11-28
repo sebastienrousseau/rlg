@@ -4,18 +4,82 @@
 
 //! The four operations as plain functions over a file path, callable
 //! and testable without a transport.
+//!
+//! Every read is bounded: a file is read up to [`MAX_FILE_BYTES`], a
+//! line longer than [`MAX_LINE_BYTES`] is skipped, and no answer holds
+//! more than [`MAX_RECORDS`] records. A tail keeps only the last `n`
+//! records as it reads, instead of every record in the file.
 
+use rlg::log::Log;
 use rlg::log_format::LogFormat;
 use rlg::log_level::LogLevel;
 use rlg_cli::{Filter, parse_record, render};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::io::{BufRead, BufReader, Read};
+use std::path::{Path, PathBuf};
 
-// ---------------------------------------------------------------------------
-// Tool implementations — pure functions over a file path.
-// ---------------------------------------------------------------------------
+/// The most bytes read from one file.
+pub const MAX_FILE_BYTES: u64 = 64 << 20;
+/// The longest line parsed; longer lines are skipped.
+pub const MAX_LINE_BYTES: usize = 1 << 20;
+/// The most records one answer holds.
+pub const MAX_RECORDS: usize = 10_000;
+
+/// Calls `each` with every parseable record of `path`, within the
+/// read limits.
+fn for_each_record(
+    path: &Path,
+    mut each: impl FnMut(Log),
+) -> std::io::Result<()> {
+    let mut reader =
+        BufReader::new(File::open(path)?.take(MAX_FILE_BYTES));
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        if reader.read_until(b'\n', &mut line)? == 0 {
+            return Ok(());
+        }
+        if line.len() > MAX_LINE_BYTES {
+            continue;
+        }
+        if let Ok(text) = std::str::from_utf8(&line)
+            && let Ok(record) = parse_record(text.trim_end())
+        {
+            each(record);
+        }
+    }
+}
+
+/// The last `n` (at most [`MAX_RECORDS`]) items pushed.
+struct Tail<T> {
+    n: usize,
+    items: VecDeque<T>,
+}
+
+impl<T> Tail<T> {
+    fn new(n: usize) -> Self {
+        let n = n.min(MAX_RECORDS);
+        Self {
+            n,
+            items: VecDeque::with_capacity(n.min(1_024)),
+        }
+    }
+
+    fn push(&mut self, item: T) {
+        if self.n == 0 {
+            return;
+        }
+        if self.items.len() == self.n {
+            let _ = self.items.pop_front();
+        }
+        self.items.push_back(item);
+    }
+
+    fn into_vec(self) -> Vec<T> {
+        self.items.into()
+    }
+}
 
 /// Return the last `n` parseable records from `path`, rendered in
 /// `Logfmt`. Unparseable lines are skipped.
@@ -23,20 +87,13 @@ use std::path::Path;
 /// # Errors
 /// Returns `io::Error` if the file cannot be opened or read.
 pub fn tail_log(path: &Path, n: usize) -> std::io::Result<Vec<String>> {
-    let file = File::open(path)?;
-    let mut all = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line) {
-            all.push(render(record, LogFormat::Logfmt));
-        }
-    }
-    let start = all.len().saturating_sub(n);
-    Ok(all.split_off(start))
+    let mut tail = Tail::new(n);
+    for_each_record(path, |r| tail.push(render(r, LogFormat::Logfmt)))?;
+    Ok(tail.into_vec())
 }
 
-/// Apply `filter` to every record in `path` and return matches
-/// rendered in `format`.
+/// Apply `filter` to every record in `path` and return the first
+/// [`MAX_RECORDS`] matches rendered in `format`.
 ///
 /// # Errors
 /// Returns `io::Error` if the file cannot be opened or read.
@@ -45,16 +102,12 @@ pub fn filter_log(
     filter: &Filter,
     format: LogFormat,
 ) -> std::io::Result<Vec<String>> {
-    let file = File::open(path)?;
     let mut out = Vec::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line)
-            && filter.matches(&record)
-        {
+    for_each_record(path, |record| {
+        if out.len() < MAX_RECORDS && filter.matches(&record) {
             out.push(render(record, format));
         }
-    }
+    })?;
     Ok(out)
 }
 
@@ -65,18 +118,14 @@ pub fn filter_log(
 pub fn summarize_errors(
     path: &Path,
 ) -> std::io::Result<BTreeMap<String, u64>> {
-    let file = File::open(path)?;
     let mut buckets: BTreeMap<String, u64> = BTreeMap::new();
-    for line in BufReader::new(file).lines() {
-        let line = line?;
-        if let Ok(record) = parse_record(&line)
-            && record.level.to_numeric() >= LogLevel::ERROR.to_numeric()
-        {
+    for_each_record(path, |record| {
+        if record.level.to_numeric() >= LogLevel::ERROR.to_numeric() {
             *buckets
                 .entry(record.component.to_string())
                 .or_insert(0) += 1;
         }
-    }
+    })?;
     Ok(buckets)
 }
 
@@ -94,26 +143,31 @@ pub fn tail_logs_glob(
     n: usize,
     level: Option<LogLevel>,
 ) -> Result<Vec<String>, String> {
-    let mut paths: Vec<std::path::PathBuf> = glob::glob(pattern)
+    let mut paths: Vec<PathBuf> = glob::glob(pattern)
         .map_err(|e| format!("invalid glob pattern: {e}"))?
         .filter_map(Result::ok)
         .collect();
     paths.sort();
-    let mut all = Vec::new();
+    tail_files(&paths, n, level)
+}
+
+/// The last `n` records across `paths`, read in order.
+pub(crate) fn tail_files(
+    paths: &[PathBuf],
+    n: usize,
+    level: Option<LogLevel>,
+) -> Result<Vec<String>, String> {
+    let mut tail = Tail::new(n);
     for path in paths {
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| format!("read {}: {e}", path.display()))?;
-        for line in content.lines() {
-            if let Ok(record) = parse_record(line) {
-                if let Some(min) = level
-                    && record.level.to_numeric() < min.to_numeric()
-                {
-                    continue;
-                }
-                all.push(render(record, LogFormat::Logfmt));
+        for_each_record(path, |record| {
+            let keep = level.is_none_or(|min| {
+                record.level.to_numeric() >= min.to_numeric()
+            });
+            if keep {
+                tail.push(render(record, LogFormat::Logfmt));
             }
-        }
+        })
+        .map_err(|e| format!("read {}: {e}", path.display()))?;
     }
-    let start = all.len().saturating_sub(n);
-    Ok(all.split_off(start))
+    Ok(tail.into_vec())
 }

@@ -36,16 +36,21 @@ pub mod transport;
 
 mod model;
 mod ops;
+mod outcome;
+mod root;
 
 pub use model::{
     ErrorSummary, FilterLogArgs, Records, SummarizeErrorsArgs,
     TailLogArgs, TailLogsGlobArgs,
 };
-pub use ops::{filter_log, summarize_errors, tail_log, tail_logs_glob};
+pub use ops::{
+    MAX_FILE_BYTES, MAX_LINE_BYTES, MAX_RECORDS, filter_log,
+    summarize_errors, tail_log, tail_logs_glob,
+};
+pub use root::{
+    MAX_GLOB_FILES, Root, binds_beyond_loopback, take_root_arg,
+};
 
-use rlg::log_format::LogFormat;
-use rlg::log_level::LogLevel;
-use rlg_cli::Filter;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::tool::{ToolCallContext, schema_for_output};
 use rmcp::handler::server::wrapper::Parameters;
@@ -63,55 +68,11 @@ use rmcp::service::RequestContext;
 use rmcp::{
     RoleServer, ServerHandler, tool, tool_handler, tool_router,
 };
-use serde::Serialize;
-use std::fmt;
-use std::path::Path;
+use std::sync::Arc;
 
-/// A failure to read `path`, worded for a model: the path is what
-/// makes the message actionable.
-fn read_error(path: &str, e: &std::io::Error) -> String {
-    format!("Cannot read `{path}`: {e}")
-}
-
-fn parse_level(name: &str) -> Result<LogLevel, String> {
-    name.parse::<LogLevel>().map_err(|e| {
-        format!(
-            "{e}. The levels are TRACE, DEBUG, VERBOSE, INFO, WARN, \
-             ERROR, FATAL and CRITICAL."
-        )
-    })
-}
-
-/// A tool result carrying the same answer twice: as text for the
-/// model and as a structured value for the client.
-///
-/// A failure keeps the text only. The structured schema describes a
-/// result, and an error is not one.
-fn reply<T: Serialize + fmt::Display>(
-    outcome: Result<T, String>,
-) -> Result<CallToolResult, ErrorData> {
-    match outcome {
-        Ok(value) => {
-            let structured =
-                serde_json::to_value(&value).map_err(|e| {
-                    ErrorData::internal_error(e.to_string(), None)
-                })?;
-            let mut result =
-                CallToolResult::success(vec![ContentBlock::text(
-                    value.to_string(),
-                )]);
-            result.structured_content = Some(structured);
-            Ok(result)
-        }
-        // A tool that ran and could not do the job: a *successful*
-        // JSON-RPC response carrying `isError`, so the model sees the
-        // text and can react to it. A JSON-RPC error would be handled
-        // by the client and never shown.
-        Err(message) => {
-            Ok(CallToolResult::error(vec![ContentBlock::text(message)]))
-        }
-    }
-}
+use outcome::{
+    filter_log_outcome, read_error, reply, tail_logs_glob_outcome,
+};
 
 // ---------------------------------------------------------------------------
 // The server.
@@ -121,10 +82,12 @@ fn reply<T: Serialize + fmt::Display>(
 /// [`rmcp`].
 ///
 /// Cheap to create and to clone; the HTTP transports create one per
-/// session. It holds nothing between calls.
+/// session. It holds nothing between calls but its [`Root`]: every
+/// path a tool is given is resolved under it.
 #[derive(Debug, Clone)]
 pub struct LogServer {
     tool_router: ToolRouter<Self>,
+    root: Option<Arc<Root>>,
 }
 
 impl Default for LogServer {
@@ -143,12 +106,34 @@ impl Default for LogServer {
     reason = "the SDK's tool router calls tools as methods"
 )]
 impl LogServer {
-    /// A server with all four tools registered.
+    /// A server with all four tools registered, reading under the
+    /// current directory (or under nothing, if it cannot be resolved).
     #[must_use]
     pub fn new() -> Self {
         Self {
             tool_router: Self::tool_router(),
+            root: Root::new(".").ok().map(Arc::new),
         }
+    }
+
+    /// A server reading only under `root`.
+    #[must_use]
+    pub fn with_root(root: Root) -> Self {
+        Self {
+            tool_router: Self::tool_router(),
+            root: Some(Arc::new(root)),
+        }
+    }
+
+    /// `requested`, resolved under the root.
+    fn resolve(
+        &self,
+        requested: &str,
+    ) -> Result<std::path::PathBuf, String> {
+        self.root.as_deref().map_or_else(
+            || Err("no log root is configured".to_string()),
+            |root| root.resolve(requested),
+        )
     }
 
     #[tool(
@@ -167,11 +152,11 @@ impl LogServer {
         &self,
         Parameters(args): Parameters<TailLogArgs>,
     ) -> Result<CallToolResult, ErrorData> {
-        reply(
-            tail_log(Path::new(&args.path), args.n)
+        reply(self.resolve(&args.path).and_then(|path| {
+            tail_log(&path, args.n)
                 .map(Records::from)
-                .map_err(|e| read_error(&args.path, &e)),
-        )
+                .map_err(|e| read_error(&args.path, &e))
+        }))
     }
 
     #[tool(
@@ -190,7 +175,10 @@ impl LogServer {
         &self,
         Parameters(args): Parameters<FilterLogArgs>,
     ) -> Result<CallToolResult, ErrorData> {
-        reply(filter_log_outcome(&args))
+        reply(
+            self.resolve(&args.path)
+                .and_then(|path| filter_log_outcome(&path, &args)),
+        )
     }
 
     #[tool(
@@ -209,11 +197,11 @@ impl LogServer {
         &self,
         Parameters(args): Parameters<SummarizeErrorsArgs>,
     ) -> Result<CallToolResult, ErrorData> {
-        reply(
-            summarize_errors(Path::new(&args.path))
+        reply(self.resolve(&args.path).and_then(|path| {
+            summarize_errors(&path)
                 .map(ErrorSummary::from)
-                .map_err(|e| read_error(&args.path, &e)),
-        )
+                .map_err(|e| read_error(&args.path, &e))
+        }))
     }
 
     #[tool(
@@ -232,34 +220,11 @@ impl LogServer {
         &self,
         Parameters(args): Parameters<TailLogsGlobArgs>,
     ) -> Result<CallToolResult, ErrorData> {
-        reply(tail_logs_glob_outcome(&args))
+        reply(self.root.as_deref().map_or_else(
+            || Err("no log root is configured".to_string()),
+            |root| tail_logs_glob_outcome(root, &args),
+        ))
     }
-}
-
-fn filter_log_outcome(args: &FilterLogArgs) -> Result<Records, String> {
-    let mut filter = Filter::new();
-    if let Some(level) = args.min_level.as_deref() {
-        filter = filter.min_level(parse_level(level)?);
-    }
-    if let Some(component) = args.component.as_deref() {
-        filter = filter.component(component);
-    }
-    let format = args.format.parse::<LogFormat>().map_err(|e| {
-        format!(
-            "{e}. Use an rlg LogFormat name such as Logfmt or JSON."
-        )
-    })?;
-    filter_log(Path::new(&args.path), &filter, format)
-        .map(Records::from)
-        .map_err(|e| read_error(&args.path, &e))
-}
-
-fn tail_logs_glob_outcome(
-    args: &TailLogsGlobArgs,
-) -> Result<Records, String> {
-    let level = args.level.as_deref().map(parse_level).transpose()?;
-    tail_logs_glob(&args.glob_pattern, args.lines, level)
-        .map(Records::from)
 }
 
 /// The name of the one prompt.
@@ -457,13 +422,11 @@ impl ServerHandler for LogServer {
             return Ok(ReadResourceResult::new(vec![contents]).into());
         }
         if let Some(path) = uri.strip_prefix(TAIL_URI_PREFIX) {
-            let lines =
-                tail_log(Path::new(path), 100).map_err(|e| {
-                    ErrorData::resource_not_found(
-                        read_error(path, &e),
-                        None,
-                    )
-                })?;
+            let not_found =
+                |m: String| ErrorData::resource_not_found(m, None);
+            let resolved = self.resolve(path).map_err(not_found)?;
+            let lines = tail_log(&resolved, 100)
+                .map_err(|e| not_found(read_error(path, &e)))?;
             let contents =
                 ResourceContents::text(lines.join("\n"), uri)
                     .with_mime_type("text/plain");
