@@ -73,6 +73,18 @@ jobs:
           tool: rust-code-analysis-cli@0.0.25
       - run: scripts/complexity-gate.py
 
+  # Third-party dependencies (crates, actions, images, tools) held to
+  # scripts/dependency-baseline.json, which may only shrink; every
+  # direct crate needs its reason in docs/DEPENDENCIES.md.
+  dependencies:
+    name: Dependency baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/dependency-gate.py
+
   mcp-manifests:
     name: MCP manifests name the shipped version
     runs-on: ubuntu-latest
