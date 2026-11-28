@@ -32,17 +32,6 @@ jobs:
     with:
       language: rust
 
-  docs:
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    uses: sebastienrousseau/pipelines/.github/workflows/docs.yml@3f9978aba68e59da1bd5a58d12fbaf142679fe5f # main 2026-10-13
-    with:
-      type: rust
-      redirect-crate: rlg
-
   # The shared security workflow runs `cargo deny check` with
   # `continue-on-error: true`, so a policy violation there never
   # fails the build. This job is the enforcing gate for deny.toml.

@@ -37,7 +37,7 @@ version checks. Run it before opening a pull request.
 | Coverage (95% floor) | `cargo tarpaulin` (reads `tarpaulin.toml`) | `ci.yml` |
 | Dependency policy | `cargo deny --all-features check` | `ci.yml` |
 | Dependency audit trail | `cargo vet --locked` | `cargo-vet.yml` |
-| API breakage | `cargo semver-checks check-release --workspace --exclude rlg-ebpf` | `semver-checks.yml` |
+| API breakage | `cargo semver-checks check-release --workspace` | `semver-checks.yml` |
 | Complexity ceilings | `scripts/complexity-gate.py` | `ci.yml` |
 | Install snippets | `scripts/check-doc-versions.sh` | `ci.yml` |
 | MCP manifests | `scripts/check-mcp-manifests.sh` | `ci.yml` |
