@@ -33,6 +33,9 @@ API or in any format's output changes.
   through `rlg_core::Record`; the format tests pass unchanged.
 - The breaking milestone moves to 0.0.24, and each later milestone one
   release on (`docs/IMPLEMENTATION-PLAN.md`).
+- Dependencies (Dependabot #256, #257): clap 4.6.10; new digests for the
+  `rust:1.100-bookworm` build images and the dev container base, now
+  tag 2.1.
 
 ## [0.0.22] - 2026-11-28
 
