@@ -87,7 +87,7 @@ avoid an advisory.
 | `tokio-test` | rlg (dev) | Async test helpers | |
 | `tokio-util` | rlg-mcp | Cancellation and codecs for the transports | |
 | `toml` | rlg (`config` feature), fuzz | TOML config load and save | |
-| `tower` | rlg-tower | Middleware stack | |
+| `tower` | rlg-tower (dev) | `ServiceExt` and a real service stack in middleware tests | |
 | `tower-layer` | rlg-tower | `Layer` trait | |
 | `tower-service` | rlg-tower | `Service` trait | |
 | `tracing` | rlg, rlg-otlp, rlg-redact (dev) | Emits spans and events in bridge tests | |
