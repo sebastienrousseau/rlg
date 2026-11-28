@@ -32,9 +32,21 @@ with the maintainer's other Rust crates.
   release's CHANGELOG section marks breaking changes as **Breaking**, and
   `cargo-semver-checks` runs on every pull request so none is
   accidental.
-- There is no deprecation window before `0.1.0`: a removed item is gone
-  in the release that removes it, with the replacement named in the
-  CHANGELOG.
+- A removal or a change to the contract (an API item, a flag, a format's
+  output, a default) is deprecated first; see [Deprecation](#deprecation).
+
+## Deprecation
+
+A deprecation comes before any removal or change of the contract. The
+deprecated item keeps working, with a warning (`#[deprecated]` for an
+API item, a message on standard error for a flag or default), and is
+listed in [DEPRECATIONS.md](../DEPRECATIONS.md) with what replaces it,
+the release that deprecated it and a removal date. That date is at
+least 90 days after the deprecating release; the change ships in the
+first release on or after it, and in a later release than the one that
+announced it, never earlier. A planned breaking release carries only
+the removals whose dates have passed. A vulnerability fix may break
+sooner, and says why in its CHANGELOG entry.
 
 ## Output stability
 
