@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# codespell: CI (ci.yml, docs lint) and pre-commit.
+[codespell]
+skip = ./target,./fuzz/target,./fuzz/corpus,./Cargo.lock,./supply-chain,*.gif,*.png,*.svg,./.git,./.claude
+# wit: WebAssembly Interface Types. intoto: the in-toto attestation
+# format. unparseable: printed by rlg-report, so part of its output.
+# caf: a percent-decoding test vector ("caf%C3%A9"). nd: NDJSON.
+ignore-words-list = wit,intoto,unparseable,caf,nd

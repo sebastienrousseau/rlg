@@ -280,13 +280,17 @@
     "cargo-criterion",
     "cargo-deny",
     "cargo-fuzz",
+    "cargo-hack",
     "cargo-outdated",
     "cargo-semver-checks",
     "cargo-vet",
+    "codespell",
+    "https://github.com/codespell-project/codespell",
     "https://github.com/doublify/pre-commit-rust",
     "https://github.com/gitleaks/gitleaks",
     "https://github.com/pre-commit/pre-commit-hooks",
     "mdbook",
+    "reuse",
     "rust-code-analysis-cli"
   ]
 }

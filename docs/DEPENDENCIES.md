@@ -16,7 +16,7 @@ prints how many of each there are:
 | Crates | third-party packages in `Cargo.lock`, transitive included |
 | Actions | `uses:` in `.github/` |
 | Container images | `FROM` lines and the dev container |
-| Tools | install-action `tool:`, `cargo install`, `npx`, pre-commit repos |
+| Tools | install-action `tool:`, `cargo install`, `npx`, `pipx run`, pre-commit repos |
 
 The gate fails on any name not in the baseline, and on any direct crate
 below that has no row here. Removing a dependency always passes; run
@@ -36,6 +36,16 @@ counts as adding them.
 Cryptography, TLS and other protocol stacks with a security history,
 the toolchain and operating-system interfaces stay dependencies: they
 are safer from an audited source than written here.
+
+## Approved additions
+
+Each row records the maintainer's approval of one named dependency.
+
+| Dependency | Kind | Approved | Why |
+| --- | --- | --- | --- |
+| `reuse` 6.3.0 | tool (CI, `pipx run`) | 2026-11-28 | REUSE compliance lint (REPO-STANDARD section 7); no in-house equivalent of the specification's checker is worth owning |
+| `codespell` 2.4.3 | tool (CI `pipx run`, pre-commit hook) | 2026-11-28 | Spelling in the docs-lint job and pre-commit (REPO-STANDARD section 8) |
+| `cargo-hack` 0.6.46 | tool (CI, install-action) | 2026-11-28 | Each feature alone per push, the feature powerset weekly (REPO-STANDARD section 6) |
 
 ## Direct crates
 

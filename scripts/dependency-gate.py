@@ -8,7 +8,8 @@ Four kinds are counted (standards AGENTS.md section 11):
 - actions: every GitHub Action or reusable workflow in .github/
 - images:  every container base image (Dockerfiles, dev container)
 - tools:   every tool CI, make or pre-commit installs
-           (install-action `tool:`, `cargo install`, `npx`, hook repos)
+           (install-action `tool:`, `cargo install`, `npx`, `pipx run`,
+           hook repos)
 
 The gate fails when any of them names something that is not in
 scripts/dependency-baseline.json, and when a direct crate dependency
@@ -37,6 +38,7 @@ STAGE = re.compile(r"^\s*FROM\s+.*\s+AS\s+(\S+)", re.M | re.I)
 IMAGE = re.compile(r'"image"\s*:\s*"([^"@:]+)')
 TOOL = re.compile(r"^\s*tool:\s*(.+)$", re.M)
 CARGO_INSTALL = re.compile(r"cargo (?:install|binstall)\s+(?:--\S+\s+)*([A-Za-z0-9_-]+)")
+PIPX = re.compile(r"pipx run\s+(?:--\S+\s+)*([A-Za-z0-9_.-]+)")
 NPX = re.compile(r"npx\s+(?:-y\s+)?(@?[A-Za-z0-9_./-]+)")
 HOOK_REPO = re.compile(r"^\s*-\s*repo:\s*(\S+)", re.M)
 
@@ -80,6 +82,7 @@ def images():
 
 def unversioned(name):
     """`name` without an `@version` suffix (a leading `@` is an npm scope)."""
+    name = name.split("==")[0]
     at = name.find("@", 1)
     return name[:at] if at > 0 else name
 
@@ -92,6 +95,7 @@ def tools():
         for line in TOOL.findall(text):
             found.update(t.strip() for t in line.split(","))
         found.update(NPX.findall(text))
+        found.update(PIPX.findall(text))
     for name in ("Makefile", "GNUmakefile"):
         found.update(CARGO_INSTALL.findall(read(ROOT / name)))
     found.update(HOOK_REPO.findall(read(ROOT / ".pre-commit-config.yaml")))
