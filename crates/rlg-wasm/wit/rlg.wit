@@ -8,10 +8,11 @@
 // path uses the `wasm-bindgen` JavaScript ABI instead.
 //
 // See `docs/adr/0013-wasi-0.2-component.md` for the wire-up
-// status. Phase 22.1 (planned) delivers the `wit-bindgen`
-// integration that turns this WIT into a runnable component.
+// status. WP-X4 in `docs/IMPLEMENTATION-PLAN.md` (planned) delivers
+// the `wit-bindgen` integration that turns this WIT into a runnable
+// component. The package version moves with the crate's.
 
-package rlg:core@0.0.11;
+package rlg:core@0.0.22;
 
 /// Structured logging surface exposed by rlg-wasm to a WASI 0.2
 /// host. Mirrors the JavaScript surface (`RlgWasm::info`,

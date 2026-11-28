@@ -13,6 +13,19 @@
 > audit findings still to be confirmed by the work package's
 > fail-first test.
 >
+> **Renumbered 2026-11-28:** 0.0.22 became a documentation and
+> standards release (the website, rustlogs.com, joins the lockstep
+> family), so every milestone from M2 on moved one release later:
+> M2 is now 0.0.23 and M9 ends at 0.0.33.
+>
+> **Deprecations first:** a removal or contract change in a breaking
+> milestone ships only after it has been listed in
+> [`DEPRECATIONS.md`](../DEPRECATIONS.md) for at least 90 days and
+> one release, with a warning while it keeps working
+> ([policy](POLICIES.md#deprecation)). A breaking release takes only
+> the items whose date has passed; the rest wait for the first
+> release on or after their date.
+>
 > **Audience:** maintainers and contributors picking up a work
 > package, and adopters who want to know what rlg commits to.
 
@@ -24,7 +37,7 @@
   holds and its gate is required on `main`.
 - Section 2 lists the ceilings that code cannot lift.
 - Section 3 is the work: 37 work packages (WP) grouped into nine
-  milestones across twelve releases, two of them breaking. Every WP names the problem with its
+  milestones across thirteen releases, two of them breaking. Every WP names the problem with its
   evidence, the change, the files, the public API (with code), the
   fail-first test, the gate, and the semver impact.
 - Section 4 maps milestones to releases; section 5 records the
@@ -247,7 +260,7 @@ organisation change, not a pull request.
 | OpenSSF Best Practices Gold | Passing | Silver | Gold needs two unassociated significant contributors |
 
 Alerts #6 and #76 were dismissed as "won't fix" on 2026-11-27 for
-this reason, and decision 4 keeps it so until after 0.0.27. WP-S6 below moves the protection rules into a
+this reason, and decision 4 keeps it so until after 0.0.28. WP-S6 below moves the protection rules into a
 repository ruleset so the parts that are enforced become visible.
 
 ## 3. Work packages
@@ -297,7 +310,9 @@ impl Root {
 - **Gate:** a fuzz target over `Root::resolve`.
 - **Semver:** decided 2026-11-27: in 0.0.21 `--root` defaults to the
   current directory and the server warns at start that it should be
-  set; it becomes required in 0.0.22 (the planned breaking release).
+  set. Under the deprecation policy it becomes required in the first
+  release on or after 2027-02-26 (90 days after 0.0.21), not in the
+  0.0.23 breaking release.
   The path guard blocks escapes from the default root from day one.
 
 #### WP-S2. No injection in any renderer
@@ -365,7 +380,7 @@ impl Root {
   config files, environment, network collector, MCP clients, log
   files read by tools).
 
-### Milestone M2 (0.0.22): correct output and the one API reset
+### Milestone M2 (0.0.23): correct output and the one API reset
 
 The first of two planned breaking releases. Every caller-facing change that can land together does: the output fixes, the `Sink` trait, the overflow policy, the API reset, the format cuts and the stdout default. Upgrade notes cover all of them in one place.
 
@@ -408,7 +423,7 @@ pub const fn otlp_severity(level: LogLevel) -> u8 {
 }
 ```
 
-  Records carry the time as nanoseconds from WP-P1 (0.0.25); until
+  Records carry the time as nanoseconds from WP-P1 (0.0.26); until
   then the renderer parses `Log::time` back to nanoseconds once. Keep
   that parser to one small function with its own tests, marked for
   deletion in WP-P1, so removing it is painless. Attributes go
@@ -614,21 +629,21 @@ impl LockFreeEngine {
   away with the sink trait.
 - **Test first:** a `cargo public-api` snapshot committed in this
   release; CI fails on any later unplanned change to it.
-- **Semver:** breaking, planned for 0.0.22.
+- **Semver:** breaking, planned for 0.0.23.
 
 #### WP-D1. Defaults that work on first run
 
 - Decided 2026-11-27: the default sink is stdout on every OS;
   journald and os_log are chosen explicitly (`set_sink`, config, or
   `RLG_SINK=journald`). An ADR records it, since it reverses the
-  native-first default. Lands in 0.0.22 with the other breaking
+  native-first default. Lands in 0.0.23 with the other breaking
   changes.
 - macOS: real `os_log` through `os_log_create` with a subsystem, or
   document that the sink is syslog and rename it.
 - Fix `docs/tutorials/getting-started.md` (`journalctl -t rlg` once
   `SYSLOG_IDENTIFIER` exists, the macOS predicate, the fallback).
 
-### Milestone M3 (0.0.23): lifecycle and config
+### Milestone M3 (0.0.24): lifecycle and config
 
 #### WP-R2. Flush, shutdown, panics, exit
 
@@ -666,7 +681,7 @@ impl LockFreeEngine {
 - **Semver:** behaviour change for configs that relied on being
   ignored (CHANGELOG, migration note).
 
-### Milestone M4 (0.0.24): filters and one tracing path
+### Milestone M4 (0.0.25): filters and one tracing path
 
 #### WP-A3. Per-target filtering
 
@@ -686,10 +701,11 @@ impl LockFreeEngine {
 - With the `tracing-layer` feature, `init()` installs
   `registry().with(RlgLayer)` so span context, scrub, span export and
   `traceparent` work without hand-built setup; `RlgSubscriber` is
-  deprecated in 0.0.24 and removed in 0.0.25, the second planned
-  breaking release.
+  deprecated in 0.0.25 and removed in the second planned breaking
+  release, 0.0.26, or the first release at least 90 days after the
+  deprecation if that is later.
 
-### Milestone M5 (0.0.25): producer-path performance
+### Milestone M5 (0.0.26): producer-path performance
 
 The second and last planned breaking release: `Log` changes shape, and `RlgSubscriber` is removed.
 
@@ -718,7 +734,7 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
 - `LogEvent` size tracked by a `const` assertion (target: 64 bytes
   after WP-P1).
 
-### Milestone M6 (0.0.26): flusher, layer and exporter performance
+### Milestone M6 (0.0.27): flusher, layer and exporter performance
 
 #### WP-P3. Batch writes
 
@@ -750,7 +766,7 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
 - **Gate:** an exporter bench (spans per second to a local
   collector) in the suite.
 
-### Milestone M7 (0.0.27): measured and verified
+### Milestone M7 (0.0.28): measured and verified
 
 #### WP-B1. A reproducible benchmark suite
 
@@ -786,7 +802,7 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
 - Replace `tests/test_coverage_*.rs` with behaviour tests; add
   `scripts/check-assertions.py` (fails on a test with no assertion).
 
-### Milestone M8 (0.0.28 to 0.0.29): observability that leads
+### Milestone M8 (0.0.29 to 0.0.30): observability that leads
 
 #### WP-O1. OTLP logs and metrics from the engine
 
@@ -820,7 +836,7 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
   a `Log::fire` record with `password=hunter2` is scrubbed with the
   engine hook set.
 
-### Milestone M9 (0.0.30 to 0.0.32): differentiators and finish
+### Milestone M9 (0.0.31 to 0.0.33): differentiators and finish
 
 #### WP-X1. TLS behind a feature
 
@@ -881,13 +897,13 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
   (rmcp, axum, hyper, tokio, serde_json, regex) or trust their
   publishers explicitly; commit the exemption count in
   `scripts/vet-exemptions.txt` and fail CI if it grows.
-  Target: under 40 exemptions by 0.0.32.
+  Target: under 40 exemptions by 0.0.33.
 
 #### WP-Q2. Architecture debt
 
 - Break the `rlg` to `rlg-cli` dev-dependency cycle: move the
   round-trip tests into `rlg-cli`'s own tests.
-- The API items that used to be here moved to WP-Q3 (0.0.22), so
+- The API items that used to be here moved to WP-Q3 (0.0.23), so
   callers adapt once.
 - `cargo hack check --each-feature --no-dev-deps` in CI.
 - A `public-api` snapshot (`cargo public-api`) committed and diffed
@@ -907,32 +923,37 @@ The second and last planned breaking release: `Log` changes shape, and `RlgSubsc
 | Release | Milestone | Work packages | Breaking | Categories lifted |
 | --- | --- | --- | --- | --- |
 | 0.0.21 | M1 | S1 to S6 | No | C5, C6 |
-| 0.0.22 | M2 | C1 to C7, A1, R1, Q3, D1 | Yes (planned) | C1, C2, C3, C8 |
-| 0.0.23 | M3 | R2, A2 | No (behaviour: config now applies) | C3, C2, C10 |
-| 0.0.24 | M4 | A3, A4 | No (`RlgSubscriber` deprecated) | C2, C8 |
-| 0.0.25 | M5 | P1, P2 | Yes (planned, last) | C4 |
-| 0.0.26 | M6 | P3, P4, P5 | No | C4 |
-| 0.0.27 | M7 | B1, V1 | No | C4, C9 |
-| 0.0.28 | M8 | O1 | No | C7 |
-| 0.0.29 | M8 | O2 | No | C5, C7 |
-| 0.0.30 | M9 | X1, X2 | No | C5, C7 |
-| 0.0.31 | M9 | X4, D2, K1, Q2 | No | C8, C10, C2 |
-| 0.0.32 | M9 | Q1 | No | C6 |
+| 0.0.22 | — | docs, standards 0.0.16 compliance, website joins lockstep | No | C8 |
+| 0.0.23 | M2 | C1 to C7, A1, R1, Q3, D1 | Yes (planned) | C1, C2, C3, C8 |
+| 0.0.24 | M3 | R2, A2 | No (behaviour: config now applies) | C3, C2, C10 |
+| 0.0.25 | M4 | A3, A4 | No (`RlgSubscriber` deprecated) | C2, C8 |
+| 0.0.26 | M5 | P1, P2 | Yes (planned, last) | C4 |
+| 0.0.27 | M6 | P3, P4, P5 | No | C4 |
+| 0.0.28 | M7 | B1, V1 | No | C4, C9 |
+| 0.0.29 | M8 | O1 | No | C7 |
+| 0.0.30 | M8 | O2 | No | C5, C7 |
+| 0.0.31 | M9 | X1, X2 | No | C5, C7 |
+| 0.0.32 | M9 | X4, D2, K1, Q2 | No | C8, C10, C2 |
+| 0.0.33 | M9 | Q1 | No | C6 |
 
-Two breaking releases, announced in advance: 0.0.22 (output, sink
-trait, overflow policy, API reset, formats, stdout default, `--root`
-required) and 0.0.25 (`Log` shape, `RlgSubscriber` removed). A
+Two breaking releases, announced in advance: 0.0.23 (output, sink
+trait, overflow policy, API reset, formats, stdout default) and
+0.0.26 (`Log` shape, `RlgSubscriber` removed). `--root` becomes
+required in the first release on or after 2027-02-26, whichever that
+is. Each removal is listed in `DEPRECATIONS.md` for at least 90 days
+and one release before the breaking release that carries it; one
+whose date has not passed waits. A
 breaking change found later waits for the next planned break unless
 it fixes a vulnerability.
 
 Every release also clears the hygiene gate (Dependabot, alerts,
 audit) before its own work, ships a CHANGELOG section and release
-highlights, and keeps the satellites in lockstep. 0.0.22 is large;
+highlights, and keeps the satellites in lockstep. 0.0.23 is large;
 it reaches `main` through its one release PR, built as a series of
-reviewed commits on `feat/v0.0.22`.
+reviewed commits on `feat/v0.0.23`.
 
 Dependencies between packages: WP-S2 (0.0.21) before WP-C5 and
-WP-C6 (0.0.22); WP-C2 before WP-O1; WP-A1 before WP-R1, WP-A2,
+WP-C6 (0.0.23); WP-C2 before WP-O1; WP-A1 before WP-R1, WP-A2,
 WP-O1, WP-K1 (rotation reopen) and WP-X4 (rlg-test); WP-P1 before
 WP-P4 and the final WP-B1 numbers.
 
@@ -943,15 +964,16 @@ WP-P4 and the final WP-B1 numbers.
 1. **Business model: purely open source, for now.** WP-X3 (audit
    mode) and the OAuth half of WP-X2 are dropped (see "Deferred").
    WP-B1 and rlg-mcp stay, for adoption.
-2. **Default sink: stdout everywhere** (WP-D1, in 0.0.22). journald
+2. **Default sink: stdout everywhere** (WP-D1, in 0.0.23). journald
    and os_log become explicit choices.
 3. **Formats: remove ELF and W3C; rework CLF and Apache** to their
-   real specs (WP-C5, in 0.0.22).
+   real specs (WP-C5, in 0.0.23).
 4. **Second maintainer: not now.** The section 2 ceilings stay
    recorded; revisit once the library is stable and in production
-   use, after 0.0.27.
+   use, after 0.0.28.
 5. **rlg-mcp `--root`: the current directory with a warning in
-   0.0.21, required from 0.0.22** (WP-S1).
+   0.0.21, required from the first release on or after 2027-02-26**
+   (WP-S1; the date replaces 0.0.23 under the deprecation policy).
 
 6. **The rlg-mcp fix ships publicly (2026-11-28).** The plan had
    already described the issue on a public branch, so WP-S1 is fixed
@@ -962,11 +984,12 @@ WP-P4 and the final WP-B1 numbers.
 ### What 0.0.21 shipped, and what moved
 
 0.0.21 kept its promise of no breaking change, so parts of the
-security work moved to the 0.0.22 breaking release:
+security work moved to the 0.0.23 breaking release:
 
 - **WP-S1:** the root, the read limits, one refusal message and the
-  non-loopback warning shipped. Moved: `--root` required, and a bearer
-  token required for a non-loopback bind (0.0.22, with WP-X2's token
+  non-loopback warning shipped. Moved: `--root` required (the first
+  release on or after 2027-02-26, see `DEPRECATIONS.md`), and a bearer
+  token required for a non-loopback bind (0.0.23, with WP-X2's token
   support). Dropped: running tool I/O on a blocking thread with a
   timeout; refusing non-regular files and capping every read removes
   the ways a tool could block.
@@ -978,10 +1001,10 @@ security work moved to the 0.0.22 breaking release:
   non-local hosts, which cannot tell a Compose service or a DaemonSet
   address from a remote one before DNS; WP-X1 (TLS) is the fix.
 - **WP-S4:** `0640`/`0750` modes and rotation without overwriting
-  shipped. Moved to 0.0.22: `O_NOFOLLOW` (breaks deliberate symlinked
+  shipped. Moved to 0.0.23: `O_NOFOLLOW` (breaks deliberate symlinked
   log paths) and retention limits (with WP-A2).
 - **WP-S5:** `env_vars` values hidden from `Debug` and `diff`, and
-  rlg-tower trace-header validation, shipped. Moved to 0.0.22: not
+  rlg-tower trace-header validation, shipped. Moved to 0.0.23: not
   writing expanded values in `save_to_file` (needs a private field on
   `Config`) and the `RLG_` prefix for environment config.
 - **WP-S6:** shipped except the repository ruleset, which is a

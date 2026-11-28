@@ -60,7 +60,9 @@ fn main() -> ExitCode {
 }
 
 /// The root from `--root`, else `RLG_MCP_ROOT`, else the current
-/// directory with a warning (`--root` becomes required in 0.0.22).
+/// directory with a warning. Running without a root was deprecated in
+/// 0.0.21; `--root` becomes required in the first release on or after
+/// 2027-02-26 (see `DEPRECATIONS.md`).
 fn open_root(arg: Option<String>) -> Result<Root, String> {
     let chosen = arg.or_else(|| {
         std::env::var("RLG_MCP_ROOT").ok().filter(|v| !v.is_empty())
@@ -72,7 +74,8 @@ fn open_root(arg: Option<String>) -> Result<Root, String> {
     if !explicit {
         eprintln!(
             "{NAME}: warning: no --root given; the tools read only under \
-             {}. Pass --root <dir> or set RLG_MCP_ROOT (required from 0.0.22).",
+             {}. Pass --root <dir> or set RLG_MCP_ROOT (required from the first \
+             release on or after 2027-02-26).",
             root.path().display()
         );
     }

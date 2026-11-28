@@ -6,7 +6,7 @@ RLG pushes log events into a lock-free ring buffer and formats them on a backgro
 
 ## Core Features
 
-- **14 output formats** — JSON, NDJSON, OTLP, MCP, GELF, CEF, ECS, Logfmt, CLF, W3C, Syslog, Logstash, Log4j-XML, Apache Error
+- **14 output formats** — CLF, CEF, ELF, W3C, Apache Access, Log4j XML, JSON, GELF, Logstash, NDJSON, MCP, OTLP, Logfmt, ECS
 - **Fluent builder API** — `Log::info("msg").with("key", val).fire()`
 - **Platform-native sinks** — macOS `os_log`, Linux `journald`, file, stdout
 - **`log` and `tracing` bridges** — drop-in replacement for existing Rust logging

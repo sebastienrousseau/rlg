@@ -20,6 +20,12 @@ the OSS-Fuzz onboarding runbook.
 | `log_format_from_str` | `<LogFormat as FromStr>::from_str` — the 14 variants |
 | `config_load` | `toml::from_str::<Config>` — the config file parser |
 | `redact_scrub` | `Redactor::with_defaults().scrub` — the six built-in patterns |
+| `render_one_line` | Every `LogFormat` renders one record as exactly one line (seed corpus in `corpus/render_one_line/`) |
+
+CI (`.github/workflows/fuzz-smoke.yml`) runs on every pull request and
+push to `main`: each target replays its committed corpus, where one
+exists, with `-runs=0`, then fuzzes for 30 seconds with
+`--sanitizer none`.
 
 ## Local run
 

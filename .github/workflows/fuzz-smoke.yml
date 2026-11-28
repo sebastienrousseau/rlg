@@ -1,27 +1,26 @@
 name: Fuzz Smoke
 
-# Manual trigger only.
+# Runs on every pull request, on every push to main, and on demand.
 #
-# The GHA Ubuntu image's Rust toolchain layout does not play well
-# with cargo-fuzz's `-Zbuild-std` step. Five iterations of workflow
-# tweaks (RUSTFLAGS, target-scoped Cargo config, --sanitizer none,
-# rust-src component install) converged on the pragmatic call:
+# Each of the five targets (fuzz/fuzz_targets/) gets its own job:
 #
-#   * The fuzz targets themselves are correct — they compile and
-#     run locally on nightly with cargo-fuzz.
-#   * Continuous coverage happens through OSS-Fuzz post-onboarding
-#     (see `docs/OSS-FUZZ.md`).
-#   * Miri covers UB detection on every PR.
-#   * The smoke gate as a per-PR blocker adds cost without unique
-#     coverage — so we run it on demand instead.
+#   1. Corpus replay: where fuzz/corpus/<target>/ is committed, every
+#      input in it is run once (`-runs=0`), so a regression on a
+#      known input fails the job.
+#   2. Smoke: the target fuzzes for a bounded time (30 s on pull
+#      requests and pushes; the `duration` input on a manual run).
 #
-# Contributors and maintainers can trigger this workflow manually
-# from the GitHub Actions tab to sanity-check a target.
+# A manual run can pick one target. Deep, continuous fuzzing with
+# sanitizers is OSS-Fuzz's job (see `docs/OSS-FUZZ.md`); Miri covers
+# UB detection on every PR.
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       target:
-        description: "Fuzz target to run (one of: parse_record, log_format_from_str, config_load, redact_scrub, or 'all')"
+        description: "Fuzz target to run (one of: parse_record, log_format_from_str, config_load, redact_scrub, render_one_line, or 'all')"
         required: true
         default: "all"
         type: choice
@@ -84,29 +83,38 @@ jobs:
           workspaces: fuzz -> target
           cache-on-failure: true
 
-      # 30-second budget per target per PR. Any crash lands as a
-      # `fuzz/artifacts/<target>/crash-*` file that the job uploads
-      # so the crash can be reproduced locally.
-      #
       # `--sanitizer none` disables the ASan runtime for the CI smoke
-      # gate. Sanitizer coverage is orthogonal to fuzz coverage — the
-      # smoke gate's job is to catch panics and hangs in 30 s, which
-      # it does without ASan. Deep UB detection happens through:
-      #   1. Miri on every rlg PR (`.github/workflows/miri.yml`);
-      #   2. OSS-Fuzz post-onboarding, which runs ASan / MSan / UBSan
-      #      variants for hours per day on Google's infra.
-      #
-      # Skipping ASan here avoids the well-known GHA Ubuntu
-      # incompatibility between libFuzzer's sanitizer runtime and
-      # statically-linked libc, which no combination of RUSTFLAGS or
-      # target-scoped Cargo config resolves cleanly in the smoke
-      # window.
-      - name: Run ${{ matrix.target }} for ${{ inputs.duration }}s
-        if: inputs.target == 'all' || inputs.target == matrix.target
+      # gate. The smoke gate's job is to catch panics and hangs in a
+      # bounded window, which it does without ASan, and it avoids the
+      # GHA Ubuntu incompatibility between libFuzzer's sanitizer
+      # runtime and statically-linked libc. Deep UB detection happens
+      # through Miri on every PR and OSS-Fuzz's ASan / MSan / UBSan
+      # runs. A crash lands as `fuzz/artifacts/<target>/crash-*`,
+      # which the job uploads so it can be reproduced locally.
+      - name: Replay the committed ${{ matrix.target }} corpus
+        if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == matrix.target
         working-directory: fuzz
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
-          cargo +nightly fuzz run --sanitizer none "${{ matrix.target }}" \
-            -- -max_total_time=${{ inputs.duration }} -print_final_stats=1
+          if [ -d "corpus/${TARGET}" ]; then
+            cargo +nightly fuzz run --sanitizer none "${TARGET}" "corpus/${TARGET}" -- -runs=0
+          else
+            echo "no committed corpus for ${TARGET}; nothing to replay"
+          fi
+
+      - name: Fuzz ${{ matrix.target }} for a bounded time
+        if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == matrix.target
+        working-directory: fuzz
+        env:
+          TARGET: ${{ matrix.target }}
+          DURATION: ${{ inputs.duration || '30' }}
+        run: |
+          case "${DURATION}" in
+            ''|*[!0-9]*) echo "duration must be a whole number of seconds"; exit 1 ;;
+          esac
+          cargo +nightly fuzz run --sanitizer none "${TARGET}" \
+            -- -max_total_time="${DURATION}" -print_final_stats=1
 
       - name: Upload crash artefacts
         if: failure()
