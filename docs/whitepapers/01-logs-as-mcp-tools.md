@@ -41,9 +41,10 @@ the agent invoke by name.
 
 ## 2. The wire format
 
-`rlg-mcp` speaks JSON-RPC 2.0 over stdio, per the
+`rlg-mcp` speaks JSON-RPC 2.0 over stdio, streamable HTTP or
+HTTP+SSE, per the
 [MCP specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18).
-Three tools:
+Four tools, each reading only under the server's log root (`--root`):
 
 ```jsonc
 {
@@ -59,8 +60,9 @@ Three tools:
 }
 ```
 
-The `filter_log` and `summarize_errors` tools follow the same
-shape. Every tool is a **pure function over a file path** — no
+The `filter_log`, `summarize_errors` and `tail_logs_glob` tools
+follow the same shape (`tail_logs_glob` takes `glob_pattern`, `lines`
+and `level`). Every tool is a **pure function over a file path** — no
 transport envelope negotiation, no query language, no schema
 registry.
 
