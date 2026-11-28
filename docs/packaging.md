@@ -14,7 +14,7 @@ if something you need is missing, open an issue.
 | `rlg-mcp` | the `rlg-mcp` binary | MCP server; also an OCI image, `pkg/docker/Dockerfile.mcp` |
 | `rlg`, `rlg-otlp`, `rlg-redact`, `rlg-tower`, `rlg-test`, `rlg-wasm`, `rlg-ebpf` | libraries | for distributions that package Rust crates (Debian, Fedora) |
 
-All ten publishable crates share one version.
+All eleven publishable crates share one version.
 
 ## License
 

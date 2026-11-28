@@ -24,7 +24,7 @@ with the maintainer's other Rust crates.
 
 ## Versioning
 
-- All ten publishable crates share one version and are released
+- All eleven publishable crates share one version and are released
   together.
 - Releases go `0.0.1` at a time (`0.0.12` → `0.0.13`); `0.1.0` follows
   `0.0.999`.

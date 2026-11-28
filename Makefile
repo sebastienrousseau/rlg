@@ -16,10 +16,12 @@ verify: ## Run the full local pre-PR verification pipeline.
 	@echo "▶ cargo check -p rlg (lean feature sets)"
 	@cargo check -p rlg --no-default-features --lib
 	@cargo check -p rlg --no-default-features --features tracing-layer --lib
+	@echo "▶ rlg-core builds for a no_std target"
+	@cargo build -p rlg-core --target thumbv7em-none-eabihf
 	@echo "▶ cargo test --workspace --all-features"
 	@cargo test --workspace --all-features
-	@echo "▶ cargo semver-checks --workspace"
-	@cargo semver-checks check-release --workspace
+	@echo "▶ cargo semver-checks --workspace --exclude rlg-core"
+	@cargo semver-checks check-release --workspace --exclude rlg-core
 	@echo "▶ cargo deny check"
 	@cargo deny check
 	@echo "▶ cargo vet check"
