@@ -61,6 +61,8 @@ Nothing in the public API or in any format's output changes.
   `doc/INPUT-FORMATS.md`, the README demo GIF on crates.io (now an
   absolute URL), and `SECURITY.md`'s SBOM check, which used the
   `.sig`/`.crt` form releases stopped shipping after 0.0.14.
+- rlg-tower no longer lists `tower` as a normal dependency; its library
+  uses only `tower-layer` and `tower-service` (`tower` stays for tests).
 
 ## [0.0.21] - 2026-11-28
 
