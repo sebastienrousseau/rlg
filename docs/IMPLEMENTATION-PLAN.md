@@ -20,7 +20,7 @@
 >
 > **Deprecations first:** a removal or contract change in a breaking
 > milestone ships only after it has been listed in
-> [`DEPRECATIONS.md`](../DEPRECATIONS.md) for at least 90 days and
+> [`DEPRECATIONS.md`](https://github.com/sebastienrousseau/rlg/blob/main/DEPRECATIONS.md) for at least 90 days and
 > one release, with a warning while it keeps working
 > ([policy](POLICIES.md#deprecation)). A breaking release takes only
 > the items whose date has passed; the rest wait for the first
