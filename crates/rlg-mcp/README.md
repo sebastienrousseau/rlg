@@ -47,6 +47,30 @@ The protocol revision is **2025-06-18**.
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | rlg-mcp
 ```
 
+## Where the tools may read
+
+The tools read only regular files under one directory, the **log
+root**: `--root <dir>`, else the `RLG_MCP_ROOT` environment variable,
+else the current directory (with a warning; `--root` becomes
+required in 0.0.22). A path or glob that resolves outside the root,
+through `..`, an absolute path or a symlink, is refused. A file is
+read up to 64 MiB, lines over 1 MiB are skipped, an answer holds at
+most 10,000 records, and a glob may match at most 1,000 files.
+
+```bash
+rlg-mcp --root /var/log/app
+```
+
+In a container, mount the logs read-only and point the root at them:
+
+```bash
+docker run --rm -i -v /var/log/app:/logs:ro \
+  ghcr.io/sebastienrousseau/rlg-mcp:0.0.21 --root /logs
+```
+
+The HTTP transports have no authentication: keep `--host` on
+loopback (the default). A non-loopback `--host` prints a warning.
+
 ## Client configurations
 
 ### Claude Desktop
@@ -57,7 +81,8 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | rlg-mcp
 {
   "mcpServers": {
     "rlg": {
-      "command": "rlg-mcp"
+      "command": "rlg-mcp",
+      "args": ["--root", "/var/log/app"]
     }
   }
 }
@@ -70,7 +95,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | rlg-mcp
 ```jsonc
 {
   "mcpServers": {
-    "rlg": { "command": "rlg-mcp" }
+    "rlg": { "command": "rlg-mcp", "args": ["--root", "/var/log/app"] }
   }
 }
 ```
@@ -78,7 +103,7 @@ printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' | rlg-mcp
 ### mcp.run
 
 Use the **stdio** server registration; supply `rlg-mcp` as
-the executable and no arguments.
+the executable and `--root <your log directory>` as its arguments.
 
 ## Limitations
 

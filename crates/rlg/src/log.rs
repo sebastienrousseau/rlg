@@ -12,10 +12,12 @@ use std::fmt;
 use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
 
+mod escape;
 mod source;
+mod text;
 mod write;
 use write::Part::{Map, Num, Raw, Str, Value};
-use write::{write_logfmt_value, write_parts};
+use write::write_parts;
 
 /// `file:line` for a call site, built without the `format!` machinery.
 /// The flusher calls it once per record `fire()` sent; under Miri,
@@ -223,98 +225,10 @@ impl Log {
             ..crate::engine::LogEvent::new(self)
         }
     }
-
-    fn write_logfmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "level={} msg=\"{}\" session_id={} component=\"{}\"",
-            self.level.as_str_lowercase(),
-            self.description.replace('"', "\\\""),
-            self.session_id,
-            self.component,
-        )?;
-        for (key, value) in &self.attributes {
-            write!(f, " {key}=")?;
-            write_logfmt_value(f, value)?;
-        }
-        Ok(())
-    }
 }
 
 // --- Per-format serialization methods ---
 impl Log {
-    fn fmt_clf(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "SessionID={} Timestamp={} Description={} Level={} Component={}",
-            self.session_id,
-            self.time,
-            self.description,
-            self.level,
-            self.component
-        )
-    }
-
-    fn fmt_cef(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "CEF:0|{}|{}|{}|{}|{}|CEF",
-            self.session_id,
-            self.time,
-            self.level,
-            self.component,
-            self.description
-        )
-    }
-
-    fn fmt_elf(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "ELF:0|{}|{}|{}|{}|{}|ELF",
-            self.session_id,
-            self.time,
-            self.level,
-            self.component,
-            self.description
-        )
-    }
-
-    fn fmt_w3c(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "W3C:0|{}|{}|{}|{}|{}|W3C",
-            self.session_id,
-            self.time,
-            self.level,
-            self.component,
-            self.description
-        )
-    }
-
-    fn fmt_apache(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} - - [{}] \"{}\" {} {}",
-            *CACHED_HOSTNAME,
-            self.time,
-            self.description,
-            self.level,
-            self.component
-        )
-    }
-
-    fn fmt_log4j_xml(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            r#"<log4j:event logger="{}" timestamp="{}" level="{}" thread="{}"><log4j:message>{}</log4j:message></log4j:event>"#,
-            self.component,
-            self.time,
-            self.level,
-            self.session_id,
-            self.description
-        )
-    }
-
     fn fmt_json(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write_parts(
             f,

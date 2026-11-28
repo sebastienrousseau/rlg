@@ -28,6 +28,14 @@ use rlg_mcp::transport;
 
 const ERROR: &str = r#"{"session_id":2,"time":"t","level":"ERROR","component":"db","description":"boom","format":"JSON","attributes":{}}"#;
 
+/// A server reading under the temp directory, where `log_file` puts
+/// its files.
+fn temp_rooted() -> rlg_mcp::LogServer {
+    rlg_mcp::LogServer::with_root(
+        rlg_mcp::Root::new(std::env::temp_dir()).expect("temp dir"),
+    )
+}
+
 fn log_file() -> tempfile::NamedTempFile {
     let mut f = tempfile::NamedTempFile::new().unwrap();
     writeln!(f, "{ERROR}").unwrap();
@@ -108,7 +116,7 @@ impl Server {
                 tokio::runtime::Runtime::new().expect("runtime");
             runtime.block_on(async move {
                 tokio::select! {
-                    served = transport::serve(&options, rlg_mcp::LogServer::new) => {
+                    served = transport::serve(&options, temp_rooted) => {
                         let _ = failed_tx.send(served);
                     }
                     _ = stopped => {}
@@ -971,7 +979,8 @@ fn streamable_http_caps_the_number_of_live_sessions() {
 #[test]
 fn the_binary_announces_where_it_listens() {
     let mut child = Command::new(env!("CARGO_BIN_EXE_rlg-mcp"))
-        .args(["--transport", "sse", "--port", "0"])
+        .args(["--transport", "sse", "--port", "0", "--root"])
+        .arg(std::env::temp_dir())
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

@@ -13,6 +13,7 @@
 use crate::config::LogRotation;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
+use std::path::Path as StdPath;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -42,8 +43,7 @@ impl RotatingFile {
     ///
     /// Returns `io::Error` if the file cannot be opened or created.
     pub fn open(path: &Path, policy: LogRotation) -> io::Result<Self> {
-        let file =
-            OpenOptions::new().create(true).append(true).open(path)?;
+        let file = open_log_file(path)?;
         let bytes_written = file.metadata().map_or(0, |m| m.len());
         Ok(Self {
             file,
@@ -116,19 +116,87 @@ impl RotatingFile {
             ))
         };
 
-        fs::rename(&self.path, &rotated_name)?;
+        move_to_free_name(&self.path, &rotated_name)?;
 
         // Open a new file at the original path.
-        self.file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)?;
+        self.file = open_log_file(&self.path)?;
         self.bytes_written = 0;
         self.events_written = 0;
         self.opened_at = Instant::now();
         self.opened_date = today_date_string();
 
         Ok(())
+    }
+}
+
+/// Open `path` for appending, creating it readable by its owner and
+/// group only (`0640`, before the umask) on Unix.
+///
+/// # Errors
+/// As [`OpenOptions::open`].
+pub(crate) fn open_log_file(path: &StdPath) -> io::Result<File> {
+    let mut options = OpenOptions::new();
+    let _ = options.create(true).append(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        let _ = options.mode(0o640);
+    }
+    options.open(path)
+}
+
+/// Create `dir` and its parents, accessible by owner and group only
+/// (`0750`, before the umask) on Unix.
+///
+/// # Errors
+/// As [`fs::DirBuilder::create`].
+pub(crate) fn create_log_dir(dir: &StdPath) -> io::Result<()> {
+    let mut builder = fs::DirBuilder::new();
+    let _ = builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        let _ = builder.mode(0o750);
+    }
+    builder.create(dir)
+}
+
+/// Move `from` to `to`, or to `to` with `.1`, `.2`, … inserted before
+/// the extension when that name is taken, never replacing a file.
+/// `fs::rename` replaces an existing target on Unix, which lost an
+/// archive whenever two rotations fell in the same second.
+fn move_to_free_name(from: &StdPath, to: &StdPath) -> io::Result<()> {
+    for n in 0..10_000_u32 {
+        let candidate = numbered(to, n);
+        // A hard link fails with AlreadyExists instead of replacing.
+        match fs::hard_link(from, &candidate) {
+            Ok(()) => return fs::remove_file(from),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
+            // No hard links on this file system: check, then rename.
+            Err(_) if !candidate.exists() => {
+                return fs::rename(from, &candidate);
+            }
+            Err(_) => {}
+        }
+    }
+    Err(io::Error::new(
+        io::ErrorKind::AlreadyExists,
+        "no free name for the rotated log file",
+    ))
+}
+
+/// `to` itself for `n == 0`, else `stem.N.ext` (or `name.N`).
+fn numbered(to: &StdPath, n: u32) -> PathBuf {
+    if n == 0 {
+        return to.to_path_buf();
+    }
+    match (to.file_stem(), to.extension()) {
+        (Some(stem), Some(ext)) => to.with_file_name(format!(
+            "{}.{n}.{}",
+            stem.to_string_lossy(),
+            ext.to_string_lossy()
+        )),
+        _ => PathBuf::from(format!("{}.{n}", to.display())),
     }
 }
 

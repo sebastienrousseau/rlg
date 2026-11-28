@@ -5,6 +5,9 @@
 //! Unit tests for `lib.rs`.
 
 use super::*;
+use rlg::log_format::LogFormat;
+use rlg::log_level::LogLevel;
+use rlg_cli::Filter;
 use serde_json::{Value, json};
 use std::io::Write;
 
@@ -24,8 +27,21 @@ fn parse<T: serde::de::DeserializeOwned>(v: Value) -> T {
     serde_json::from_value(v).expect("arguments")
 }
 
+/// A server whose root is the system temp directory, where every
+/// test file lives.
+fn server() -> LogServer {
+    LogServer::with_root(Root::new(std::env::temp_dir()).unwrap())
+}
+
 fn call(tool: &str, args: Value) -> CallToolResult {
-    let server = LogServer::new();
+    call_on(&server(), tool, args)
+}
+
+fn call_on(
+    server: &LogServer,
+    tool: &str,
+    args: Value,
+) -> CallToolResult {
     let result = match tool {
         "tail_log" => server.tail_log_tool(Parameters(parse(args))),
         "filter_log" => server.filter_log_tool(Parameters(parse(args))),
@@ -389,4 +405,177 @@ fn the_server_describes_itself() {
     assert!(info.capabilities.prompts.is_some());
     assert!(info.capabilities.resources.is_some());
     assert!(info.instructions.is_some());
+}
+
+// ---------------------------------------------------------------------------
+// The log root and the read limits.
+// ---------------------------------------------------------------------------
+
+/// A root holding `app.ndjson` and `sub/`, and a file outside it.
+fn rooted() -> (tempfile::TempDir, tempfile::TempDir, Root) {
+    let inside = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    std::fs::write(
+        inside.path().join("app.ndjson"),
+        format!("{INFO}\n{ERROR}\n"),
+    )
+    .unwrap();
+    std::fs::create_dir(inside.path().join("sub")).unwrap();
+    std::fs::write(
+        outside.path().join("secret.ndjson"),
+        format!("{FATAL}\n"),
+    )
+    .unwrap();
+    let root = Root::new(inside.path()).unwrap();
+    (inside, outside, root)
+}
+
+#[test]
+fn the_root_refuses_anything_outside_it_with_one_message() {
+    let (inside, outside, root) = rooted();
+    assert!(root.resolve("app.ndjson").is_ok());
+    let abs_inside = inside.path().join("app.ndjson");
+    assert!(root.resolve(abs_inside.to_str().unwrap()).is_ok());
+    let secret = outside.path().join("secret.ndjson");
+    #[cfg(unix)]
+    std::os::unix::fs::symlink(
+        &secret,
+        inside.path().join("link.ndjson"),
+    )
+    .unwrap();
+    let refused = [
+        secret.to_str().unwrap().to_string(),
+        "../secret.ndjson".to_string(),
+        format!(
+            "sub/../../{}/secret.ndjson",
+            outside.path().file_name().unwrap().to_str().unwrap()
+        ),
+        "sub".to_string(),
+        "missing.ndjson".to_string(),
+        "/dev/zero".to_string(),
+        #[cfg(unix)]
+        "link.ndjson".to_string(),
+    ];
+    let messages: Vec<String> = refused
+        .iter()
+        .map(|p| root.resolve(p).unwrap_err())
+        .collect();
+    for (p, m) in refused.iter().zip(&messages) {
+        assert!(
+            m.contains("not a log file under the log root"),
+            "{p}: {m}"
+        );
+        assert!(
+            !m.contains("No such file") && !m.contains("denied"),
+            "{p}: {m}"
+        );
+    }
+}
+
+#[test]
+fn tools_read_only_under_the_root() {
+    let (inside, outside, root) = rooted();
+    let server = LogServer::with_root(root);
+    let ok =
+        call_on(&server, "tail_log", json!({"path": "app.ndjson"}));
+    assert!(!is_error(&ok), "{}", text_of(&ok));
+    let secret = outside.path().join("secret.ndjson");
+    for tool in ["tail_log", "filter_log", "summarize_errors"] {
+        let r = call_on(&server, tool, json!({"path": secret}));
+        assert!(is_error(&r), "{tool}");
+        assert!(
+            !text_of(&r).contains("down"),
+            "{tool}: {}",
+            text_of(&r)
+        );
+    }
+    let r = call_on(
+        &server,
+        "tail_logs_glob",
+        json!({"glob_pattern": format!("{}/*", outside.path().display())}),
+    );
+    assert!(
+        is_error(&r) && !text_of(&r).contains("down"),
+        "{}",
+        text_of(&r)
+    );
+    for walk_everything in ["/**/*", "../**/*"] {
+        let r = call_on(
+            &server,
+            "tail_logs_glob",
+            json!({"glob_pattern": walk_everything}),
+        );
+        assert!(is_error(&r), "{walk_everything}: {}", text_of(&r));
+    }
+    let r = call_on(
+        &server,
+        "tail_logs_glob",
+        json!({"glob_pattern": "**/*.ndjson"}),
+    );
+    assert!(text_of(&r).contains("boom"), "{}", text_of(&r));
+    drop(inside);
+}
+
+#[test]
+fn a_glob_may_not_match_too_many_files() {
+    let dir = tempfile::tempdir().unwrap();
+    for i in 0..=MAX_GLOB_FILES {
+        std::fs::write(dir.path().join(format!("{i}.ndjson")), "")
+            .unwrap();
+    }
+    let server = LogServer::with_root(Root::new(dir.path()).unwrap());
+    let r = call_on(
+        &server,
+        "tail_logs_glob",
+        json!({"glob_pattern": "*.ndjson"}),
+    );
+    assert!(
+        is_error(&r) && text_of(&r).contains("files"),
+        "{}",
+        text_of(&r)
+    );
+}
+
+#[test]
+fn reads_are_bounded() {
+    let f = write_log(&format!(
+        "{}\n{ERROR}\n",
+        "x".repeat(MAX_LINE_BYTES + 1)
+    ));
+    let out = tail_log(f.path(), usize::MAX).unwrap();
+    assert_eq!(out.len(), 1, "the oversized line is skipped");
+    let many: String =
+        std::iter::repeat_n(format!("{INFO}\n"), MAX_RECORDS + 5)
+            .collect();
+    let f = write_log(&many);
+    assert_eq!(
+        tail_log(f.path(), usize::MAX).unwrap().len(),
+        MAX_RECORDS
+    );
+    let filter = Filter::new();
+    assert_eq!(
+        filter_log(f.path(), &filter, LogFormat::Logfmt)
+            .unwrap()
+            .len(),
+        MAX_RECORDS
+    );
+}
+
+#[test]
+fn root_and_host_arguments_are_read() {
+    let args = |a: &[&str]| {
+        a.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
+    };
+    let (root, rest) =
+        take_root_arg(args(&["--root", "/logs", "--port", "1"]))
+            .unwrap();
+    assert_eq!(root.as_deref(), Some("/logs"));
+    assert_eq!(rest, args(&["--port", "1"]));
+    let (root, _) = take_root_arg(args(&["--root=/a"])).unwrap();
+    assert_eq!(root.as_deref(), Some("/a"));
+    assert!(take_root_arg(args(&["--root"])).is_err());
+    assert!(binds_beyond_loopback(&args(&["--host", "0.0.0.0"])));
+    assert!(binds_beyond_loopback(&args(&["--host=10.0.0.5"])));
+    assert!(!binds_beyond_loopback(&args(&["--host", "127.0.0.1"])));
+    assert!(!binds_beyond_loopback(&args(&["--port", "9"])));
 }

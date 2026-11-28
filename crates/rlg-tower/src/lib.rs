@@ -174,7 +174,7 @@ where
             .trace_header
             .and_then(|name| req.headers().get(name))
             .and_then(|v| v.to_str().ok())
-            .map(str::to_string);
+            .and_then(trace_id_from_header);
         let cfg = self.config.clone();
         let start = Instant::now();
         let fut = self.inner.call(req);
@@ -242,6 +242,38 @@ where
     }
 }
 
+/// The trace id to log from a request's trace header, or `None`.
+///
+/// The header is set by the client, so it is kept only when it is a
+/// W3C `traceparent` (its trace id is taken) or a plain id of at most
+/// 128 characters from `[A-Za-z0-9._:-]`, such as a UUID.
+fn trace_id_from_header(value: &str) -> Option<String> {
+    traceparent_trace_id(value)
+        .or_else(|| is_plain_id(value).then_some(value))
+        .map(str::to_string)
+}
+
+/// The trace id of a W3C `traceparent` (`vv-<32 hex>-<16 hex>-ff`).
+fn traceparent_trace_id(value: &str) -> Option<&str> {
+    let mut parts = value.split('-');
+    let lens = [2, 32, 16, 2];
+    let fields: Vec<&str> = parts.by_ref().take(4).collect();
+    let shaped = parts.next().is_none()
+        && fields.len() == 4
+        && fields.iter().zip(lens).all(|(f, n)| {
+            f.len() == n && f.bytes().all(|b| b.is_ascii_hexdigit())
+        });
+    shaped.then(|| fields[1])
+}
+
+/// A short id such as a UUID: 1 to 128 of `[A-Za-z0-9._:-]`.
+fn is_plain_id(value: &str) -> bool {
+    (1..=128).contains(&value.len())
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"._:-".contains(&b))
+}
+
 fn emit(
     cfg: &Config,
     method: &http::Method,
@@ -271,6 +303,21 @@ fn emit(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn trace_ids_are_kept_only_when_well_formed() {
+        let tp =
+            "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+        assert_eq!(
+            trace_id_from_header(tp).as_deref(),
+            Some("4bf92f3577b34da6a3ce929d0e0e4736")
+        );
+        let uuid = "6f1c2a9e-3b7d-4c1e-9a2b-1f0e8d7c6b5a";
+        assert_eq!(trace_id_from_header(uuid).as_deref(), Some(uuid));
+        for bad in ["", "a b", "x\ny", "<script>", &"a".repeat(129)] {
+            assert_eq!(trace_id_from_header(bad), None, "{bad:?}");
+        }
+    }
 
     #[test]
     fn defaults_are_sensible() {

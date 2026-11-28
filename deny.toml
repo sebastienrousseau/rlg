@@ -53,9 +53,9 @@ skip-tree = []
 # careless dep bump. If a bump ever wants one of these in, it will
 # fail CI and force an explicit discussion.
 deny = [
-    # OpenSSL FFI. rlg's `rlg-otlp` uses `rustls` and we intend to
-    # keep it that way — statically-linked libssl on the target host
-    # is a supply-chain footgun.
+    # OpenSSL FFI. rlg-otlp has no TLS today (ADR 0015: it sends to a
+    # local collector); if TLS lands (plan WP-X1) it uses rustls.
+    # A system or statically-linked libssl is a supply-chain risk.
     { name = "openssl-sys" },
     { name = "native-tls" },
 
@@ -80,3 +80,8 @@ allow-git = []
 
 [advisories]
 ignore = []
+# A yanked crate version fails the check, like an advisory does.
+yanked = "deny"
+# Unmaintained advisories count for every crate in the tree, not only
+# for direct dependencies.
+unmaintained = "all"

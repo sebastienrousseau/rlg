@@ -57,13 +57,39 @@ fn connect(
         io::ErrorKind::NotFound,
         "collector host resolved to no addresses",
     );
-    for addr in (target.host.as_str(), target.port).to_socket_addrs()? {
+    for addr in resolve(target, deadline)? {
         match TcpStream::connect_timeout(&addr, remaining(deadline)?) {
             Ok(stream) => return Ok(stream),
             Err(e) => last = timed_out(e),
         }
     }
     Err(last)
+}
+
+/// Resolve the collector's addresses within the deadline. The system
+/// resolver (`getaddrinfo`) has no timeout of its own, so it runs on a
+/// helper thread; past the deadline the export fails with `TimedOut`
+/// and the thread finishes on its own.
+fn resolve(
+    target: &Endpoint,
+    deadline: Instant,
+) -> io::Result<Vec<std::net::SocketAddr>> {
+    let (host, port) = (target.host.clone(), target.port);
+    let (tx, rx) = std::sync::mpsc::channel();
+    let _ = std::thread::Builder::new()
+        .name("rlg-otlp-dns".into())
+        .spawn(move || {
+            let addrs = (host.as_str(), port)
+                .to_socket_addrs()
+                .map(Iterator::collect);
+            let _ = tx.send(addrs);
+        })?;
+    rx.recv_timeout(remaining(deadline)?).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::TimedOut,
+            "collector host name did not resolve in time",
+        )
+    })?
 }
 
 /// Time left before `deadline`, or a timeout error once it passes.
@@ -101,6 +127,21 @@ mod tests {
         assert!(
             remaining(Instant::now() + Duration::from_secs(5)).is_ok()
         );
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn resolve_finds_localhost_and_honours_the_deadline() {
+        let target =
+            Endpoint::parse("http://localhost:4318/v1/logs").unwrap();
+        let addrs =
+            resolve(&target, Instant::now() + Duration::from_secs(5))
+                .unwrap();
+        assert!(
+            addrs.iter().all(|a| a.port() == 4318) && !addrs.is_empty()
+        );
+        let err = resolve(&target, Instant::now()).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::TimedOut);
     }
 
     #[test]

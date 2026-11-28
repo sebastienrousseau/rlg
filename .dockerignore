@@ -1,0 +1,18 @@
+# Build context for Dockerfile and pkg/docker/Dockerfile.mcp. The
+# image builds rlg-mcp from the workspace sources; nothing else goes
+# into the context, so local secrets, build output and git history
+# never reach a layer or the build cache.
+.git
+.github
+**/target
+fuzz/artifacts
+fuzz/corpus
+fuzz/coverage
+.env
+.env.*
+**/*.pem
+**/*.key
+.claude
+.idea
+.vscode
+.DS_Store

@@ -20,7 +20,9 @@ check() {
   fi
 }
 check "glama.json version"        "$(jq -r .version glama.json)"
-check "glama.json docker tag"     "$(jq -r '.installation.docker' glama.json | sed 's/.*://')"
+# The image reference sits among other arguments (a volume, --root):
+# take the tag of the rlg-mcp image itself.
+check "glama.json docker tag"     "$(jq -r '.installation.docker' glama.json | grep -oE 'rlg-mcp:[^ ]+' | sed 's/.*://')"
 check "glama.json mcpServers tag" "$(jq -r '.mcpServers.rlg.args[-1]' glama.json | sed 's/.*://')"
 check "server.json version"       "$(jq -r .version server.json)"
 check "server.json image tag"     "$(jq -r '.packages[0].identifier' server.json | sed 's/.*://')"
