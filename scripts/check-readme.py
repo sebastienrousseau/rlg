@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 """The workspace README follows the portfolio template (README-TEMPLATE.md).
 
 Checks the headings the template requires, in its order; that no
@@ -39,6 +40,7 @@ HEADINGS = [
     "Stability guarantees",
     "License",
 ]
+# REUSE-IgnoreStart
 STRUCTURE = [
     "<!-- SPDX-License-Identifier:",
     '<p align="center">',
@@ -46,6 +48,7 @@ STRUCTURE = [
     "ossf-scorecard",
     ".github/demo.gif",
 ]
+# REUSE-IgnoreEnd
 
 
 def problems(text: str) -> list[str]:
