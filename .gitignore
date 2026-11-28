@@ -5,6 +5,7 @@
 /output/
 /public/
 /target/
+/fuzz/target/
 build
 Icon?
 src/.DS_Store
