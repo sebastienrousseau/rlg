@@ -1,0 +1,47 @@
+name: no_std
+
+# `rlg-core` promises to build without `std`. A host build cannot
+# prove that (std is always there), so this builds it for a bare-metal
+# target that has no `std` at all: any `std` use fails to compile.
+
+on:
+  pull_request:
+    paths:
+      - "crates/rlg-core/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/no-std.yml"
+  push:
+    branches: [main, "feat/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: rlg-core on ${{ matrix.target }} (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # Stable and the MSRV.
+        toolchain: [stable, "1.89.0"]
+        target: [thumbv7em-none-eabihf]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: ${{ matrix.target }}
+
+      - name: Build rlg-core without std
+        run: cargo build --locked -p rlg-core --target "${{ matrix.target }}"

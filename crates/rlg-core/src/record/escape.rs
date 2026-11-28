@@ -11,7 +11,7 @@
 //! delimiters its format gives meaning to. Clean runs are written as
 //! slices, so a value with nothing to escape costs one `write_str`.
 
-use std::fmt;
+use core::fmt;
 
 /// Which format's rules to apply.
 #[derive(Clone, Copy)]
@@ -135,6 +135,7 @@ pub(super) fn logfmt_needs_quotes(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::string::{String, ToString};
 
     fn esc(s: &str, mode: Mode) -> String {
         Escaped(s, mode).to_string()

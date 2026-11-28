@@ -8,6 +8,72 @@ use super::source::{source_location, source_path};
 use super::*;
 use crate::log_format::LogFormat;
 
+/// Every `LogFormat`, with an exhaustive match: a new variant fails
+/// to compile here until it is listed, and so until the test below
+/// checks it against `rlg_core::Format`.
+const fn listed(f: LogFormat) -> [LogFormat; 14] {
+    match f {
+        LogFormat::CLF
+        | LogFormat::JSON
+        | LogFormat::CEF
+        | LogFormat::ELF
+        | LogFormat::W3C
+        | LogFormat::GELF
+        | LogFormat::ApacheAccessLog
+        | LogFormat::Logstash
+        | LogFormat::Log4jXML
+        | LogFormat::NDJSON
+        | LogFormat::MCP
+        | LogFormat::OTLP
+        | LogFormat::Logfmt
+        | LogFormat::ECS => [
+            LogFormat::CLF,
+            LogFormat::JSON,
+            LogFormat::CEF,
+            LogFormat::ELF,
+            LogFormat::W3C,
+            LogFormat::GELF,
+            LogFormat::ApacheAccessLog,
+            LogFormat::Logstash,
+            LogFormat::Log4jXML,
+            LogFormat::NDJSON,
+            LogFormat::MCP,
+            LogFormat::OTLP,
+            LogFormat::Logfmt,
+            LogFormat::ECS,
+        ],
+    }
+}
+
+#[test]
+fn core_format_mirrors_log_format_variant_for_variant() {
+    let all = listed(LogFormat::CLF);
+    assert_eq!(all.len(), Format::ALL.len());
+    for (i, format) in all.into_iter().enumerate() {
+        assert_eq!(format as usize, i);
+        assert_eq!(
+            format!("{:?}", Format::ALL[format as usize]),
+            format!("{format:?}")
+        );
+    }
+}
+
+#[test]
+fn level_types_are_the_rlg_core_types() {
+    // Compiles only while the old paths name the very same types.
+    use crate::LogLevel as RootLevel;
+    use crate::log_level::{
+        LogLevel as OldLevel, ParseLogLevelError as OldError,
+    };
+    use rlg_core::{
+        LogLevel as CoreLevel, ParseLogLevelError as CoreError,
+    };
+    let level: CoreLevel = OldLevel::WARN;
+    let err: CoreError = OldError::new("x");
+    assert_eq!(level, RootLevel::WARN);
+    assert_eq!(err.invalid_value, "x");
+}
+
 #[test]
 fn resolve_hostname_uses_localhost_on_error() {
     let err = Err(std::io::Error::other("no hostname"));

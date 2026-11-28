@@ -34,5 +34,7 @@ jobs:
         with:
           tool: cargo-semver-checks
 
+      # rlg-core has no release on crates.io to compare against until
+      # its first publish (0.0.23); drop the exclude after that.
       - name: Run cargo semver-checks
-        run: cargo semver-checks check-release --workspace
+        run: cargo semver-checks check-release --workspace --exclude rlg-core
